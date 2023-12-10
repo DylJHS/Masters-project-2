@@ -106,7 +106,7 @@ for col in SoI_df.columns[1:]:
 
 # Save the formatted gene set and control set dataframes as CSV files.
 
-SoI_df.to_csv(f'../../Data/{Data_type}/Genes_of_Interest_{Data_type}_df.csv', index = False)
+# SoI_df.to_csv(f'../../Data/{Data_type}/Genes_of_Interest_{Data_type}_df.csv', index = False)
 
 
 
@@ -211,7 +211,7 @@ while dif_ctrl != 0:
 
 			# Save the formatted gene set and control set dataframes as CSV files.
 
-			globals()[var].to_csv(f'../../Data/{Data_type}/Control_Genes_{Data_type}_df{n}.csv', index = False)
+			# globals()[var].to_csv(f'../../Data/{Data_type}/Control_Genes_{Data_type}_df{n}.csv', index = False)
 			n += 1
 			break  # Exit the loop if the shapes are equal
 
