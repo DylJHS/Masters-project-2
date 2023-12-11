@@ -19,10 +19,10 @@ pd.set_option('display.width', None)
 """
 
 # Loading the datasets with Pandas. 
-cntrl_RNA_df = pd.read_csv('../../Data/RNA/Control_Genes_RNA_df.csv')
-GoI_RNA_df = pd.read_csv('../../Data/RNA/Genes_of_Interest_RNA_df.csv')
-cntrl_CNV_df = pd.read_csv('../../Data/CNV/Control_Genes_CNV_df.csv')
-GoI_CNV_df = pd.read_csv('../../Data/CNV/Genes_of_Interest_CNV_df.csv')
+cntrl_RNA_df = pd.read_csv('../../Data/RNA_Data/Control_Genes_RNA_df.csv')
+GoI_RNA_df = pd.read_csv('../../Data/RNA_Data/Genes_of_Interest_RNA_df.csv')
+cntrl_CNV_df = pd.read_csv('../../Data/CNV_Data/Control_Genes_CNV_df.csv')
+GoI_CNV_df = pd.read_csv('../../Data/CNV_Data/Genes_of_Interest_CNV_df.csv')
 codes = pd.read_csv('../../Data/Codes.csv')
 hist_df = pd.read_csv('../../Data/Cancer_Groups.csv')
 
@@ -131,27 +131,4 @@ print(reduced_RNA_full.iloc[:5,:5])
 # reduced_RNA_full.to_csv('../../Data/RNA/Full_RNA_Sample_metrics.csv', index=False)
 # reduced_CNV_full.to_csv('../../Data/CNV/Full_CNV_Sample_metrics.csv', index=False)
 
-
-
-# ## SET OF INTEREST MODIFICATIONS
-
-# # Add the tissue source type to the dataframe.
-
-# GoI_RNA_df['TSS'] = GoI_RNA_df.Sample.apply(lambda x: x.split('-')[1])
-# GoI_RNA_df['TSS'] = GoI_RNA_df['TSS'].map(TSS_mapping_dict)
-
-# GoI_CNV_df['TSS'] = GoI_CNV_df.Sample.apply(lambda x: x.split('-')[1])
-# GoI_CNV_df['TSS'] = GoI_CNV_df['TSS'].map(TSS_mapping_dict)
-
-
-# # Add the Histology Group to the dataframe.
-
-# GoI_RNA_df['Hist_group'] = GoI_RNA_df['TSS'].map(Hist_mapping_dict)
-# GoI_RNA_df['TSS_Abbrvs'] = GoI_RNA_df['TSS'].map(TSS_abbr_mapping_dict)
-
-# GoI_CNV_df['Hist_group'] = GoI_CNV_df['TSS'].map(Hist_mapping_dict)
-# GoI_CNV_df['TSS_Abbrvs'] = GoI_CNV_df['TSS'].map(TSS_abbr_mapping_dict)
-
-
-# print(GoI_RNA_df.iloc[:5,-9:])
 
