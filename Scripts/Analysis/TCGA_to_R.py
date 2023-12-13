@@ -18,117 +18,99 @@ pd.set_option('display.width', None)
 """INITIAL DATASET CONFIGURATION
 """
 
-# Loading the datasets with Pandas. 
-cntrl_RNA_df = pd.read_csv('../../Data/RNA_Data/Control_Genes_RNA_df.csv')
+
+# Loadidng the static datasets.
+
 GoI_RNA_df = pd.read_csv('../../Data/RNA_Data/Genes_of_Interest_RNA_df.csv')
-cntrl_CNV_df = pd.read_csv('../../Data/CNV_Data/Control_Genes_CNV_df.csv')
 GoI_CNV_df = pd.read_csv('../../Data/CNV_Data/Genes_of_Interest_CNV_df.csv')
-codes = pd.read_csv('../../Data/Codes.csv')
-hist_df = pd.read_csv('../../Data/Cancer_Groups.csv')
+
+codes = pd.read_csv('../../Data/Other/Codes.csv')
+hist_df = pd.read_csv('../../Data/Other/Cancer_Groups.csv')
 
 
+# Define the TSS and Histology groups and dataframes 
 
 codes['TSS Code'] = codes['TSS Code'].astype(str)
 codes['TSS Code'] = codes['TSS Code'].apply(lambda x: '0' + x if len(x) == 1 else x)
 codes['TSS Code'] = codes['TSS Code'].replace('nan', 'NA')
-
 
 TSS_mapping_dict = pd.Series(codes['Study Name'].values, index=codes['TSS Code']).to_dict()
 Hist_mapping_dict = pd.Series(hist_df['Type'].values, index=hist_df['Name']).to_dict()
 TSS_abbr_mapping_dict = pd.Series(hist_df['Abbrvs'].values, index=hist_df['Name']).to_dict()
 
 
+for df in [GoI_CNV_df,GoI_RNA_df]:
+	df['Mean'] = df.iloc[:, 1:].mean(axis=1)
+	df['Median'] = df.iloc[:, 1:-1].median(axis=1)
+	df['Std'] = df.iloc[:, 1:-2].std(axis=1)
 
-"""PART 1: INITIAL DISTRIBUTION ANALYSIS
+	df['Group'] = 'Set'
 
-PURPOSE: Add broad metric variables (Mean, Median, Standard deviation) 
-to the data and analyse the general distribution of the data based on 
-group type.
-
-"""
-
-
-# Create the columns for analysis metrics in the
-# set and control dataframes.
-
-Stats_SoI_RNA_df = GoI_RNA_df.iloc[:,:]
-Stats_Cntrl_RNA_df = cntrl_RNA_df.iloc[:,:]
-print(Stats_SoI_RNA_df.iloc[:5,-5:])
-
-Stats_SoI_CNV_df = GoI_CNV_df.iloc[:,:]
-Stats_Cntrl_CNV_df = cntrl_CNV_df.iloc[:,:]
-print(Stats_SoI_CNV_df.iloc[:5,-5:])
+	reduced_df = df[['Sample', 'Group', 'Mean','Median', 'Std']]
 
 
-Stats_SoI_CNV_df['Mean'] = Stats_SoI_CNV_df.iloc[:, 1:].mean(axis=1)
-Stats_SoI_CNV_df['Median'] = Stats_SoI_CNV_df.iloc[:, 1:-1].median(axis=1)
-Stats_SoI_CNV_df['Std'] = Stats_SoI_CNV_df.iloc[:, 1:-2].std(axis=1)
+	# Commence the iteration over the different control sets.
 
-Stats_Cntrl_CNV_df['Mean'] = Stats_Cntrl_CNV_df.iloc[:, 1:].mean(axis=1)
-Stats_Cntrl_CNV_df['Median'] = Stats_Cntrl_CNV_df.iloc[:, 1:-1].median(axis=1)
-Stats_Cntrl_CNV_df['Std'] = Stats_Cntrl_CNV_df.iloc[:, 1:-2].std(axis=1)
+	# Set the intial df number.
+
+	n = 1
 
 
-Stats_SoI_RNA_df['Mean'] = Stats_SoI_RNA_df.iloc[:, 1:].mean(axis=1)
-Stats_SoI_RNA_df['Median'] = Stats_SoI_RNA_df.iloc[:, 1:-1].median(axis=1)
-Stats_SoI_RNA_df['Std'] = Stats_SoI_RNA_df.iloc[:, 1:-2].std(axis=1)
+	while True:
 
-Stats_Cntrl_RNA_df['Mean'] = Stats_Cntrl_RNA_df.iloc[:, 1:].mean(axis=1)
-Stats_Cntrl_RNA_df['Median'] = Stats_Cntrl_RNA_df.iloc[:, 1:-1].median(axis=1)
-Stats_Cntrl_RNA_df['Std'] = Stats_Cntrl_RNA_df.iloc[:, 1:-2].std(axis=1)
- 
+		# Loading the control datasets. 
 
-# Create column defining the groups.
+		if df is GoI_RNA_df:
+			ctrl_df = pd.read_csv(f'../../Data/RNA_Data/Control_Genes_RNA_Data_df{n}.csv')
+			sort = "RNA"
+		else:
+			ctrl_df = pd.read_csv(f'../../Data/CNV_Data/Control_Genes_CNV_Data_df{n}.csv')
+			sort = "CNV"
 
-Stats_SoI_RNA_df['Group'] = 'Set'
-Stats_Cntrl_RNA_df['Group'] = 'Control'
+		# Create the columns for analysis metrics in the
+		# set and control dataframes.
 
-Stats_SoI_CNV_df['Group'] = 'Set'
-Stats_Cntrl_CNV_df['Group'] = 'Control'
-
-
-# Reduce the dataframes to the necessary columns.
-
-reduced_SoI_RNA = Stats_SoI_RNA_df[['Sample', 'Group', 'Mean','Median', 'Std']]
-reduced_cntrl_RNA = Stats_Cntrl_RNA_df[['Sample', 'Group', 'Mean','Median', 'Std']]
-
-reduced_SoI_CNV = Stats_SoI_CNV_df[['Sample', 'Group', 'Mean','Median', 'Std']]
-reduced_cntrl_CNV = Stats_Cntrl_CNV_df[['Sample', 'Group', 'Mean','Median', 'Std']]
+		ctrl_df['Mean'] = ctrl_df.iloc[:, 1:].mean(axis=1)
+		ctrl_df['Median'] = ctrl_df.iloc[:, 1:-1].median(axis=1)
+		ctrl_df['Std'] = ctrl_df.iloc[:, 1:-2].std(axis=1)
 
 
-## FULL SAMPLE CREATION
+		# Create column defining the groups.
+
+		ctrl_df['Group'] = 'Control'
 
 
-# Merge the reduced dataframes for further analysis in R 
+		# Reduce the dataframes to the necessary columns.
 
-reduced_RNA_full = pd.merge(reduced_SoI_RNA, reduced_cntrl_RNA, how = 'inner', on= 'Sample', suffixes=('_set', '_cntrl'))
-reduced_CNV_full = pd.merge(reduced_SoI_CNV, reduced_cntrl_CNV, how = 'inner', on= 'Sample', suffixes=('_set', '_cntrl'))
-
-
-# Add the tissue source type to the dataframe.
-
-reduced_RNA_full['TSS'] = reduced_RNA_full.Sample.apply(lambda x: x.split('-')[1])
-reduced_RNA_full['TSS'] = reduced_RNA_full['TSS'].map(TSS_mapping_dict)
-
-reduced_CNV_full['TSS'] = reduced_CNV_full.Sample.apply(lambda x: x.split('-')[1])
-reduced_CNV_full['TSS'] = reduced_CNV_full['TSS'].map(TSS_mapping_dict)
+		reduced_cntrl = ctrl_df[['Sample', 'Group', 'Mean','Median', 'Std']]
 
 
-# Add the Histology Group to the dataframe.
+		## FULL SAMPLE CREATION
 
-reduced_RNA_full['Hist_group'] = reduced_RNA_full['TSS'].map(Hist_mapping_dict)
-reduced_RNA_full['TSS_Abbrvs'] = reduced_RNA_full['TSS'].map(TSS_abbr_mapping_dict)
 
-reduced_CNV_full['Hist_group'] = reduced_CNV_full['TSS'].map(Hist_mapping_dict)
-reduced_CNV_full['TSS_Abbrvs'] = reduced_CNV_full['TSS'].map(TSS_abbr_mapping_dict)
+		# Merge the reduced dataframes for further analysis in R 
 
-print(reduced_CNV_full.iloc[:5,:5])
+		reduced_full = pd.merge(reduced_df, reduced_cntrl, how = 'inner', on= 'Sample', suffixes=('_set', '_cntrl'))
 
-print(reduced_RNA_full.iloc[:5,:5])
 
-# Save the datasets.
+		# Add the tissue source type to the dataframe.
 
-# reduced_RNA_full.to_csv('../../Data/RNA/Full_RNA_Sample_metrics.csv', index=False)
-# reduced_CNV_full.to_csv('../../Data/CNV/Full_CNV_Sample_metrics.csv', index=False)
+		reduced_full['TSS'] = reduced_full.Sample.apply(lambda x: x.split('-')[1])
+		reduced_full['TSS'] = reduced_full['TSS'].map(TSS_mapping_dict)
+
+
+		# Add the Histology Group to the dataframe.
+
+		reduced_full['Hist_group'] = reduced_full['TSS'].map(Hist_mapping_dict)
+		reduced_full['TSS_Abbrvs'] = reduced_full['TSS'].map(TSS_abbr_mapping_dict)
+
+		print('\n', n)
+
+
+		# Save the datasets.
+
+		reduced_full.to_csv(f'../../Data/{sort}_Data/Full_{sort}_metrics{n}.csv', index=False)
+
+		n +=1 
 
 

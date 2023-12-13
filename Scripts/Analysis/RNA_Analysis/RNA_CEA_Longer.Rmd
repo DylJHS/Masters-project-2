@@ -1,0 +1,422 @@
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+```{r}
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(rstatix)
+library(paletteer)
+library(PairedData)
+library(tidyverse)
+
+
+``` 
+
+
+Load the RNA metrics dataset and remove the useless columns. 
+
+The data shows the samples as rows and descriptive characteristics, the Tissue Source Site (TSS) and the Histology grouping as columns.
+
+```{r}
+first <- fread("Data/RNA_Data/Full_RNA_metrics1.csv", nrows = 3000)
+
+used_first <- first[,c("Sample", "Mean_set", "Mean_cntrl","TSS","Hist_group", "TSS_Abbrvs")]
+setnames(used_first, old = "Mean_cntrl", new = "Mean_cntrl1")
+used_first[, Mean_diff1 := (Mean_set - Mean_cntrl1)]
+
+num_datasets <- 100
+
+# Loop over the datasets
+for (i in 70:num_datasets) {
+  
+  file_name <- paste("Data/RNA_Data/Full_RNA_metrics", i, ".csv", sep = "")
+  
+
+  # Read the CSV file into a data.table
+  current_dataset <- fread(file_name, nrows = 3000)
+  current_dataset[, Mean_diff := (Mean_set - Mean_cntrl)]
+
+  new_name1 = paste('Mean_cntrl', i, sep = "")
+  new_name2 = paste('Mean_diff', i, sep = "")
+
+  rename_map <- c("Mean_cntrl" = new_name1, "Mean_diff" = new_name2)
+
+  # Rename columns in 'current_dataset' using the named vector
+  setnames(current_dataset, old = names(rename_map), new = rename_map)
+
+  # Select columns with their original names from 'current_dataset' and rename them
+  selected_columns <- current_dataset[, c("Sample", new_name1, new_name2), with = FALSE]
+
+  # Perform a merge based on Sample ID
+  used_first <- merge(used_first, selected_columns, by = "Sample", all = FALSE, suffixes = c("", i))
+
+}
+``` 
+
+Part I. Inter-genomic expression analysis 
+
+
+```{r}
+long_data <- used_first %>% 
+  dplyr::select(starts_with("Mean_diff")) %>% 
+  pivot_longer(cols = everything(),
+               names_to = "Variable",
+               values_to = "Value")
+```
+
+
+
+Q1. 
+A) Create violoin plots of the differences of the average log2 expression to assess the type of paired test to perform on the the pairwise groups 
+
+```{r}
+
+ggplot(long_data, aes(y = Value, x = Variable)) +
+  geom_violin(trim = FALSE)+
+  geom_boxplot(width = 0.07)+
+  labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
+       title = "Distribution of the Set-of-Interest to Control Set \n Differential Log2 Expression Across Samples") +
+  theme(
+    axis.title = element_text(size = 13, color = "black", face = "bold"),
+    axis.text = element_text(color = "black", size = 10),
+    axis.text.x = element_blank(),
+    panel.background = element_rect(fill = "#EDEDED"),
+    legend.text = element_blank(),
+    plot.title = element_text(hjust = 0.6, size = 15),
+    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
+    panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 1),
+    panel.grid.major.x = element_line(color = "black", linewidth = 0.25, linetype = 1),
+    panel.grid.minor.x = element_line(color = "black", linewidth = 0.1, linetype = 1),
+    panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 1),
+    plot.title.position = "plot"
+  )
+``` 
+Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-paramtetric test of paired differences between teh means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a paired t-test or a Wilcoxon Signed Rank test.
+
+D) Calculate the significance of the difference between the mean expression of both sets using a paired t-test
+
+```{r}
+
+RNA_sets_ttest = t.test(data$Mean_set, data$Mean_cntrl, paired = TRUE)
+RNA_sets_ttest_pval <- RNA_sets_ttest$p.value
+```
+Interpretation: the p-value shows a significnat difference between the means of the paired sets. With a mean idffernce of 2.508523
+and 
+
+E) Demonstrate difference between the gene sets in a comparative plot
+
+```{r}
+reshaped <- gather(data[,c("Mean_set","Mean_cntrl")], key = "Variable", value = "Value")
+```
+
+
+```{r}
+
+
+ggplot(reshaped, aes( y = Value, x = Variable, fill = Variable)) +
+  geom_boxplot(outlier.colour = 2) +
+  stat_boxplot(geom = "errorbar") +
+  theme_minimal() +
+  labs(title = "Distribution of the Mean Copy Number in the Set-of-Interest vs the Control-Set",
+       y = "Log2 Expression") +
+  scale_x_discrete(label = c("Control Set", "Set of Interest")) +
+  scale_fill_hue(labels = c("Control Set", "Set of Interest"))+
+  theme(
+        legend.position = "None",
+        axis.title.y = element_text(size= 13),
+        plot.subtitle = element_text(hjust= 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 11),
+        plot.title = element_text(hjust = 0.5,
+                                  size = 14),
+        panel.background = element_rect(fill = "#EDEDED"),
+        panel.grid.major.y = element_line(color = "black", size = 0.25, linetype = 2),
+        panel.border = element_rect(fill = "transparent",
+                                    color = 1,
+                                    linewidth = 2)) +
+  geom_text(aes(x = .8, 
+                 y = max(Value) - 0.02*max(Value),
+                 label = paste(c("Paired t-test <<", RNA_sets_ttest_pval), collapse = " ")),
+                stat = "unique")
+
+```
+
+
+Q2. 
+A) Create a barplot of the samples vs their differences in the mean log2 RNA values coloured by TSS.
+
+```{r}
+ggplot(order_data, aes(x = Sample, y = Mean_diff, fill = TSS)) + 
+  geom_col() +
+  theme_minimal() +
+  labs(y = "Δ Mean Log2 Expression",
+       x = "Samples",
+       title = "Expression Differential by Sample ")+
+  scale_y_continuous(breaks = c(0, 1, 2, 3))+
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.y = element_text(size = 14), 
+    axis.text.y = element_text(size = 11),
+    axis.title.x = element_text(size = 14), 
+    legend.position = "right",
+    legend.text = element_text(size= 11),
+    legend.title =element_text(hjust = 0.5,
+                               size = 13),
+    plot.title = element_text(hjust = 0.4,
+                              size = 18),
+    plot.title.position = "plot",
+    panel.background = element_rect(fill = "#EDEDED"),
+    panel.grid.major.y = element_line(color = "black", size = 0.5, linetype = 2),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.line = element_line(size = 0.35, linetype = "solid",
+                             colour = "black"),
+    panel.border = element_rect(fill = "transparent",
+                                color = 1,
+                                linewidth = 1)) +
+  guides(fill = guide_legend(ncol = 1, 
+                             title = "Source Tissue Type",
+                             title.position = "top")) 
+
+``` 
+
+B) Create a barplot of the samples vs their differences in the mean log2 RNA values coloured by Hist
+
+```{r}
+ggplot(order_data, aes(x = Sample, y = Mean_diff, fill = Hist_group)) + 
+  geom_col() +
+  theme_minimal() +
+  labs(y = "Δ Mean Log2 Expression",
+       x = "Samples",
+       title = "Expression Differential by Sample ")+
+  scale_y_continuous(breaks = c(0, 1, 2, 3))+
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.y = element_text(size = 14), 
+    axis.text.y = element_text(size = 11),
+    axis.title.x = element_text(size = 14), 
+    legend.position = "right",
+    legend.text = element_text(size= 11),
+    legend.title =element_text(hjust = 0.5,
+                               size = 13),
+    plot.title = element_text(hjust = 0.4,
+                              size = 18),
+    plot.title.position = "plot",
+    panel.background = element_rect(fill = "#EDEDED"),
+    panel.grid.major.y = element_line(color = "black", size = 0.5, linetype = 2),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.line = element_line(size = 0.35, linetype = "solid",
+                             colour = "black"),
+    panel.border = element_rect(fill = "transparent",
+                                color = 1,
+                                linewidth = 1)) +
+  guides(fill = guide_legend(ncol = 1, 
+                             title = "Histology Grouping",
+                             title.position = "top"))
+
+``` 
+
+Q1 & Q2. 
+A) Create the functions that are going to perform the paired t-test for each cancer type on the mean and the median stats.
+
+Function creates a df that calculates the mean difference over the provided set and applies a paired t-test returning mean difference as well as the p-value.
+
+```{r}
+perform_mean_test <- function(data) {
+  test_result <- t.test(data$Mean_set, data$Mean_cntrl, paired = TRUE)
+  return(data.frame(mean_diff = mean(data$Mean_set - data$Mean_cntrl),
+                    p_value = test_result$p.value))
+}
+
+``` 
+
+
+B) Apply the "perform_mean_test" function seperately on each TSS group.
+
+
+```{r}
+mean_results <- data %>%
+  group_by(TSS, Hist_group) %>%
+  filter(n() > 1 & !is.na(Mean_set) & !is.na(Mean_cntrl)) %>%
+  do(perform_mean_test(.))
+
+``` 
+
+C) Correct the p-values due to mutliple testing using the Benjamini-Hochberg method for FDR.
+
+```{r}
+results_mean <- mean_results %>%
+  mutate(p_adjusted = p.adjust(p_value, method = "BH")) 
+``` 
+
+D) Replace p-values with a value of 0 with a very small number to avoid downstream errors that would occur when applying log transformations.
+
+
+```{r}
+min_nonzero_p <- min(results_mean$p_adjusted[results_mean$p_adjusted > 0])
+results_mean$p_value_adjusted <- ifelse(results_mean$p_adjusted == 0, min_nonzero_p, results_mean$p_adjusted)
+
+``` 
+
+E) Apply a -log10 transformation to the p-values for readability on graphs.
+
+```{r}
+results_mean$neg_log_pvalue <- -log10(results_mean$p_value_adjusted)
+
+``` 
+
+F) Sort by Histology group for readability/interpretation of graph and legend.
+
+```{r}
+results_mean_complete <- results_mean %>% arrange(Hist_group) 
+unique_tss <- unique(results_mean_complete$TSS)
+results_mean_complete$TSS <- factor(results_mean_complete$TSS, levels = unique_tss)
+
+``` 
+
+G) Add significance threshold. 
+
+```{r}
+threshold <- -log10(0.01)
+``` 
+
+H) Create plot of each TSS group, based on mean differential expression vs. p-value.
+
+```{r}
+ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS)) +
+  geom_point(size = 5, shape = 21, stroke = 1) +
+  geom_hline(yintercept = threshold, linetype = "dashed", color = "red") +
+  geom_text(aes(x = 2.9, y = threshold, label = ""), vjust = -0.5, hjust = -1.5, color = "red") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(2.15, 3.2)) +
+  labs(title = "Comparative Analysis of Average Differential Expression in Set-of-Interest vs Control Set", 
+       x = "Average Differential Log2 Expression", 
+       y = "Adjusted P-Value (-log10)") +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size= 9),
+        axis.title = element_text(size = 14),
+        legend.title =element_text(hjust = 0.5,
+                                   size = 10),
+        plot.title = element_text(hjust = 0.5,
+                                  size = 16),
+        panel.grid.major = element_line(color = "black",
+                                        linewidth = 0.5,
+                                        linetype = 1),
+        panel.grid.minor = element_line(color = "black",
+                                        linewidth = 0.2,
+                                        linetype = 1),
+        panel.background = element_rect(fill = "#EDEDED"),
+        panel.border = element_rect(fill = "transparent",
+                                    color = 1,
+                                    linewidth = 2)) +
+  scale_color_discrete(name = "Histology Group")
+
+``` 
+
+
+
+Part II. Intra-Gene-set & inter-cancer type expression analysis
+
+Reorder the data based on the histology group for readability and interpretation of graph and legend.
+
+```{r}
+data_complete <- data %>% arrange(Hist_group) 
+unique_Abbrvs <- unique(data_complete$TSS_Abbrvs)
+data_complete$TSS_Abbrvs <- factor(data_complete$TSS_Abbrvs, levels = unique_Abbrvs)
+
+``` 
+
+Q1. 
+A) Boxplot showing the various distributions of RNA for each cancer type.
+
+```{r}
+ggplot(data_complete, aes(x = TSS_Abbrvs, y = Mean_set, fill = Hist_group)) + 
+  geom_boxplot() +
+  stat_boxplot(geom = "errorbar") +
+  theme_minimal() +
+  labs(title = "Average Gene-set Expression by Source Tissue Type",
+       y = "Log2 Expression",
+       fill = "Histology Group") +
+  theme(legend.position = "right",
+        legend.text = element_text(size= 7),
+        axis.text.x = element_text(angle= 90, 
+                                   size= 8),
+        axis.title.x = element_blank(),
+        legend.title =element_text(hjust = 0.5,
+                                   size = 11),
+        plot.title = element_text(hjust = 0.5,
+                                  size = 14),
+        panel.grid.major = element_line(color = "black",
+                                        linewidth = 0.5,
+                                        linetype = 1),
+        panel.grid.minor = element_line(color = "black",
+                                        linewidth = 0.2,
+                                        linetype = 1),
+        panel.background = element_rect(fill = "#EDEDED"),
+        panel.border = element_rect(fill = "transparent",
+                                    color = 1,
+                                    linewidth = 2)) 
+
+``` 
+
+B) For the ANOVA test between the groups means, need to test for: Normality of data within each group
+
+```{r}
+ggplot(data_complete, aes(x = Mean_set, fill = TSS_Abbrvs)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  theme_minimal() +
+  labs(title = "Histogram of Gene-set Expression by Source Tissue Type",
+       y = "Log2 Expression",
+       fill = "TSS") +
+  theme(legend.position = "right",
+        legend.text = element_text(size= 7),
+        axis.text.x = element_text(size= 8),
+        legend.title =element_text(hjust = 0.5,
+                                   size = 11),
+        plot.title = element_text(hjust = 0.5,
+                                  size = 14),
+        panel.grid.major = element_line(color = "black",
+                                        linewidth = 0.5,
+                                        linetype = 1),
+        panel.grid.minor = element_line(color = "black",
+                                        linewidth = 0.2,
+                                        linetype = 1),
+        panel.background = element_rect(fill = "#EDEDED"),
+        panel.border = element_rect(fill = "transparent",
+                                    color = 1,
+                                    linewidth = 2)) 
+```
+
+```{r}
+ggplot(data_complete, aes(sample= Mean_set, color = TSS)) +
+  stat_qq() + 
+  stat_qq_line() +
+  facet_wrap(~TSS) + 
+  theme(
+    legend.position = "None",
+    axis.text.x = element_text(size= 10),
+    plot.title = element_text(hjust = 0.5,
+                              size = 19),
+    panel.grid.major = element_line(color = "black",
+                                    linewidth = 0.5,
+                                    linetype = 1),
+    panel.grid.minor = element_line(color = "black",
+                                    linewidth = 0.2,
+                                    linetype = 1),
+    panel.background = element_rect(fill = "#EDEDED"),
+    panel.border = element_rect(fill = "transparent",
+                                color = 1,
+                                linewidth = 2)
+  ) 
+```
+
+C) For the ANOVA test between the groups means, need to test for: Homoscedasticity of data within each group 
+
+
+
+
