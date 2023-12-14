@@ -65,7 +65,7 @@ Part I. Inter-genomic expression analysis
 
 ```{r}
 graph_long_data <- used_first %>% 
-  dplyr::select(starts_with("Mean_diff4")) %>% 
+  dplyr::select(starts_with("Mean_diff30")) %>% 
   pivot_longer(cols = everything(),
                names_to = "Variable",
                values_to = "Value")
@@ -80,10 +80,11 @@ A) Create violoin plots of the differences of the average log2 expression to ass
 
 ggplot(graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE)+
-  geom_boxplot(width = 0.07)+
+  geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
        title = "Distribution of the Set-of-Interest to Control Set \n Differential Log2 Expression Across Various Pairings") +
   theme(
+    legend.position = "none",
     axis.title = element_text(size = 13, color = "black", face = "bold"),
     axis.text = element_text(color = "black", size = 10),
     axis.text.x = element_blank(),
@@ -98,12 +99,14 @@ ggplot(graph_long_data, aes(y = Value, x = Variable)) +
     plot.title.position = "plot"
   )
 ``` 
-Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-paramtetric test of paired differences between teh means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a paired t-test or a Wilcoxon Signed Rank test.
+Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-parametric test of paired differences between the means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a paired t-test or a Wilcoxon Signed Rank test.
 
-D) Calculate the significance of the difference between the mean expression of both sets using a Wilcoxon Signed-Rank Test
+B) Calculate the significance of the difference between the mean expression of both sets using a Wilcoxon Signed-Rank Test
 
 ```{r}
-
+# Loop over each of the control datasets in the folder.
+# For each control-set perform a Two-Sample wilcoxon Signed-Rank test.
+# Save the pvalue for each test in a dataframe.
 
 paired_tests_list <- list()
 for (i in 1:num_datasets) {
@@ -111,36 +114,36 @@ for (i in 1:num_datasets) {
   wlcx_paired_res = wilcox.test(used_first$Mean_set, used_first[,get(ctrl)], paired = TRUE)
   wlcx_paired_res_pval <- wlcx_paired_res$p.value
   formatted_pval <- sprintf("%.10f", wlcx_paired_res_pval)
-
-  
-  # print(wlcx_paired_res)
   pair <- paste("Pair", i, sep ="_")
   pair_frame = data.frame(Pairing = pair, Pvalue = as.numeric(formatted_pval))
   paired_tests_list[[i]] <- pair_frame
 }
 
+# Correct the P-value due to multiple testing by using the Bonferoni method (more stringent than BH).
 
 full_paired = do.call(rbind, paired_tests_list)
 full_paired$Corrected_Pval <- full_paired$Pvalue * num_datasets
 ```
 Interpretation: the p-value shows a significant difference between the means of the paired sets. 
 
-E) Demonstrate difference between the gene sets in a comparative plot
+C) Demonstrate difference by showing the individual expression distributions of the SoI
+  and some (3) of the control sets
 
 ```{r}
+# Select 3 control sets at random to compare their distributions with that of the SoI.
+
 controls <- c("Mean_set")
 for (i in sample(1:num_datasets, 3)) {
   controls <- c(controls, paste("Mean_cntrl", i, sep =""))
 }
+
+# Pivot the data into a form that can be used by boxplot.
+
 long_data <- used_first %>% 
   dplyr::select(all_of(controls)) %>% 
   pivot_longer(cols = everything(),
                names_to = "Variable",
                values_to = "Value")
-```
-
-
-```{r}
 
 
 ggplot(long_data, aes( y = Value, x = Variable)) +
@@ -166,10 +169,14 @@ ggplot(long_data, aes( y = Value, x = Variable)) +
                                     linewidth = 2)) 
 
 ```
+Interpretation: the p-value and plots demonstrate that the expression pattern of the control sets are significantly different from that of the SoI.
+
+Impact on future analyses: future test can now just use a single control set to test against as it has been shown that the controls do not differ significantly from one another and all share a similar difference with the SoI.
+
 
 
 Q2. 
-A) Create a barplot of the samples vs their differences in the mean log2 RNA values coloured by TSS.
+A) Create a barplot of the samples vs their mean differences in the mean log2 RNA values coloured by TSS.
 
 ```{r}
 ggplot(order_data, aes(x = Sample, y = Mean_diff, fill = TSS)) + 

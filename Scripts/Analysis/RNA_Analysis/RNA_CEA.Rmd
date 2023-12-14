@@ -176,7 +176,7 @@ Q2.
 A) Create a barplot of the samples vs their differences in the mean log2 RNA values coloured by TSS.
 
 ```{r}
-ggplot(order_data, aes(x = Sample, y = Mean_diff, fill = TSS)) + 
+ggplot(order_data, aes(x = Sample, y = Mean_diff, fill = TSS_Abbrvs)) + 
   geom_col() +
   theme_minimal() +
   labs(y = "Δ Mean Log2 Expression",
@@ -267,7 +267,7 @@ B) Apply the "perform_mean_test" function seperately on each TSS group.
 
 ```{r}
 mean_results <- data %>%
-  group_by(TSS, Hist_group) %>%
+  group_by(TSS_Abbrvs, Hist_group) %>%
   filter(n() > 1 & !is.na(Mean_set) & !is.na(Mean_cntrl)) %>%
   do(perform_mean_test(.))
 
@@ -300,8 +300,8 @@ F) Sort by Histology group for readability/interpretation of graph and legend.
 
 ```{r}
 results_mean_complete <- results_mean %>% arrange(Hist_group) 
-unique_tss <- unique(results_mean_complete$TSS)
-results_mean_complete$TSS <- factor(results_mean_complete$TSS, levels = unique_tss)
+unique_tss <- unique(results_mean_complete$TSS_Abbrvs)
+results_mean_complete$TSS <- factor(results_mean_complete$TSS_Abbrvs, levels = unique_tss)
 
 ``` 
 
@@ -314,7 +314,7 @@ threshold <- -log10(0.01)
 H) Create plot of each TSS group, based on mean differential expression vs. p-value.
 
 ```{r}
-ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS)) +
+plt <- ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = Hist_group)) +
   geom_point(size = 5, shape = 21, stroke = 1) +
   geom_hline(yintercept = threshold, linetype = "dashed", color = "red") +
   geom_text(aes(x = 2.9, y = threshold, label = ""), vjust = -0.5, hjust = -1.5, color = "red") +
@@ -323,7 +323,7 @@ ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS)
   labs(title = "Comparative Analysis of Average Differential Expression in Set-of-Interest vs Control Set", 
        x = "Average Differential Log2 Expression", 
        y = "Adjusted P-Value (-log10)") +
-  theme(legend.position = "bottom",
+  theme(legend.position = "None",
         legend.text = element_text(size= 9),
         axis.title = element_text(size = 14),
         legend.title =element_text(hjust = 0.5,
@@ -340,7 +340,8 @@ ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS)
         panel.border = element_rect(fill = "transparent",
                                     color = 1,
                                     linewidth = 2)) +
-  scale_color_discrete(name = "Histology Group")
+  scale_color_discrete(name = "Histology Group") + 
+  geom_text_repel(aes(label = TSS_Abbrvs), size = 3, box.padding = 0.7)
 
 ``` 
 
