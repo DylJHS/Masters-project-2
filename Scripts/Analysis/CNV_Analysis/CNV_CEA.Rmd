@@ -25,12 +25,13 @@ library(ggplot2)
 library(ggpubr)
 library(rstatix)
 library(paletteer)
+library(ggrepel)
 ```
 
 Load the CNV metrics dataset and remove the useless columns.
 
 ```{r}
-data <- fread("../../../Data/CNV_Data/Full_CNV_Sample_metrics.csv")
+data <- fread("../../../Data/CNV_Data/Full_CNV_metrics1.csv")
 ```
 
 Add column for the difference between the means and same for the medians . 
@@ -187,7 +188,7 @@ order_data <- setDF(data) %>%
  B) Create a barplot of the samples vs their differences in the mean CNV values coloured by TSS.
 
 ``` {r}
-ggplot(order_data, aes(x = Sample, y = Median_diff, fill = TSS)) + 
+ggplot(order_data, aes(x = Sample, y = Median_diff, fill = TSS_Abbrvs)) + 
   geom_col() +
   theme_minimal() +
   ylim(c(-0.5, 0.5)) +
@@ -280,7 +281,7 @@ B) Applies the "perform_mean_test" function seperately on each TSS group.
  
 ```{r}
 mean_results <- data %>%
-  group_by(TSS, Hist_group) %>%
+  group_by(TSS_Abbrvs, Hist_group) %>%
   filter(n() > 1 & !is.na(Mean_set) & !is.na(Mean_cntrl)) %>%
   do(perform_mean_test(.))
 ```
@@ -314,8 +315,8 @@ F) Sort by Histology group for readability/interpretation of graph and legend.
 
 ```{r}
 results_mean_complete <- results_mean %>% arrange(Hist_group) 
-unique_tss <- unique(results_mean_complete$TSS)
-results_mean_complete$TSS <- factor(results_mean_complete$TSS, levels = unique_tss)
+unique_tss <- unique(results_mean_complete$TSS_Abbrvs)
+results_mean_complete$TSS <- factor(results_mean_complete$TSS_Abbrvs, levels = unique_tss)
 ```
 
 
@@ -326,10 +327,13 @@ threshold <- -log10(0.01)
 ```
 
 
-H) Create plot of each TSS group, based on mean differential expression vs. p-value.
+H) Create dot plot of each TSS group, based on mean differential expression vs. p-value.
 
 ```{r}
-plt <- ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS)) +
+
+options(ggrepel.max.overlaps = Inf)
+
+plt <- ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS_Abbrvs)) +
   geom_point(size = 5, shape = 21, stroke = 1) +
   geom_hline(yintercept = threshold, linetype = "dashed", color = "red") +
   geom_text(aes(x = min(mean_diff) - 0.1*min(mean_diff), y = threshold, label = ""), color = "red") +
@@ -337,8 +341,8 @@ plt <- ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill
   labs(title = "Comparative Analysis of Average Copy Number Differential between Set-of-Interest and Control Set", 
        x = "Average Copy Number Differential", 
        y = "Adjusted P-Value (-log10)") +
-  theme(legend.position = "bottom",
-        legend.text = element_text(size= 9),
+  theme(legend.position = "None",
+        legend.text = element_blank(),
         axis.title = element_text(size = 14),
         legend.title =element_text(hjust = 0.5,
                                    size = 10),
@@ -354,7 +358,8 @@ plt <- ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill
         panel.border = element_rect(fill = "transparent",
                                     color = 1,
                                     linewidth = 2)) +
-  scale_color_discrete(name = "Histology Group")
+  scale_color_discrete(name = "Histology Group") + 
+  geom_text_repel(aes(label = TSS_Abbrvs), size = 3, box.padding = 0.7)
 ```
 
 

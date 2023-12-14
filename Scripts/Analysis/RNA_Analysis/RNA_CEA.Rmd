@@ -130,7 +130,7 @@ D) Calculate the significance of the difference between the mean expression of b
 RNA_sets_ttest = t.test(data$Mean_set, data$Mean_cntrl, paired = TRUE)
 RNA_sets_ttest_pval <- RNA_sets_ttest$p.value
 ```
-Interpretation: the p-value shows a significnat difference between the means of the paired sets. With a mean idffernce of 2.508523
+Interpretation: the p-value shows a significant difference between the means of the paired sets. With a mean difference of 2.508523
 and 
 
 E) Demonstrate difference between the gene sets in a comparative plot
