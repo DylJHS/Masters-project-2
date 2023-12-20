@@ -5,18 +5,22 @@ knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internsh
 Load the libraries
 ```{r}
 library(dplyr)
+library(broom)
+library(knitr)
+library(coin)
 library(data.table)
-library(ggplot2)
 library(ggpubr)
 library(rstatix)
-library(paletteer)
-library(PairedData)
+# library(ggplot2)
+# library(paletteer)
+# library(PairedData)
 library(tidyverse)
 ``` 
 
 Load other options
 ```{r}
 # options(scipen = 1, digits = 20)
+getOption("max.print")
 ```
 
 
@@ -25,7 +29,9 @@ Load the RNA metrics dataset and remove the useless columns.
 The data shows the samples as rows and descriptive characteristics, the Tissue Source Site (TSS) and the Histology grouping as columns.
 
 ```{r}
-first <- fread("Data/RNA_Data/Full_RNA_metrics1.csv", nrows = 3000)
+row_numbers <- 500
+
+first <- fread("Data/RNA_Data/Full_RNA_metrics1.csv", nrows = row_numbers)
 
 used_first <- first[,c("Sample", "Mean_set", "Mean_cntrl","TSS","Hist_group", "TSS_Abbrvs")]
 setnames(used_first, old = "Mean_cntrl", new = "Mean_cntrl1")
@@ -40,7 +46,7 @@ for (i in 2:num_datasets) {
   
 
   # Read the CSV file into a data.table
-  current_dataset <- fread(file_name, nrows = 3000)
+  current_dataset <- fread(file_name, nrows = row_numbers)
   current_dataset[, Mean_diff := (Mean_set - Mean_cntrl)]
 
   new_name1 = paste('Mean_cntrl', i, sep = "")
@@ -63,22 +69,23 @@ for (i in 2:num_datasets) {
 Part I. Inter-genomic expression analysis 
 
 
+Q1. 
+
+
+A) Create violin plots of the differences of the average log2 expression to assess the type of paired test to perform on the the pairwise groups .
+
 ```{r}
-graph_long_data <- used_first %>% 
-  dplyr::select(starts_with("Mean_diff30")) %>% 
+
+
+violin_graph_long_data <- used_first %>% 
+  dplyr::select(sample(starts_with("Mean_diff"), 7)) %>% 
   pivot_longer(cols = everything(),
                names_to = "Variable",
-               values_to = "Value")
-```
+               values_to = "Value") 
 
 
 
-Q1. 
-A) Create violoin plots of the differences of the average log2 expression to assess the type of paired test to perform on the the pairwise groups 
-
-```{r}
-
-ggplot(graph_long_data, aes(y = Value, x = Variable)) +
+ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE)+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
@@ -92,16 +99,76 @@ ggplot(graph_long_data, aes(y = Value, x = Variable)) +
     legend.text = element_blank(),
     plot.title = element_text(hjust = 0.6, size = 15),
     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
-    panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 1),
-    panel.grid.major.x = element_line(color = "black", linewidth = 0.25, linetype = 1),
-    panel.grid.minor.x = element_line(color = "black", linewidth = 0.1, linetype = 1),
-    panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 1),
+    panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
     plot.title.position = "plot"
   )
 ``` 
-Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-parametric test of paired differences between the means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a paired t-test or a Wilcoxon Signed Rank test.
+Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-parametric test of paired differences between the means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a parametric or non-parametric test to the distributions. 
 
-B) Calculate the significance of the difference between the mean expression of both sets using a Wilcoxon Signed-Rank Test
+
+B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t-test for more than 2 groups) to test whether the different control groups differ significantly in their distributions.
+
+
+```{r}
+Fried_test_data <- used_first %>%
+  gather(key = "Pairing", value = "Differential", starts_with("Mean_diff")) %>%
+  mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>% 
+  select(Sample, Pairing, Differential)
+
+friedman_result <- coin::friedman_test(Differential ~ Pairing | Sample, data = Fried_test_data)
+
+```
+Result: The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
+
+
+```{r}
+# posthoc_result <- PMCMRplus::frdAllPairsNemenyiTest(Differential ~ Pairing | Sample, data = Fried_test_data)
+```
+
+
+
+C) Create plots of the differences of the average log2 expression across all pairings between the SoI and controls sets in order to visualise the similarities fo the behaviour between the controls and the SoI. 
+Seeing as the Friedman test came back indicating that at least one of the controls shows a different expression distribution compared to the others, cannot sue the test as evidence to dismiss all controls but one. Instead we can visualise the general distribution acorsss all controls to determine if they act in a similar fashion. 
+
+```{r}
+
+graph_long_data <- used_first %>% 
+  dplyr::select(starts_with("Mean_diff")) %>% 
+  pivot_longer(cols = everything(),
+               names_to = "Variable",
+               values_to = "Value") 
+
+
+
+ggplot(graph_long_data, aes(y = Value, x = Variable)) +
+  geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "#EDEDED")+
+    coord_cartesian(ylim = c(-1, 5)) +
+  labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
+       title = "Distribution of the Set-of-Interest to Control Set \n Differential Log2 Expression Across Various Pairings") +
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 13, color = "black", face = "bold"),
+    axis.text = element_text(color = "black", size = 10),
+    axis.text.x = element_blank(),
+    panel.background = element_rect(fill = "#EDEDED"),
+    legend.text = element_blank(),
+    plot.title = element_text(hjust = 0.6, size = 15),
+    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
+    panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
+    plot.title.position = "plot"
+)
+``` 
+Interpretation: Despite that fact that the Friedman Test resulted in a significant result, the plot above clearly demonstrates that the differential expression pattern between every control set and the Set-of-Interest is bound in a narrow range centered between log2(2) and log2(3). Indicating the expression within the SoI is always increased compared 
+
+
+
+D) Calculate the significance of the difference between the mean expression of both sets using a Wilcoxon Signed-Rank Test
 
 ```{r}
 # Loop over each of the control datasets in the folder.
@@ -126,7 +193,10 @@ full_paired$Corrected_Pval <- full_paired$Pvalue * num_datasets
 ```
 Interpretation: the p-value shows a significant difference between the means of the paired sets. 
 
-C) Demonstrate difference by showing the individual expression distributions of the SoI
+
+
+
+E) Demonstrate difference by showing the individual expression distributions of the SoI
   and some (3) of the control sets
 
 ```{r}
@@ -171,7 +241,7 @@ ggplot(long_data, aes( y = Value, x = Variable)) +
 ```
 Interpretation: the p-value and plots demonstrate that the expression pattern of the control sets are significantly different from that of the SoI.
 
-Impact on future analyses: future test can now just use a single control set to test against as it has been shown that the controls do not differ significantly from one another and all share a similar difference with the SoI.
+Impact on analyses: future test can now use a single control set to test against as it has been shown that the controls do not differ significantly from one another and all share a similar difference with the SoI.
 
 
 
