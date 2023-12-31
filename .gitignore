@@ -5,3 +5,7 @@ Data/
 Raw_Data/
 
 
+*.csv
+*.json
+
+

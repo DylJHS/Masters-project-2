@@ -333,7 +333,7 @@ H) Create dot plot of each TSS group, based on mean differential expression vs. 
 
 options(ggrepel.max.overlaps = Inf)
 
-plt <- ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS_Abbrvs)) +
+ggplot(results_mean_complete, aes(x = mean_diff, y = neg_log_pvalue, fill = TSS_Abbrvs)) +
   geom_point(size = 5, shape = 21, stroke = 1) +
   geom_hline(yintercept = threshold, linetype = "dashed", color = "red") +
   geom_text(aes(x = min(mean_diff) - 0.1*min(mean_diff), y = threshold, label = ""), color = "red") +

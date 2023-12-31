@@ -145,30 +145,32 @@ graph_long_data <- used_first %>%
 
 ggplot(graph_long_data, aes(y = Value, x = Variable)) +
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "#EDEDED")+
-    coord_cartesian(ylim = c(-1, 5)) +
+    coord_cartesian(ylim = c(0, 4)) +
+  scale_y_continuous() +
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
-       title = "Distribution of the Set-of-Interest to Control Set \n Differential Log2 Expression Across Various Pairings") +
+       title = "Distribution of the Set-of-Interest to Control Set \n Differential Log2 Expression Across All Pairings") +
   theme(
-    legend.position = "none",
+    plot.title = element_text(hjust = 0.6, size = 15),
+    plot.title.position = "plot",
     axis.title = element_text(size = 13, color = "black", face = "bold"),
     axis.text = element_text(color = "black", size = 10),
     axis.text.x = element_blank(),
-    panel.background = element_rect(fill = "#EDEDED"),
+    axis.ticks.x = element_blank(),
     legend.text = element_blank(),
-    plot.title = element_text(hjust = 0.6, size = 15),
+    legend.position = "none",
     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
-    plot.title.position = "plot"
+    panel.background = element_rect(fill = "#EDEDED")
 )
 ``` 
-Interpretation: Despite that fact that the Friedman Test resulted in a significant result, the plot above clearly demonstrates that the differential expression pattern between every control set and the Set-of-Interest is bound in a narrow range centered between log2(2) and log2(3). Indicating the expression within the SoI is always increased compared 
+Interpretation: Despite that fact that the Friedman Test resulted in a significant result (indicating a significant difference in differential expression with at least one of the control groups), the plot above clearly demonstrates that the differential expression pattern between every control set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). Indicating the expression within the SoI is always increased compared 
 
 
 
-D) Calculate the significance of the difference between the mean expression of both sets using a Wilcoxon Signed-Rank Test
+D) Calculate the significance of the difference between the mean expression of the control-sets and the Set-of-Interest using Wilcoxon Signed-Rank Tests for each control/SoI pair followed by a correction for multiple testing. 
 
 ```{r}
 # Loop over each of the control datasets in the folder.
