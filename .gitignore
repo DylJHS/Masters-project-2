@@ -2,10 +2,12 @@ Papers/
 Meetings/
 "Heterochormatin Associated Proteins/"
 Data/
+Plots/
 Raw_Data/
 
 
 *.csv
 *.json
+*.png
 
 
