@@ -174,7 +174,7 @@ D) Calculate the significance of the difference between the mean expression of t
 
 ```{r}
 # Loop over each of the control datasets in the folder.
-# For each control-set perform a Two-Sample wilcoxon Signed-Rank test.
+# For each control-set perform a Two-Sample wilcoxon Signed-Rank test with the SoI.
 # Save the pvalue for each test in a dataframe.
 
 paired_tests_list <- list()
@@ -244,6 +244,7 @@ ggplot(long_data, aes( y = Value, x = Variable)) +
 Interpretation: the p-value and plots demonstrate that the expression pattern of the control sets are significantly different from that of the SoI.
 
 Impact on analyses: future test can now use a single control set to test against as it has been shown that the controls do not differ significantly from one another and all share a similar difference with the SoI.
+
 
 
 
