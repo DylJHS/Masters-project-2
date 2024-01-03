@@ -1,7 +1,0 @@
-*.csv filter=lfs diff=lfs merge=lfs -text
-*.txt filter=lfs diff=lfs merge=lfs -text
-*.gz filter=lfs diff=lfs merge=lfs -text
-
-Data/CNV_Data/TCGA_PanCan_CNV.txt filter=lfs diff=lfs merge=lfs -text
-Data/RNA_Data/TCGA_mRNA_Norm filter=lfs diff=lfs merge=lfs -text
-*.pptx filter=lfs diff=lfs merge=lfs -text
