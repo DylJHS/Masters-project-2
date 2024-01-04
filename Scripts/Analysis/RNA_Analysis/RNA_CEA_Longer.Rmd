@@ -136,7 +136,7 @@ Paired_wilc_table <- used_first %>%
   dplyr::select(starts_with("Mean_diff")) %>%
   mutate_all(as.numeric) 
    
-Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0))
+Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
 
 # Loop over each control sets
 for (i in 1:num_datasets) {
@@ -149,17 +149,18 @@ for (i in 1:num_datasets) {
    
    wlcx_paired_res = wilcox.test(Global_table[,get(set)], Global_table$global, paired = TRUE)
    Corrected_Pval <- wlcx_paired_res$p.value * num_datasets
+   Significant_value <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
    
-   Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval))
+   Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval, Significant = Significant_value)) %>% arrange(desc(Adj_P_Value))
 }
 
 
 ```
-
+Result: The Contrast analysis shows that the expression pattern of the control sets seem to mostly differ significantly compared to their average with only 25/412 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control sets behave in the same general fashion. 
 
 
 C) Create plots of the differences of the average log2 expression across all pairings between the SoI and controls sets in order to visualise the similarities fo the behaviour between the controls and the SoI. 
-Seeing as the Friedman test came back indicating that at least one of the controls shows a different expression distribution compared to the others, cannot sue the test as evidence to dismiss all controls but one. Instead we can visualise the general distribution acorsss all controls to determine if they act in a similar fashion. 
+Seeing as the Friedman test came back indicating that at least one of the controls shows a different expression distribution compared to the others, cannot use the test as evidence to dismiss all controls but one. Instead we can visualise the general distribution across all controls to determine if they act in a similar fashion. 
 
 ```{r}
 
