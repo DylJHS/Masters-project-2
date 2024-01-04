@@ -29,11 +29,12 @@ Load the RNA metrics dataset and remove the useless columns.
 The data shows the samples as rows and descriptive characteristics, the Tissue Source Site (TSS) and the Histology grouping as columns.
 
 ```{r}
-# row_numbers <- 1000
+
+random_rows <- sample(1:11060, 500)
 
 first <- fread("Data/RNA_Data/Full_RNA_metrics1.csv")
 
-used_first <- first[,c("Sample", "Mean_set", "Mean_cntrl","TSS","Hist_group", "TSS_Abbrvs")]
+used_first <- first[random_rows,c("Sample", "Mean_set", "Mean_cntrl","TSS","Hist_group", "TSS_Abbrvs")]
 setnames(used_first, old = "Mean_cntrl", new = "Mean_cntrl1")
 used_first[, Mean_diff1 := (Mean_set - Mean_cntrl1)]
 
@@ -58,7 +59,7 @@ for (i in 2:num_datasets) {
   setnames(current_dataset, old = names(rename_map), new = rename_map)
 
   # Select columns with their original names from 'current_dataset' and rename them
-  selected_columns <- current_dataset[, c("Sample", new_name1, new_name2), with = FALSE]
+  selected_columns <- current_dataset[random_rows, c("Sample", new_name1, new_name2), with = FALSE]
 
   # Perform a merge based on Sample ID
   used_first <- merge(used_first, selected_columns, by = "Sample", all = FALSE, suffixes = c("", i))
@@ -78,7 +79,7 @@ A) Create violin plots of the differences of the average log2 expression to asse
 
 
 violin_graph_long_data <- used_first %>% 
-  dplyr::select(sample(starts_with("Mean_diff"), 7)) %>% 
+  dplyr::select(sample(starts_with("Mean_dif"), 7)) %>% 
   pivot_longer(cols = everything(),
                names_to = "Variable",
                values_to = "Value") 
@@ -105,8 +106,11 @@ ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
     panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
     plot.title.position = "plot"
   )
+
+
 ``` 
 Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-parametric test of paired differences between the means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a parametric or non-parametric test to the distributions. 
+The data is however not symmetrical around the median and the paired Wilcoxon test has this as an assumption which will come into play for the statistical comparisons between the SoI and control sets. Should not be an issue when comparing amongst each other though as the skew is in the same direction for all. 
 
 
 B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t-test for more than 2 groups) to test whether the different control groups differ significantly in their distributions.
@@ -114,7 +118,7 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 
 ```{r}
 Fried_test_data <- used_first %>%
-  gather(key = "Pairing", value = "Differential", starts_with("Mean_diff")) %>%
+  gather(key = "Pairing", value = "Differential", starts_with("Mean_cntrl")) %>%
   mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>% 
   select(Sample, Pairing, Differential)
 
@@ -124,9 +128,32 @@ friedman_result <- coin::friedman_test(Differential ~ Pairing | Sample, data = F
 Result: The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
 
 
+
+C) Construct a contrast analysis to assess each of the pairings against the general trend
+
 ```{r}
-Paired_wilc_test <- used_first %>% 
-  dplyr::select(starts_with("Mean_diff")) 
+Paired_wilc_table <- used_first %>% 
+  dplyr::select(starts_with("Mean_diff")) %>%
+  mutate_all(as.numeric) 
+   
+Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0))
+
+# Loop over each control sets
+for (i in 1:num_datasets) {
+  
+  set = paste('Mean_diff', i, sep = "")
+  
+   Global_table <- Paired_wilc_table %>%
+    mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
+    select(set, global)
+   
+   wlcx_paired_res = wilcox.test(Global_table[,get(set)], Global_table$global, paired = TRUE)
+   Corrected_Pval <- wlcx_paired_res$p.value * num_datasets
+   
+   Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval))
+}
+
+
 ```
 
 
