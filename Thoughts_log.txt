@@ -1,1 +1,21 @@
 04/01/24
+
+Thinking about editting the SoI-to-Control-set Wilcoxon Signed Rank test so as to become directional
+I may not be able to use the wilcoxon paired test between the SoI and the control sets due the distribution of the difference between the two not being symmetrical around the median. This is because the skeweness of both are the opposite of each other. 
+Thinking about intialising a permutation test instead of the Wilcoxon test between the two sets for each control set
+Can't use DESeq2 for the paired analysis unless i switch datasets, as it only takes raw RNA-seq counts as input
+
+Creating a preanalysis file for the exploratory analysis the set of interest
+started to set up the Contrast analysis to test the SoI-to-Control_set pairings individually
+ Should forget the coontrast test given that it might just add complexity to the analysis as opposed to clarifying. Also the result that showed that each of the control sets does deviate significantly from the general trend. Not what I wanted but was confirmed by Adi that this is most likely to be expected given that I am dealing with cancer cells
+04/01/24
+
+Thinking about editting the SoI-to-Control-set Wilcoxon Signed Rank test so as to become directional
+I may not be able to use the wilcoxon paired test between the SoI and the control sets due the distribution of the difference between the two not being symmetrical around the median. This is because the skeweness of both are the opposite of each other. 
+Thinking about intialising a permutation test instead of the Wilcoxon test between the two sets for each control set
+Can't use DESeq2 for the paired analysis unless i switch datasets, as it only takes raw RNA-seq counts as input
+
+Creating a preanalysis file for the exploratory analysis the set of interest
+started to set up the Contrast analysis to test the SoI-to-Control_set pairings individually
+ Should forget the coontrast test given that it might just add complexity to the analysis as opposed to clarifying. Also the result that showed that each of the control sets does deviate significantly from the general trend. Not what I wanted but was confirmed by Adi that this is most likely to be expected given that I am dealing with cancer cells
+Finished the Contrast Analysis, the result showed significant difference among the Set pairings (not what i wanted). But can move on. 

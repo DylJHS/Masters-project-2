@@ -195,7 +195,7 @@ ggplot(graph_long_data, aes(y = Value, x = Variable)) +
     panel.background = element_rect(fill = "#EDEDED")
 )
 ``` 
-Interpretation: Despite that fact that the Friedman Test resulted in a significant result (indicating a significant difference in differential expression with at least one of the control groups), the plot above clearly demonstrates that the differential expression pattern between every control set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). Indicating the expression within the SoI is always increased compared 
+Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in differential expression amongst the control set to SoI pairings), the plot above clearly demonstrates that the differential expression pattern between every control set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). And that the difference between the general expression of both sets is consistantly positive, demonstrating increased expression within the SoI compared to all control sets.
 
 
 
