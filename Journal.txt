@@ -1,0 +1,41 @@
+02/01/24:
+
+Log:
+- Configured the plots in Q2.A & B of the RNA_analysis_longer top handle the script following the changes for the multiple control sets.
+- Edited the RNA_Analysis_logner script to maintain the same control set (for sole use) following the demonstration that the control sets all demonstrate a similar expression pattern.
+- Read up on the binomial distribution and differential gene expression analyses. 
+
+Questions: 
+Questions on the validity of the statistical tests given the count nature of the RNA-seq data. After normalisation is it appropriate to consider the data to be continuous and therefore use (non)parametric tests. Also the data still seems to be distributed like a negative binomial distribution. Are there other tests that should be used instead of non-parametric ones when comparing different genes or groups of genes to one another?
+
+Remarks: 
+- For the DGE analyses that will follow make sure to use the R packages (EdgeR, DESeq2) as they are fitted to handle the negative binomial distributed RNA-seq data. 
+- When conducting the DGE find out how to configure it for data that has already been normalised and log transformed. 
+
+
+
+03/01/24:
+
+Log:
+- Configured the RNA_Analysis_longer script to use a random set of rows from the csv in order to lighten the weight when running the statistical tests on the when still configuring the script. 
+- Read up on the different methods to deal with dependent groupings of independent samples for statistical tests. 
+- Started to implement a Contrast analysis following the Friedman test which will help demonstrate whether the SoI-Control-set difference pairings vary significantly from one another or if we can assume they all follow a general trend. This contrast analysis will be based on the paired wilcoxon signed Rank test given the non-normal (binomial) distribution of the data, using each pairing against the mean of the others for each pairing and accounting for multiple testing. 
+
+Remarks:
+- The Contrast Analysis is made slightly difficult due to the nature of the data. 
+
+
+04/01/24
+
+Log:
+- Created a Contrast analysis to compare the SoI-Control-set difference pairings following the Friedman test to evaluate whether or not the parings all follow a similar general expression pattern. The Result however, demonstrated a significant difference in the pattern for most of the pairings. This is however what could have been expected given the cancerous nature of the samples and that creates variation in the control sets. This result does not impact the rest of the analysis as the differnece between the SoI and the controls all appear to significant (to be determined using a Permuation method) and in the same direction.
+- Created a Pre-Analysis R file to handle the pre analysis/visualisations of the SoI.
+- Met with Adi to discuss the Presentation on the 15th of January. 
+
+Remarks: 
+- Need to move faster with the analyses (getting the sense that Adi is underwhelmed) 
+- Need to finish the Permutation Test
+- Need to start creating the slides for the presentation
+
+
+
