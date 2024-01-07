@@ -31,7 +31,7 @@ The data shows the samples as rows and descriptive characteristics, the Tissue S
 
 ```{r}
 
-random_rows <- sample(1:11060, 500)
+random_rows <- sample(1:11060, 1000)
 
 first <- fread("Data/RNA_Data/Full_RNA_metrics1.csv")
 
@@ -68,6 +68,15 @@ for (i in 2:num_datasets) {
 }
 ``` 
 
+
+Choose a random set of 5 control sets that will be used in the graphs
+
+```{r}
+controls <- sample(1:num_datasets, 5)
+```
+
+
+
 Part I. Inter-genomic expression analysis 
 
 
@@ -78,14 +87,12 @@ A) Create violin plots of the differences of the average log2 expression to asse
 
 ```{r}
 
+dif_pairing_names <- unlist(lapply(controls, function(i) paste("Mean_diff", i, sep ="")))
 
 violin_graph_long_data <- used_first %>% 
-  dplyr::select(sample(starts_with("Mean_dif"), 7)) %>% 
-  pivot_longer(cols = everything(),
+  pivot_longer(cols = dif_pairing_names,
                names_to = "Variable",
                values_to = "Value") 
-
-
 
 ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE)+
@@ -115,19 +122,21 @@ The data is however not symmetrical around the median and the paired Wilcoxon te
 The plots also demonstrate that the variance of the different pairings (width) is quite similar despite the fact that the shape may deviate somewhat between pairings. 
 
 
+
 B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t-test for more than 2 groups) to test whether the different control groups differ significantly in their distributions.
 
 
 ```{r}
-Fried_test_data <- used_first %>%
-  gather(key = "Pairing", value = "Differential", starts_with("Mean_cntrl")) %>%
-  mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>% 
-  select(Sample, Pairing, Differential)
-
-friedman_result <- coin::friedman_test(Differential ~ Pairing | Sample, data = Fried_test_data)
+# Fried_test_data <- used_first %>%
+#   gather(key = "Pairing", value = "Differential", starts_with("Mean_cntrl")) %>%
+#   mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>% 
+#   select(Sample, Pairing, Differential)
+# 
+# friedman_result <- coin::friedman_test(Differential ~ Pairing | Sample, data = Fried_test_data)
 
 ```
 Result: The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
+
 
 
 
@@ -159,6 +168,7 @@ for (i in 1:num_datasets) {
 
 ```
 Result: The Contrast analysis shows that the expression pattern of the control sets seem to mostly differ significantly compared to their average with only 25/412 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control sets behave in the same general fashion. 
+
 
 
 C) Create plots of the differences of the average log2 expression across all pairings between the SoI and controls sets in order to visualise the similarities fo the behaviour between the controls and the SoI. 
@@ -201,31 +211,31 @@ Interpretation: Despite that fact that the Friedman Test and the Contrast Analys
 
 
 
-D) Calculate the significance of the difference between the mean expression of the control-sets and the Set-of-Interest using a one-sided Paired Permutation Test for each control/SoI pair followed by a correction for multiple testing. 
+D) Calculate the significance of the difference between the mean expression of the control-sets and the Set-of-Interest using a two-sided Paired Permutation Test for each control/SoI pair followed by a correction for multiple testing. 
 
 ```{r}
-# Loop over each of the control datasets in the folder.
-# For each control-set perform a one-sided paired permutation test with the SoI.
-# Save the pvalue for each test in a dataframe.
+# # Loop over each of the control datasets in the folder.
+# # For each control-set perform a two-sided paired permutation test with the SoI.
+# # Save the pvalue for each test in a dataframe.
+# 
+# paired_tests_list <- list()
+# for (i in 1:num_datasets) {
+#   ctrl <- paste("Mean_cntrl", i, sep ="")
+#   permutation_res <- perm.test(used_first$Mean_set, used_first[,get(ctrl)], alternative = "two.sided", mu = 0,
+#       paired = TRUE, all.perms = TRUE, num.sim = 10000, plot = FALSE, stat = mean)
+#   pair <- paste("Pair", i, sep ="_")
+#   pair_frame = data.frame(Pairing = pair, Pvalue = as.numeric(permutation_res$p.value), Corrected_Pval = as.numeric(p.adjust(permutation_res$p.value, method = "BH", n = num_datasets)))
+#   paired_tests_list[[i]] <- pair_frame
+# }
+# 
+# # Correct the P-value due to multiple testing by using the BH method.
+# 
+# full_paired <- do.call(rbind, paired_tests_list) %>% arrange(desc(Pvalue))
 
-paired_tests_list <- list()
-for (i in 1:num_datasets) {
-  ctrl <- paste("Mean_cntrl", i, sep ="")
-  permutation_res <- perm.test(used_first$Mean_set, used_first[,get(ctrl)], alternative = "greater", mu = 0, 
-      paired = TRUE, all.perms = TRUE, num.sim = 10000, plot = FALSE, stat = mean)
-  pair <- paste("Pair", i, sep ="_")
-  pair_frame = data.frame(Pairing = pair, Pvalue = as.numeric(permutation_res$p.value))
-  paired_tests_list[[i]] <- pair_frame
-}
-
-# Correct the P-value due to multiple testing by using the Bonferoni method (more stringent than BH).
-
-full_paired <- do.call(rbind, paired_tests_list) %>% arrange(desc(Pvalue))
-full_paired$Corrected_Pval <- full_paired$Pvalue * num_datasets
 ```
 Result: The results show a p-value of 0 for all pairings.
 
-Interpretation: the p-value generated by the one-sided paired permutation test demonstrates a significant difference between the means of the SoI and the Control_set for each of the control_sets. Indicating that the general expression of the genes of interest is reliably and significantly higher than the general expression from the rest of the genome. 
+Interpretation: the p-value generated by the two-sided paired permutation test demonstrates a significant difference between the means of the SoI and the Control_set for each of the control_sets. Indicating that the general expression of the genes of interest is reliably and significantly different than the general expression from the rest of the genome. 
 
 
 
@@ -236,25 +246,21 @@ E) Demonstrate difference by showing the individual expression distributions of 
 ```{r}
 # Select 3 control sets at random to compare their distributions with that of the SoI.
 
-controls <- c("Mean_set")
-for (i in sample(1:num_datasets, 5)) {
-  controls <- c(controls, paste("Mean_cntrl", i, sep =""))
-}
+controls_names <- "Mean_set"
+controls_names <- append(controls_names, unlist(lapply(controls, function(i) paste("Mean_cntrl", i, sep =""))))
 
 # Pivot the data into a form that can be used by boxplot.
 
 long_data <- used_first %>% 
-  dplyr::select(all_of(controls)) %>% 
-  pivot_longer(cols = everything(),
+  pivot_longer(cols = all_of(controls_names),
                names_to = "Variable",
                values_to = "Value")
-
 
 ggplot(long_data, aes( y = Value, x = Variable)) +
   geom_boxplot(outlier.colour = 2) +
   stat_boxplot(geom = "errorbar") +
   theme_minimal() +
-  labs(title = "Distribution of the Mean Copy Number in the Set-of-Interest vs the Control-Set",
+  labs(title = "Distribution of the Mean Expression in the \n Set-of-Interest vs various Control-Sets",
        y = "Log2 Expression") +
   # scale_x_discrete(label = c("Control Set", "Set of Interest")) +
   # scale_fill_hue(labels = c("Control Set", "Set of Interest"))+
@@ -288,17 +294,22 @@ QUESTION 2
 
 
 
-Data using only a single control group
+Data using only a single control set with more rows
 ```{r}
-main_control <- controls[2]
+main_control_num <- controls[2]
 
-single_control <- used_first %>%
-  dplyr::select(all_of(c("Sample", "Mean_set", main_control, "TSS", "Hist_group", "TSS_Abbrvs"))) %>% 
-  mutate(Dif = Mean_set - .data[[as.character(main_control)]], 
-         Sample = factor(Sample, levels = Sample[order(TSS_Abbrvs)]))
+
+file_name <- paste("Data/RNA_Data/Full_RNA_metrics", main_control_num, ".csv", sep = "")
+main_control <- fread(file_name)
+
+main_data <- main_control[, c("Sample", "Mean_set", "Mean_cntrl", "TSS", "Hist_group", "TSS_Abbrvs")] %>%
+  mutate(Mean_dif = Mean_set - Mean_cntrl) %>%
+  mutate(Sample = factor(Sample, levels = Sample[order(TSS_Abbrvs)]))
 
 
 ```
+
+
 
 
 
@@ -307,7 +318,7 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 RN
 ```{r}
 
 
-ggplot(single_control, aes(x = Sample, y = Dif, fill = TSS_Abbrvs)) + 
+ggplot(main_data, aes(x = Sample, y = Mean_dif, fill = TSS_Abbrvs)) + 
   geom_col() +
   theme_minimal() +
   labs(y = "Δ Mean Log2 Expression",
@@ -347,12 +358,11 @@ B) Create a barplot of the samples vs their differences in the mean log2 RNA val
 
 ```{r}
 
-single_control_reorder <- used_first %>%
-  dplyr::select(all_of(c("Sample", "Mean_set", main_control, "TSS", "Hist_group", "TSS_Abbrvs"))) %>% 
-  mutate(Dif = Mean_set - .data[[as.character(main_control)]], 
-         Sample = factor(Sample, levels = Sample[order(Hist_group)]))
+main_data <- main_data %>%
+  mutate( Sample = factor(Sample, levels = Sample[order(Hist_group)]))
 
-ggplot(single_control_reorder, aes(x = Sample, y = Dif, fill = Hist_group)) + 
+
+ggplot(main_data, aes(x = Sample, y = Mean_dif, fill = Hist_group)) + 
   geom_col() +
   theme_minimal() +
   labs(y = "Δ Mean Log2 Expression",
@@ -375,7 +385,7 @@ ggplot(single_control_reorder, aes(x = Sample, y = Dif, fill = Hist_group)) +
     panel.grid.major.y = element_line(color = "black", size = 0.5, linetype = 2),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.x = element_blank(),
-    axis.line = element_line(size = 0.35, linetype = "solid",
+    axis.line = element_line(linewidth = 0.35, linetype = "solid",
                              colour = "black"),
     panel.border = element_rect(fill = "transparent",
                                 color = 1,
@@ -389,105 +399,40 @@ ggplot(single_control_reorder, aes(x = Sample, y = Dif, fill = Hist_group)) +
 
 
 
-C) Assess the distribution of the data for the control set that is selected
-
+C) Apply a two-sided paired permutation test between the SoI and the control set while grouping by cancer type in the form of TSS
 
 
 ```{r}
-ggplot(single_control, aes(x = Dif)) +
-  geom_histogram(aes(y = after_stat(density)),
-                 colour = 1,
-                 fill = "white",
-                 bins = 50) +
-  geom_density(lwd = 1,
-               colour = 1) +
-  labs(y = "Density", x = "Δ Log2 Expression",
-       title = "Distribution of the Set-of-Interest to Control Set \n Differential Log2 Expression Across Samples") +
-  theme(
-    axis.title = element_text(size = 13, color = "black", face = "bold"),
-    axis.text = element_text(color = "black", size = 10),
-    panel.background = element_rect(fill = "#EDEDED"),
-    plot.title = element_text(hjust = 0.6, size = 15),
-    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
-    panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 1),
-    panel.grid.major.x = element_line(color = "black", linewidth = 0.25, linetype = 1),
-    panel.grid.minor.x = element_line(color = "black", linewidth = 0.1, linetype = 1),
-    panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 1),
-    plot.title.position = "plot"
-  )
+# Get unique values of 'TSS' for grouping
+unique_TSS <- unique(main_data$TSS)
 
-ggplot(single_control, aes(sample= Dif)) +
-  stat_qq() + 
-  stat_qq_line(color= "red") +
-  labs(title = "Normal QQ Plot for Analysis of the Average Set-of-Interest to \n Control Set Differential Mean Expression in Cancer Samples",
-       y = "Sample Quantiles",
-       x = "Theoretical Quantiles") +
-  theme(
-    axis.text.x = element_text(size= 8),
-    axis.title.x = element_text(size= 13),
-    axis.title.y = element_text(size= 13),
-    legend.title =element_text(hjust = 0.5,
-                               size = 11),
-    plot.title = element_text(hjust = 0.5,
-                              size = 14),
-    panel.grid.major = element_line(color = "black",
-                                    linewidth = 0.5,
-                                    linetype = 1),
-    panel.grid.minor = element_line(color = "black",
-                                    linewidth = 0.2,
-                                    linetype = 1),
-    panel.background = element_rect(fill = "#EDEDED"),
-    panel.border = element_rect(fill = "transparent",
-                                color = 1,
-                                linewidth = 2)
-  ) 
-```
+# Initialize a df to store the test results
+Results_table <- data.frame(TSS = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant_value= character(0))
 
+# Loop through each unique value of 'TSS'
+for (i in 1:length(unique_TSS)) {
+  current_TSS <- unique_TSS[i]
+  
+  # Subset the data for the current group
+  subset_data <- main_data[main_data$TSS == current_TSS, ]
+  
+  # Perform the paired permutation test for the current group
+  test_result <- perm.test(subset_data$Mean_set, subset_data$Mean_cntrl,
+                            alternative = "two.sided", mu = 0, paired = TRUE,
+                            all.perms = TRUE, num.sim = 10000, plot = FALSE, stat = mean)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-Create the functions that are going to perform the paired t-test for each cancer type on the mean and the median stats.
-
-Function creates a df that calculates the mean difference over the provided set and applies a paired t-test returning mean difference as well as the p-value.
-
-```{r}
-perform_mean_test <- function(data) {
-  test_result <- t.test(data$Mean_set, data$main_control, paired = TRUE)
-  return(data.frame(mean_diff = mean(data$Mean_set - data$main_control),
-                    p_value = test_result$p.value))
+  # Correct the p_value using the Benjamini Hochberg correction method
+  Corrected_Pval =  p.adjust(test_result$p.value, method = "BH", n = length(unique_TSS)) 
+  Significant_val <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
+  
+  # Store the result in  'Results_table' 
+  Results_table <- rbind(Results_table, data.frame(TSS = current_TSS, P_Value = test_result$p.value, Adj_P_Value = Corrected_Pval,
+                                                   Significant_value  = Significant_val)) %>% arrange(desc(P_Value))
 }
 
 ``` 
 
 
-B) Apply the "perform_mean_test" function separately on each TSS group.
-
-
-```{r}
-mean_results <- data %>%
-  group_by(TSS, Hist_group) %>%
-  filter(n() > 1 & !is.na(Mean_set) & !is.na(Mean_cntrl)) %>%
-  do(perform_mean_test(.))
-
-``` 
-
-C) Correct the p-values due to mutliple testing using the Benjamini-Hochberg method for FDR.
-
-```{r}
-results_mean <- mean_results %>%
-  mutate(p_adjusted = p.adjust(p_value, method = "BH")) 
-``` 
 
 D) Replace p-values with a value of 0 with a very small number to avoid downstream errors that would occur when applying log transformations.
 

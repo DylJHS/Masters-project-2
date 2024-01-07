@@ -39,3 +39,29 @@ Remarks:
 
 
 
+ 
+
+05/01/24
+
+Log:
+- Implemented one-sided Paired permutation test in Q1.E between the SoI and the control set for each control group corrected using the Bonferroni correction
+- Edited the script to use the same control sets for the graphics between sections
+
+Remarks: 
+- Need to start creating the slides for the presentation
+- Need to perform the same modifications for the CNV analysis
+
+
+
+06/01/24
+
+Log:
+- Edited the RNA_Analysis Q2.C. Applying a one-sided permutation test betweent he SoI and the Control set when grouping by TSS, therefore removing the paired t-test that was present before. 
+
+Remarks:
+Changes that will need to be made to the graphs in the script include:
+- Converting the names of the samples/pairings on the x axes
+- Finding the best colour palettes for the differences by tumour type
+- Adding significant p-value indicators to the plots
+- Making sure the plots are as understandable as possible
+

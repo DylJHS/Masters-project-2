@@ -1,13 +1,4 @@
-04/01/24
 
-Thinking about editting the SoI-to-Control-set Wilcoxon Signed Rank test so as to become directional
-I may not be able to use the wilcoxon paired test between the SoI and the control sets due the distribution of the difference between the two not being symmetrical around the median. This is because the skeweness of both are the opposite of each other. 
-Thinking about intialising a permutation test instead of the Wilcoxon test between the two sets for each control set
-Can't use DESeq2 for the paired analysis unless i switch datasets, as it only takes raw RNA-seq counts as input
-
-Creating a preanalysis file for the exploratory analysis the set of interest
-started to set up the Contrast analysis to test the SoI-to-Control_set pairings individually
- Should forget the coontrast test given that it might just add complexity to the analysis as opposed to clarifying. Also the result that showed that each of the control sets does deviate significantly from the general trend. Not what I wanted but was confirmed by Adi that this is most likely to be expected given that I am dealing with cancer cells
 04/01/24
 
 Thinking about editting the SoI-to-Control-set Wilcoxon Signed Rank test so as to become directional
@@ -19,3 +10,27 @@ Creating a preanalysis file for the exploratory analysis the set of interest
 started to set up the Contrast analysis to test the SoI-to-Control_set pairings individually
  Should forget the coontrast test given that it might just add complexity to the analysis as opposed to clarifying. Also the result that showed that each of the control sets does deviate significantly from the general trend. Not what I wanted but was confirmed by Adi that this is most likely to be expected given that I am dealing with cancer cells
 Finished the Contrast Analysis, the result showed significant difference among the Set pairings (not what i wanted). But can move on. 
+
+
+05/01/24
+
+Starting to create the permutation paired test in the RNA_Analysis script
+Reading up on the Fisher-Pitman permutation test
+Considered adding a test for equality of variance following the permutation test, test aren't meant to handle paired data (ex: Levene's). So Choosing to display the variance among the pairings instead as is shown by the violin plots (similarity of widths) in Q1.A
+ Making the test one-sided in order to reinforce the interpretation of the analysis
+Finished the one-sided paired permutation test between the SoI and Control Set for each Set
+Edited the RNA_Analysis to use the same control sets that are used in the charts to maintain a sense of consistency across the analysis
+
+
+06/01/24
+
+
+ going to start implementing the changes to the RNA_Analysis to the CNV Analysis
+ Changes that will need to be made to the graphs in the script include:
+- Converting the names of the samples/pairings on the x axes
+- Finding the best colour palettes for the differences by tumour type
+- Adding significant p-value indicators to the plots
+- Making sure the plots are as understandable as possible
+
+Editing the RNA_Analysis Q2.C to apply a one-sided paired permutation test between the SoI and the control sets when grouping by TSS
+And therefore also removing the paired t.test that was in the Analysis previously
