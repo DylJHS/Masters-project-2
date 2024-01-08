@@ -34,3 +34,27 @@ Edited the RNA_Analysis to use the same control sets that are used in the charts
 
 Editing the RNA_Analysis Q2.C to apply a one-sided paired permutation test between the SoI and the control sets when grouping by TSS
 And therefore also removing the paired t.test that was in the Analysis previously
+
+
+07/01/24
+
+- Need to finish the RNA_Analysis up to the point that i can and then convert it for use with the CNV data as well
+
+- Reading up on the multiple correction methods that might be best suited for the paired tests. 
+- The type of test is caught between the BH method (large # of tests) & the BY method (as can't truly address the correlation between the tests, or if any are present)
+- Likely to go with the BH method unless proven that there are dependencies between the tests
+- Should consider switching from one-sided tests to two-sided as the assumption that the SoI showed as general higher expression than other genes was made after seeing the data. 
+- Two-sided tests are a bit more conservative
+- My initial hypothesis is that these genes show a differential epxression pattern as opposed to solely a higher one
+- So switching the tests to two-sided
+- Changing the test in Q1.D so that it is not only two-sided but also corrected for using the BH method
+- Edited the script in RNA_Analysis Part II in order to upload the entire dataset for the selected control set instead of using filtering the concatenated one
+- The use of the full (only selected ~2000 rows of the 11000) allows for better analyses using more of the data
+-Need to explore the data some more to check the number of samples for each cancer type and other such analyses that will help determine the types of tests that i can perform
+- Should do the above using the Pre_Analysis script 
+- All the paired tests grouping by cnacer types come back as siginificant with a pvlaue of 0 for all. This means that plotting them as i had in the previous version won't produce a highly discernable graph as all the points will appear on the same line
+- I will use a barplot instead to show the average differential expression by cancer type (TSS) 
+- Will also produce the same graph as before on 2 axes but using the diff expression vs the dif copy number once the copy number analysis is achieved
+- Broke down the graph in Q2.A into facets based on the TSS group as opposed ot using colour palettes as there are not sufficient colours to cover each type
+- Split the RNA_Analysis into 2 separate files for Part I and  Part II
+- Created a barploot of the average differences in SoI vs Control Set for each TSS

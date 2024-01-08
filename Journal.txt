@@ -25,6 +25,7 @@ Remarks:
 - The Contrast Analysis is made slightly difficult due to the nature of the data. 
 
 
+
 04/01/24
 
 Log:
@@ -38,9 +39,7 @@ Remarks:
 - Need to start creating the slides for the presentation
 
 
-
  
-
 05/01/24
 
 Log:
@@ -64,4 +63,21 @@ Changes that will need to be made to the graphs in the script include:
 - Finding the best colour palettes for the differences by tumour type
 - Adding significant p-value indicators to the plots
 - Making sure the plots are as understandable as possible
+
+
+
+07/01/24
+
+Log: 
+- Switched the method of paired permutation from one-sided to two-sided due to bias after observing the data
+- Edited the script in the Q2 to use the full control set dataset
+- Applied the Benjamini-Hochberg method of multple comparison correction due to the number of tests being applied and the assumption that there are no dependencies between the tests
+- Used Facets in the Q2.A graph (expresion dif across samples by TSS) instead of filling using colours due to the 33 groups which are slightly numerous
+- Replaced the CEA pvalue vs mean dif expression plot with a barplot due to all TSS showing up as highly significant (pval < 0)
+- Split the RNA_analysis into 2 Rmd files (Part I and II)
+
+Remarks: 
+- Still need to configure the CNV analysis 
+- Will still use the CEA plot but combine CNV and RNA metrics into it instead of using pvalues as a variable
+
 
