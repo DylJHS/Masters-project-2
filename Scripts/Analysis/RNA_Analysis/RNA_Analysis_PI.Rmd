@@ -70,7 +70,7 @@ for (i in 2:num_datasets) {
 ``` 
 
 
-Choose a random set of 5 control sets that will be used in the graphs
+Choose a random set of 5 control gene-sets that will be used in the graphs
 
 ```{r}
 controls <- sample(1:num_datasets, 5)
@@ -101,7 +101,7 @@ ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE)+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
-       title = "Distribution of the Set-of-Interest to Control Set \n  Log2 Expression Difference Across Various Pairings") +
+       title = "Distribution of the Set-of-Interest to Control gene-set \n  Expression Difference Across Various Pairings") +
   theme(
     legend.position = "none",
     axis.title = element_text(size = 13, color = "black", face = "bold"),
@@ -121,7 +121,7 @@ ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
 
 ``` 
 Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-parametric test of paired differences between the means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a parametric or non-parametric test to the distributions. 
-The data is however not symmetrical around the median and the paired Wilcoxon test has this as an assumption which will come into play for the statistical comparisons between the SoI and control sets. Should not be an issue when comparing amongst each other though as the skew is in the same direction for all pairings. 
+The data is however not symmetrical around the median and the paired Wilcoxon test has this as an assumption which will come into play for the statistical comparisons between the SoI and control gene-sets. Should not be an issue when comparing amongst each other though as the skew is in the same direction for all pairings. 
 The plots also demonstrate that the variance of the different pairings (width) is quite similar despite the fact that the shape may deviate somewhat between pairings. 
 
 
@@ -130,11 +130,11 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 
 ```{r}
 # Fried_test_data <- used_first %>%
-#   gather(key = "Pairing", value = "Differential", starts_with("Mean_cntrl")) %>%
+#   gather(key = "Pairing", value = "Difference", starts_with("Mean_cntrl")) %>%
 #   mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>% 
-#   select(Sample, Pairing, Differential)
+#   select(Sample, Pairing, Difference)
 # 
-# friedman_result <- coin::friedman_test(Differential ~ Pairing | Sample, data = Fried_test_data)
+# friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
 
 ```
 Result: The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
@@ -149,7 +149,7 @@ Paired_wilc_table <- used_first %>%
    
 Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
 
-# Loop over each control sets
+# Loop over each control gene-sets
 for (i in 1:num_datasets) {
   
   set = paste('Mean_diff', i, sep = "")
@@ -167,7 +167,7 @@ for (i in 1:num_datasets) {
 
 
 ```
-Result: The Contrast analysis shows that the expression pattern of the control sets seem to mostly differ significantly compared to their average with only 25/412 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control sets behave in the same general fashion. 
+Result: The Contrast analysis shows that the expression pattern of the control gene-sets seem to mostly differ significantly compared to their average with only 25/412 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
 
 
 D) Create plots of the differences of the average log2 expression across all pairings between the SoI and controls sets in order to visualise the similarities fo the behaviour between the controls and the SoI. 
@@ -188,7 +188,7 @@ ggplot(graph_long_data, aes(y = Value, x = Variable)) +
     coord_cartesian(ylim = c(0, 4)) +
   scale_y_continuous() +
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
-       title = "Distribution of the Set-of-Interest to Control Set \n Log2 Expression Difference Across All Pairings") +
+       title = "Distribution of the Set-of-Interest to Control gene-set \n Log2 Expression Difference Across All Pairings") +
   theme(
     plot.title = element_text(hjust = 0.6, size = 15),
     plot.title.position = "plot",
@@ -206,7 +206,7 @@ ggplot(graph_long_data, aes(y = Value, x = Variable)) +
     panel.background = element_rect(fill = "#EDEDED")
 )
 ``` 
-Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in expression difference amongst the control set to SoI pairings), the plot above clearly demonstrates that the expression difference pattern between every control set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). And that the difference between the general expression of both sets is consistantly positive, demonstrating increased expression within the SoI compared to all control sets.
+Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in expression difference amongst the control gene-set to SoI pairings), the plot above clearly demonstrates that the expression difference pattern between every control gene-set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). And that the difference between the general expression of both sets is consistantly positive, demonstrating increased expression within the SoI compared to all control gene-sets.
 
 
 E) Calculate the significance of the difference between the mean expression of the control-sets and the Set-of-Interest using a two-sided Paired Permutation Test for each control/SoI pair followed by a correction for multiple testing. 
@@ -237,10 +237,10 @@ Interpretation: the p-value generated by the two-sided paired permutation test d
 
 
 F) Demonstrate difference by showing the individual expression distributions of the SoI
-  and some (3) of the control sets
+  and some (3) of the control gene-sets
 
 ```{r}
-# Select 3 control sets at random to compare their distributions with that of the SoI.
+# Select 3 control gene-sets at random to compare their distributions with that of the SoI.
 
 controls_names <- "Mean_set"
 controls_names <- append(controls_names, unlist(lapply(controls, function(i) paste("Mean_cntrl", i, sep =""))))
@@ -258,8 +258,8 @@ ggplot(long_data, aes( y = Value, x = Variable)) +
   theme_minimal() +
   labs(title = "Distribution of the Mean Expression in the \n Set-of-Interest vs various Control-Sets",
        y = "Log2 Expression") +
-  # scale_x_discrete(label = c("Control Set", "Set of Interest")) +
-  # scale_fill_hue(labels = c("Control Set", "Set of Interest"))+
+  # scale_x_discrete(label = c("Control gene-set", "Set of Interest")) +
+  # scale_fill_hue(labels = c("Control gene-set", "Set of Interest"))+
   theme(
         legend.position = "None",
         axis.title.y = element_text(size= 13),
@@ -275,9 +275,9 @@ ggplot(long_data, aes( y = Value, x = Variable)) +
                                     linewidth = 2)) 
 
 ```
-Interpretation: the p-value and plots demonstrate that the expression pattern of the control sets are significantly different from that of the SoI.
+Interpretation: the p-value and plots demonstrate that the expression pattern of the control gene-sets are significantly different from that of the SoI.
 
-Impact on analyses: future test can now use a single control set to test against as it has been shown that the controls do not differ significantly from one another and all share a similar difference with the SoI.
+Impact on analyses: future test can now use a single control gene-set to test against as it has been shown that the controls do not differ significantly from one another and all share a similar difference with the SoI.
 
 
 
@@ -290,7 +290,7 @@ QUESTION 2
 
 
 
-Data using only a single control set with more rows
+Data using only a single control gene-set with more rows
 ```{r}
 main_control_num <- controls[2]
 
@@ -335,7 +335,7 @@ ggplot(main_data, aes(x = Sample, y = Mean_dif)) +
   facet_wrap(~TSS, ncol = 4, scales = "free_x", labeller = labeller(TSS = function(label) label))  
 
 ``` 
-Interpretation: The positive ∆ expression between the SoI and the control set is maintained across all cancer types
+Interpretation: The positive ∆ expression between the SoI and the control gene-set is maintained across all cancer types
 
 
 B) Create a barplot of the samples vs their differences in the mean log2 RNA values coloured by Hist
@@ -384,7 +384,7 @@ ggplot(main_data, aes(x = Sample, y = Mean_dif, fill = Hist_group)) +
 ``` 
 
 
-C) Apply a two-sided paired permutation test between the SoI and the control set while grouping by cancer type in the form of TSS and calculate the mean difference of each group
+C) Apply a two-sided paired permutation test between the SoI and the control gene-set while grouping by cancer type in the form of TSS and calculate the mean difference of each group
 
 
 ```{r}
@@ -419,7 +419,7 @@ for (i in 1:length(unique_TSS)) {
 }
 
 ``` 
-Results: All of the cancer types are shown to have a significant difference between the general expression of the SoI and the Control set
+Results: All of the cancer types are shown to have a significant difference between the general expression of the SoI and the control gene-set
 
 
 
@@ -430,7 +430,7 @@ D) Create barplot of each TSS group, based on mean expression difference.
 ggplot(Results_table, aes(x = TSS, y = Mean_diff)) +
   geom_bar(stat = "identity") +
   theme_minimal() +
-  labs(title = "Average Expression Difference in Set-of-Interest vs Control Set", 
+  labs(title = "Average Expression Difference in Set-of-Interest vs control gene-set", 
        y = "Mean Log2 Expression Difference")+
   theme(
         axis.title = element_text(size = 13),
@@ -449,7 +449,7 @@ ggplot(Results_table, aes(x = TSS, y = Mean_diff)) +
                                     linewidth = 2)) 
 
 ``` 
-Interpretation: Indicates that the expression pattern of positive ∆ mean expression between the SoI and the Control set is present across all cancer types and that there are some differences in these levels. 
+Interpretation: Indicates that the expression pattern of positive ∆ mean expression between the SoI and the control gene-set is present across all cancer types and that there are some differences in these levels. 
 
 
 

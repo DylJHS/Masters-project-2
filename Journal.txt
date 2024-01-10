@@ -81,3 +81,24 @@ Remarks:
 - Will still use the CEA plot but combine CNV and RNA metrics into it instead of using pvalues as a variable
 
 
+
+08/01/24
+
+Log:
+- Updated the Notes file for the experiments
+- Updated the Interpretations of the figures
+- Lit reading on CNV based analysis and the GISTIC2.0 documentation
+
+Remarks:
+- Still need to finish updatign the CNV Analysis script
+
+
+09/01/24
+
+Log:
+- Created CNV pre-analysis Rmd for discovery analyses
+- Completed Q1.A - Q1.E of Part I of the CNV analysis
+
+Remarks: 
+- Need to complete the Notes segment for the CNV analysis for Part I
+- Test for the variance in the distributions of both the CNV and the RNA sets

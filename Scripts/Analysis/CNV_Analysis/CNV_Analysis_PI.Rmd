@@ -1,0 +1,228 @@
+---
+title: "CNV Analysis Part I"
+output: html_document
+date: "2024-01-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+Load the libraries
+```{r}
+library(dplyr)
+library(broom)
+library(knitr)
+library(coin)
+library(data.table)
+library(ggpubr)
+library(rstatix)
+# library(ggplot2)
+# library(paletteer)
+# library(PairedData)
+library(tidyverse)
+library(jmuOutlier)
+library(paletteer)
+``` 
+
+Load other options
+```{r}
+# options(scipen = 1, digits = 20)
+getOption("max.print")
+```
+
+
+Load the CNV metrics dataset and remove the useless columns. 
+
+The data shows the samples as rows and descriptive characteristics, the Tissue Source Site (TSS) and the Histology grouping as columns.
+
+```{r}
+
+random_rows <- sample(1:10845, 500)
+
+first <- fread("Data/CNV_Data/Full_CNV_metrics1.csv")
+
+used_first <- first[random_rows,c("Sample", "Mean_set", "Mean_cntrl","TSS","Hist_group", "TSS_Abbrvs")]
+setnames(used_first, old = "Mean_cntrl", new = "Mean_cntrl1")
+used_first[, Mean_diff1 := (Mean_set - Mean_cntrl1)]
+
+num_datasets <- 412
+
+# Loop over the datasets
+for (i in 2:num_datasets) {
+  
+  file_name <- paste("Data/CNV_Data/Full_CNV_metrics", i, ".csv", sep = "")
+  
+
+  # Read the CSV file into a data.table
+  current_dataset <- fread(file_name)
+  current_dataset[, Mean_diff := (Mean_set - Mean_cntrl)]
+
+  new_name1 = paste('Mean_cntrl', i, sep = "")
+  new_name2 = paste('Mean_diff', i, sep = "")
+
+  rename_map <- c("Mean_cntrl" = new_name1, "Mean_diff" = new_name2)
+
+  # Rename columns in 'current_dataset' using the named vector
+  setnames(current_dataset, old = names(rename_map), new = rename_map)
+
+  # Select columns with their original names from 'current_dataset' and rename them
+  selected_columns <- current_dataset[random_rows, c("Sample", new_name1, new_name2), with = FALSE]
+
+  # Perform a merge based on Sample ID
+  used_first <- merge(used_first, selected_columns, by = "Sample", all = FALSE, suffixes = c("", i))
+
+}
+``` 
+
+
+Choose a random set of 5 control gene-sets that will be used in the graphs
+
+```{r}
+controls <- sample(1:num_datasets, 5)
+```
+
+
+
+
+
+Part I. Inter-genomic expression analysis 
+
+
+QUESTION 1 
+
+
+A) Create violin plots of the differences of the average log2 expression to assess the type of paired test to perform on the the pairwise groups .
+
+```{r}
+
+dif_pairing_names <- unlist(lapply(controls, function(i) paste("Mean_diff", i, sep ="")))
+
+violin_graph_long_data <- used_first %>% 
+  pivot_longer(cols = all_of(dif_pairing_names),
+               names_to = "Variable",
+               values_to = "Value") 
+
+ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
+  geom_violin(trim = FALSE, fill = "gray88")+
+  geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
+  labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Copy Number",
+       title = "Distribution of the Set-of-Interest to Control Gene-Set \n  Copy Number Difference Across Various Pairings") +
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 13, color = "black", face = "bold"),
+    axis.text = element_text(color = "black", size = 10),
+    axis.text.x = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    legend.text = element_blank(),
+    plot.title = element_text(hjust = 0.6, size = 15),
+    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
+    panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
+    plot.title.position = "plot"
+  )
+
+
+``` 
+Interpretation: Plots show distinct pairings which violate a normal distribution. This follows that a non-parametric tests of paired differences between the means can be performed. 
+The data is more symmetrical around the median than the RNA-seq data and the plots also hint at the variance of the different pairings (width) being quite similar.
+
+
+B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t-test for more than 2 groups) to test whether the different control groups differ significantly in their distributions.
+
+
+```{r}
+Fried_test_data <- used_first %>%
+  gather(key = "Pairing", value = "Difference", starts_with("Mean_cntrl")) %>%
+  mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>%
+  select(Sample, Pairing, Difference)
+
+friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
+print(friedman_result)
+
+```
+Result: chi-squared = 10684, df = 411, p-value < 2.2e-16; The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
+
+
+C) Construct a contrast analysis to assess each of the pairings against the general trend
+
+```{r}
+Paired_wilc_table <- used_first %>% 
+  dplyr::select(starts_with("Mean_diff")) %>%
+  mutate_all(as.numeric) 
+   
+Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
+
+# Loop over each control gene-sets
+for (i in 1:num_datasets) {
+  
+  set = paste('Mean_diff', i, sep = "")
+  
+   Global_table <- Paired_wilc_table %>%
+    mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
+    select(set, global)
+   
+   wlcx_paired_res = wilcox.test(Global_table[,get(set)], Global_table$global, paired = TRUE)
+   Corrected_Pval <- p.adjust(wlcx_paired_res$p.value, method = 'BH')
+   Significant_value <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
+   
+   Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval, Significant = Significant_value)) %>% arrange(desc(Adj_P_Value))
+}
+
+agg_count_table <- Contrast_table %>% group_by(Significant) %>% summarise(count = n())
+
+print(agg_count_table)
+
+```
+Result: The Contrast analysis shows that the copy number pattern of the control gene-sets seem to mostly differ significantly compared to their average with only 118/412 showing an adjusted pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
+
+
+D) Create plots of the differences of the average log2 expression across all pairings between the SoI and controls sets in order to visualise the similarities fo the behaviour between the controls and the SoI. 
+Seeing as the Friedman test came back indicating that at least one of the controls shows a different expression distribution compared to the others, cannot use the test as evidence to dismiss all controls but one. Instead we can visualise the general distribution across all controls to determine if they act in a similar fashion. 
+
+```{r}
+
+graph_long_data <- used_first %>% 
+  dplyr::select(starts_with("Mean_diff")) %>% 
+  pivot_longer(cols = everything(),
+               names_to = "Variable",
+               values_to = "Value") 
+
+
+
+ggplot(graph_long_data, aes(y = Value, x = Variable)) +
+  geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
+    coord_cartesian(ylim = c(-0.25, 0.3)) +
+  scale_y_continuous() +
+  labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Copy Number",
+       title = "Distribution of the Set-of-Interest to Control gene-set \n Copy Number Difference Across All Pairings") +
+  theme(
+    plot.title = element_text(hjust = 0.6, size = 15),
+    plot.title.position = "plot",
+    axis.title = element_text(size = 13, color = "black", face = "bold"),
+    axis.text = element_text(color = "black", size = 10),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.text = element_blank(),
+    legend.position = "none",
+    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
+    panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
+    panel.background = element_rect(fill = "white")
+)
+``` 
+
+Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in CN difference amongst the control gene-sets to SoI pairings), the plot above clearly demonstrates that the CN difference pattern between every control gene-set and the Set-of-Interest is bound in a consistent range centered between -0.24 and 0.3 on a log2 scale. The difference between the general CN of both sets is spread around 0, demonstrating fairly similar general copy number variation between the SoI compared to the control gene-sets.
+
+
+
+
+
+
+
+
+

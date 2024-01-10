@@ -58,3 +58,30 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Broke down the graph in Q2.A into facets based on the TSS group as opposed ot using colour palettes as there are not sufficient colours to cover each type
 - Split the RNA_Analysis into 2 separate files for Part I and  Part II
 - Created a barploot of the average differences in SoI vs Control Set for each TSS
+ 
+
+08/01/24
+
+- Editing the Notes file for the Project part I
+- Added the interpretation to the mean TSS expression barplot (Q2.D)
+
+-Edited the RNA_Analysis script to replace the 'Differential' terms with 'Difference'
+- Considering changing the metric from Difference when assissing the differnces in expression levels to Fold Change (ratio). This might be easier for interpretation given familiarity and removes the factor of the unit seeing as it is solely a relative (comparative) metric, which makes sense for the analyses at hand
+
+- Reading the documetation on the CNV data generated using the GISTIC2.0 method
+- Data is represented using log2 ratios
+- Positive values indicate a gain in copy number. For instance, a log2 ratio of 1 would suggest a doubling (2^1 = 2) of the copy number in the test sample compared to the reference.
+- Negative values indicate a loss in copy number. For example, a log2 ratio of -1 would suggest a halving (2^-1 = 0.5) of the copy number.
+
+
+09/01/24
+
+- Created the CNV pre-analysis Rmd script
+- Analysis of the distribution of the CNV data
+
+- Looking at the distribution of the CNV log2 ratios both the SoI and the Control Sets
+- Looking at the distribution of the difference in the CNV values between the sets
+- Leaving the RNA units untouched and using the difference in the comparison might be more valuable than assessing the ratio (FC) since I am assessing the sets of different genes and therefore the baseline expression in a ratio wouldn't make much sense
+- Think about using tests of variance to show the spread of the data in each of the groupings that get applied
+- Creating a Notes for the Part I of the analyses on the CNV data
+
