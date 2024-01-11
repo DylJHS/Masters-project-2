@@ -80,7 +80,7 @@ controls <- sample(1:num_datasets, 5)
 
 
 
-Part I. Inter-genomic expression analysis 
+Part I. Inter-genomic Expression analysis 
 
 
 QUESTION 1 
@@ -101,7 +101,7 @@ ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE)+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
-       title = "Distribution of the Set-of-Interest to Control gene-set \n  Expression Difference Across Various Pairings") +
+       title = "Distribution of the Set-of-Interest to Control Gene-Set \n  Expression Difference Across Various Pairings") +
   theme(
     legend.position = "none",
     axis.title = element_text(size = 13, color = "black", face = "bold"),
@@ -184,7 +184,7 @@ graph_long_data <- used_first %>%
 
 
 ggplot(graph_long_data, aes(y = Value, x = Variable)) +
-  geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "#EDEDED")+
+  geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
     coord_cartesian(ylim = c(0, 4)) +
   scale_y_continuous() +
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
@@ -366,7 +366,7 @@ ggplot(main_data, aes(x = Sample, y = Mean_dif, fill = Hist_group)) +
     plot.title = element_text(hjust = 0.4,
                               size = 18),
     plot.title.position = "plot",
-    panel.background = element_rect(fill = "#EDEDED"),
+    panel.background = element_rect(fill = "white"),
     panel.grid.major.y = element_line(color = "black", size = 0.5, linetype = 2),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.x = element_blank(),
@@ -419,16 +419,16 @@ for (i in 1:length(unique_TSS)) {
 }
 
 ``` 
-Results: All of the cancer types are shown to have a significant difference between the general expression of the SoI and the control gene-set
+Results: All of the cancer types are shown to have a significant difference between the general Expression of the SoI and the control gene-set
 
 
 
-D) Create barplot of each TSS group, based on mean expression difference.
+D) Create barplot of each TSS group, based on mean Expression difference.
 
 ```{r}
 
 ggplot(Results_table, aes(x = TSS, y = Mean_diff)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", fill = "gray47") +
   theme_minimal() +
   labs(title = "Average Expression Difference in Set-of-Interest vs control gene-set", 
        y = "Mean Log2 Expression Difference")+
@@ -443,13 +443,13 @@ ggplot(Results_table, aes(x = TSS, y = Mean_diff)) +
         panel.grid.minor = element_line(color = "black",
                                         linewidth = 0.2,
                                         linetype = 1),
-        panel.background = element_rect(fill = "#EDEDED"),
+        panel.background = element_rect(fill = "white"),
         panel.border = element_rect(fill = "transparent",
                                     color = 1,
                                     linewidth = 2)) 
 
 ``` 
-Interpretation: Indicates that the expression pattern of positive ∆ mean expression between the SoI and the control gene-set is present across all cancer types and that there are some differences in these levels. 
+Interpretation: Indicates that the Expression pattern of positive ∆ mean Expression between the SoI and the control gene-set is present across all cancer types and that there are some differences in these levels. 
 
 
 

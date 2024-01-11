@@ -85,3 +85,16 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Think about using tests of variance to show the spread of the data in each of the groupings that get applied
 - Creating a Notes for the Part I of the analyses on the CNV data
 
+
+10/01/24
+
+- Configuring the CNV Analysis past Question 2
+- Ediuting the graphs in both CNV and RNA analysis
+
+- Finish updating the CNV analysis
+- update the graphs in the RNA analysis (significance bars)
+
+- Write down the remarks/questioons for Stefan (PPI database pull down cutoff, Permutation tests, negative binomial in the RNA-seq data, differnetial analysis on differnet genes)
+
+
+

@@ -17,12 +17,11 @@ library(coin)
 library(data.table)
 library(ggpubr)
 library(rstatix)
-# library(ggplot2)
-# library(paletteer)
-# library(PairedData)
+library(ggplot2)
 library(tidyverse)
 library(jmuOutlier)
 library(paletteer)
+library(ggsignif)
 ``` 
 
 Load other options
@@ -37,8 +36,8 @@ Load the CNV metrics dataset and remove the useless columns.
 The data shows the samples as rows and descriptive characteristics, the Tissue Source Site (TSS) and the Histology grouping as columns.
 
 ```{r}
-
-random_rows <- sample(1:10845, 500)
+set.seed(123)
+random_rows <- sample(1:10845, 1000)
 
 first <- fread("Data/CNV_Data/Full_CNV_metrics1.csv")
 
@@ -99,9 +98,11 @@ A) Create violin plots of the differences of the average log2 expression to asse
 dif_pairing_names <- unlist(lapply(controls, function(i) paste("Mean_diff", i, sep ="")))
 
 violin_graph_long_data <- used_first %>% 
-  pivot_longer(cols = all_of(dif_pairing_names),
+  select(all_of(dif_pairing_names)) %>% 
+  pivot_longer(cols = everything(),
                names_to = "Variable",
                values_to = "Value") 
+
 
 ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE, fill = "gray88")+
@@ -134,13 +135,13 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 
 
 ```{r}
-Fried_test_data <- used_first %>%
-  gather(key = "Pairing", value = "Difference", starts_with("Mean_cntrl")) %>%
-  mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>%
-  select(Sample, Pairing, Difference)
-
-friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
-print(friedman_result)
+# Fried_test_data <- used_first %>%
+#   gather(key = "Pairing", value = "Difference", starts_with("Mean_cntrl")) %>%
+#   mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>%
+#   select(Sample, Pairing, Difference)
+# 
+# friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
+# print(friedman_result)
 
 ```
 Result: chi-squared = 10684, df = 411, p-value < 2.2e-16; The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
@@ -149,38 +150,38 @@ Result: chi-squared = 10684, df = 411, p-value < 2.2e-16; The Friedman Test show
 C) Construct a contrast analysis to assess each of the pairings against the general trend
 
 ```{r}
-Paired_wilc_table <- used_first %>% 
-  dplyr::select(starts_with("Mean_diff")) %>%
-  mutate_all(as.numeric) 
-   
-Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
-
-# Loop over each control gene-sets
-for (i in 1:num_datasets) {
-  
-  set = paste('Mean_diff', i, sep = "")
-  
-   Global_table <- Paired_wilc_table %>%
-    mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
-    select(set, global)
-   
-   wlcx_paired_res = wilcox.test(Global_table[,get(set)], Global_table$global, paired = TRUE)
-   Corrected_Pval <- p.adjust(wlcx_paired_res$p.value, method = 'BH')
-   Significant_value <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
-   
-   Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval, Significant = Significant_value)) %>% arrange(desc(Adj_P_Value))
-}
-
-agg_count_table <- Contrast_table %>% group_by(Significant) %>% summarise(count = n())
-
-print(agg_count_table)
+# Paired_wilc_table <- used_first %>% 
+#   dplyr::select(starts_with("Mean_diff")) %>%
+#   mutate_all(as.numeric) 
+#    
+# Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
+# 
+# # Loop over each control gene-sets
+# for (i in 1:num_datasets) {
+#   
+#   set = paste('Mean_diff', i, sep = "")
+#   
+#    Global_table <- Paired_wilc_table %>%
+#     mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
+#     select(set, global)
+#    
+#    wlcx_paired_res = wilcox.test(Global_table[,get(set)], Global_table$global, paired = TRUE)
+#    Corrected_Pval <- p.adjust(wlcx_paired_res$p.value, method = 'BH')
+#    Significant_value <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
+#    
+#    Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval, Significant = Significant_value)) %>% arrange(desc(Adj_P_Value))
+# }
+# 
+# Contrast_agg_count_table <- Contrast_table %>% group_by(Significant) %>% summarise(count = n())
+# 
+# print(Contrast_agg_count_table)
 
 ```
-Result: The Contrast analysis shows that the copy number pattern of the control gene-sets seem to mostly differ significantly compared to their average with only 118/412 showing an adjusted pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
+Result: The Contrast analysis shows that the copy number pattern of the control gene-sets seems to mostly differ significantly compared to their average with only ~80/412 showing an adjusted pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
 
 
-D) Create plots of the differences of the average log2 expression across all pairings between the SoI and controls sets in order to visualise the similarities fo the behaviour between the controls and the SoI. 
-Seeing as the Friedman test came back indicating that at least one of the controls shows a different expression distribution compared to the others, cannot use the test as evidence to dismiss all controls but one. Instead we can visualise the general distribution across all controls to determine if they act in a similar fashion. 
+D) Create plots of the differences of the average CN across all pairings between the SoI and controls sets in order to visualise the similarities of the general behaviour between the controls and the SoI. 
+Seeing as the Friedman test came back significant indicating that at least one of the controls shows a different Copy Number distribution compared to the others, cannot use the test as evidence to dismiss all controls but one. Instead we can visualise the general distribution across all controls to determine if they act in a similar fashion. 
 
 ```{r}
 
@@ -194,7 +195,7 @@ graph_long_data <- used_first %>%
 
 ggplot(graph_long_data, aes(y = Value, x = Variable)) +
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
-    coord_cartesian(ylim = c(-0.25, 0.3)) +
+    coord_cartesian(ylim = c(-0.25, 0.40)) +
   scale_y_continuous() +
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Copy Number",
        title = "Distribution of the Set-of-Interest to Control gene-set \n Copy Number Difference Across All Pairings") +
@@ -216,12 +217,130 @@ ggplot(graph_long_data, aes(y = Value, x = Variable)) +
 )
 ``` 
 
-Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in CN difference amongst the control gene-sets to SoI pairings), the plot above clearly demonstrates that the CN difference pattern between every control gene-set and the Set-of-Interest is bound in a consistent range centered between -0.24 and 0.3 on a log2 scale. The difference between the general CN of both sets is spread around 0, demonstrating fairly similar general copy number variation between the SoI compared to the control gene-sets.
+Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in CN difference amongst the control gene-sets to SoI pairings), the plot above demonstrates that the average CN difference between every control gene-set and the Set-of-Interest is bound in a fairly consistent range between -0.24 and 0.3 on a log2 scale and with most (IQR) of the genes showing a difference between 0 and 0.05, likely indicative of greater instability at the sites of the genes of interest compared to other genes. 
+
+
+
+E) Calculate the significance of the difference between the mean copy number of the control-sets and the Set-of-Interest using a two-sided Paired Wilcoxon Signed Rank Test for each control/SoI pair followed by a correction for multiple testing. 
+
+```{r}
+# Loop over each of the control datasets in the folder.
+# For each control-set perform a two-sided paired Wilcoxon Signed Rank test with the SoI.
+# Save the pvalue for each test in a dataframe.
+
+paired_tests_list <- list()
+for (i in 1:num_datasets) {
+  ctrl <- paste("Mean_cntrl", i, sep ="")
+  wlcx_paired_res <- wilcox.test(used_first$Mean_set, used_first[,get(ctrl)], paired = TRUE)
+  pair <- paste("Pair", i, sep ="_")
+  pair_frame = data.frame(Pairing = pair, Pvalue = as.numeric(wlcx_paired_res$p.value), Corrected_Pval = as.numeric(p.adjust(wlcx_paired_res$p.value, method = "BH", n = num_datasets)), Significant =  if(p.adjust(wlcx_paired_res$p.value, method = "BH", n = num_datasets) < 0.05) "TRUE" else "FALSE")
+  paired_tests_list[[i]] <- pair_frame
+}
+
+full_paired <- do.call(rbind, paired_tests_list) %>% arrange(desc(Pvalue))
+full_paired_wilc <- full_paired %>% group_by(Significant) %>% summarise(count = n())
+
+print(full_paired_wilc)
+```
+Result: The results shows a significant p-value for 384 of the 412 pairings.
+
+Interpretation: the p-value generated by the Paired Wilcoxon Signed Rank Test test demonstrates a significant difference between the mean copy number of the SoI and the Control_set for the majority of the control_sets. Providing evidence indicative of greater instability at the sites of the genes of interest. 
 
 
 
 
+F) Demonstrate difference by showing the individual Copy Number distributions of the SoI
+  and some (3) of the control gene-sets
 
+```{r}
+# Select 3 control gene-sets at random to compare their distributions with that of the SoI.
+
+controls_names <- "Mean_set"
+mean_cntrl_names <- unlist(lapply(controls, function(i) paste("Mean_cntrl", i, sep ="")))
+controls_names <- append(controls_names, mean_cntrl_names)
+
+
+# Pivot the data into a form that can be used by boxplot.
+
+long_data <- used_first %>% 
+  select(controls_names) %>% 
+  pivot_longer( cols = everything(), names_to = "Variable", values_to = "Value")
+
+# Extract control set numbers from the Pairing column in full_paired_wilc
+full_paired$Control_Num <- as.numeric(sub("Pair_", "", full_paired$Pairing))
+
+full_paired$Sig <- ifelse (full_paired$Corrected_Pval <= 0.001, "***",
+                           ifelse (full_paired$Corrected_Pval <= 0.01, "**",
+                                   ifelse (full_paired$Corrected_Pval <= 0.05, "*",
+"NS" )))
+    
+
+# Create a new column in full_paired_wilc to match the Variable column in long_data
+full_paired$Variable <- paste("Mean_cntrl", full_paired$Control_Num, sep="")
+
+# Merge full_paired_wilc with long_data
+merged_data <- merge(long_data, full_paired, by="Variable", all.x=TRUE)
+
+# Reorder the Variable column in merged_data
+# merged_data$Variable <- factor(merged_data$Variable, levels = desired_order)
+
+
+# Define the specific comparisons
+specific_comparisons <- list(
+  c("Mean_set", mean_cntrl_names[1]), 
+  c("Mean_set", mean_cntrl_names[2]), 
+  c("Mean_set", mean_cntrl_names[3]),
+  c("Mean_set", mean_cntrl_names[4]), 
+  c("Mean_set", mean_cntrl_names[5])
+)
+    
+specific_comparisons_ordered <-  specific_comparisons[order(sapply(specific_comparisons, function(x) x[2]))]    
+
+# Extract corresponding p-values for these comparisons
+specific_p_values <- sapply(specific_comparisons_ordered, function(comp) {
+  # Filter for rows where the Variable is either the Mean_set or the specific control
+  subset_data <- merged_data[merged_data$Variable %in% comp[2],]
+
+  # If there are multiple rows (as there should be for each pair), we take the unique p-value
+  unique_pval <- unique(subset_data$Sig)
+
+  # Return the unique p-value, or NA if not found
+  if (length(unique_pval) == 1) {
+    return(unique_pval)
+  } else {
+    return(NA)
+  }
+})
+
+
+
+ggplot(merged_data, aes( y = Value, x = Variable)) +
+  geom_boxplot(outlier.colour = 2) +
+  stat_boxplot(geom = "errorbar") +
+  theme_minimal() +
+  labs(title = "Distribution of Mean Copy Number in the \n Set-of-Interest vs various Control-Sets",
+       y = expression(Copy~Number ~ (log[2]))) +
+  theme(
+        legend.position = "None",
+        axis.title.y = element_text(size= 13),
+        plot.subtitle = element_text(hjust= 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 11),
+        plot.title = element_text(hjust = 0.5,
+                                  size = 14),
+        panel.background = element_rect(fill = "#EDEDED"),
+        panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 2),
+        panel.border = element_rect(fill = "transparent",
+                                    color = 1,
+                                    linewidth = 2)) +
+  geom_signif(comparisons = specific_comparisons_ordered,
+               annotations = specific_p_values,
+              step_increase = 0.05,
+              map_signif_level = TRUE,
+              textsize = 2.5,
+              tip_length = 0
+  ) 
+```
 
 
 
