@@ -98,3 +98,22 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 
 
+11/01/24
+
+- Updat eht egraphs in the RNA analysis
+- try to implement some form of PCA 
+- Or combine the graphs from the 2 analyses in some way
+- Based on the meaning of the interaction score, it might be prudent to set a higher interaction cutoff
+- meet with Theo. Advised to renormalise the data 
+- should it be normalised per set (SoI & control) or across both (i.e. using the vlaues across both sets as the normalisation parameter)
+- Writing the rundown of the presentation
+- In order to figure out how to re-normalise the data, figure out how it was normalised in the first place. 
+- Was it across rows (samples) or columns (genes) or something different 
+
+
+12/01/24
+
+- Writing the Rundown for the presentation
+- Writing the script for the presentation
+
+

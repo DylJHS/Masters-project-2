@@ -31,7 +31,7 @@ Load the RNA metrics dataset and remove the useless columns.
 The data shows the samples as rows and descriptive characteristics, the Tissue Source Site (TSS) and the Histology grouping as columns.
 
 ```{r}
-
+set.seed(123)
 random_rows <- sample(1:11060, 1000)
 
 first <- fread("Data/RNA_Data/Full_RNA_metrics1.csv")
@@ -67,6 +67,8 @@ for (i in 2:num_datasets) {
   used_first <- merge(used_first, selected_columns, by = "Sample", all = FALSE, suffixes = c("", i))
 
 }
+
+print(head(used_first))
 ``` 
 
 
@@ -98,7 +100,7 @@ violin_graph_long_data <- used_first %>%
                values_to = "Value") 
 
 ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
-  geom_violin(trim = FALSE)+
+  geom_violin(trim = FALSE, fill = "gray88")+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
        title = "Distribution of the Set-of-Interest to Control Gene-Set \n  Expression Difference Across Various Pairings") +
@@ -107,7 +109,7 @@ ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
     axis.title = element_text(size = 13, color = "black", face = "bold"),
     axis.text = element_text(color = "black", size = 10),
     axis.text.x = element_blank(),
-    panel.background = element_rect(fill = "#EDEDED"),
+    panel.background = element_rect(fill = "white"),
     legend.text = element_blank(),
     plot.title = element_text(hjust = 0.6, size = 15),
     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
@@ -135,7 +137,7 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 #   select(Sample, Pairing, Difference)
 # 
 # friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
-
+# print(friedman_result)
 ```
 Result: The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
 
@@ -143,29 +145,30 @@ Result: The Friedman Test shows that at least one of the pairings demonstrates a
 C) Construct a contrast analysis to assess each of the pairings against the general trend
 
 ```{r}
-Paired_wilc_table <- used_first %>% 
-  dplyr::select(starts_with("Mean_diff")) %>%
-  mutate_all(as.numeric) 
-   
-Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
+# Paired_wilc_table <- used_first %>% 
+#   dplyr::select(starts_with("Mean_diff")) %>%
+#   mutate_all(as.numeric) 
+#    
+# Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
+# 
+# # Loop over each control gene-sets
+# for (i in 1:num_datasets) {
+#   
+#   set = paste('Mean_diff', i, sep = "")
+#   
+#    Global_table <- Paired_wilc_table %>%
+#     mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
+#     select(set, global)
+#    
+#    wlcx_paired_res = wilcox.test(Global_table[,get(set)], Global_table$global, paired = TRUE)
+#    Corrected_Pval <- wlcx_paired_res$p.value * num_datasets
+#    Significant_value <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
+#    
+#    Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval, Significant = Significant_value)) %>% arrange(desc(Adj_P_Value))
+# }
 
-# Loop over each control gene-sets
-for (i in 1:num_datasets) {
-  
-  set = paste('Mean_diff', i, sep = "")
-  
-   Global_table <- Paired_wilc_table %>%
-    mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
-    select(set, global)
-   
-   wlcx_paired_res = wilcox.test(Global_table[,get(set)], Global_table$global, paired = TRUE)
-   Corrected_Pval <- wlcx_paired_res$p.value * num_datasets
-   Significant_value <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
-   
-   Contrast_table <- rbind(Contrast_table, data.frame(Set = set, P_Value = wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval, Significant = Significant_value)) %>% arrange(desc(Adj_P_Value))
-}
-
-
+# Contrast_agg_count_table <- Contrast_table %>% group_by(Significant) %>% summarise(count = n())
+# print(Contrast_agg_count_table)
 ```
 Result: The Contrast analysis shows that the expression pattern of the control gene-sets seem to mostly differ significantly compared to their average with only 25/412 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
 
@@ -229,6 +232,7 @@ E) Calculate the significance of the difference between the mean expression of t
 # # Correct the P-value due to multiple testing by using the BH method.
 # 
 # full_paired <- do.call(rbind, paired_tests_list) %>% arrange(desc(Pvalue))
+# print(head(full_paired))
 
 ```
 Result: The results show a p-value of 0 for all pairings.
@@ -237,7 +241,7 @@ Interpretation: the p-value generated by the two-sided paired permutation test d
 
 
 F) Demonstrate difference by showing the individual expression distributions of the SoI
-  and some (3) of the control gene-sets
+  and some (5) of the control gene-sets
 
 ```{r}
 # Select 3 control gene-sets at random to compare their distributions with that of the SoI.

@@ -37,7 +37,7 @@ The data shows the samples as rows and descriptive characteristics, the Tissue S
 
 
 
-first <- fread("Data/RNA_Data/Full_RNA_metrics1.csv")
+first <- fread("Data/RNA_Data/Full_RNA_metrics10.csv")
 
 used_first <- first[,c("Sample", "Mean_set", "Mean_cntrl","TSS","Hist_group", "TSS_Abbrvs")]
 setnames(used_first, old = "Mean_cntrl", new = "Mean_cntrl1")
@@ -107,7 +107,35 @@ ggplot(used_first, aes(y = Mean_set, x ="")) +
 
 ```
 
+B) Add QQplot of the difference between the mean CNV per set
 
+``` {r}
+ggplot(data, aes(sample= Mean_diff)) +
+  stat_qq() + 
+  stat_qq_line(color= "red") +
+  labs(title = "Normal QQ Plot for Analysis of the Average Set-of-Interest to \n Control Set Differential Mean Expression in Cancer Samples",
+       y = "Sample Quantiles",
+       x = "Theoretical Quantiles") +
+  theme(
+    axis.text.x = element_text(size= 8),
+    axis.title.x = element_text(size= 13),
+    axis.title.y = element_text(size= 13),
+    legend.title =element_text(hjust = 0.5,
+                               size = 11),
+    plot.title = element_text(hjust = 0.5,
+                              size = 14),
+    panel.grid.major = element_line(color = "black",
+                                    linewidth = 0.5,
+                                    linetype = 1),
+    panel.grid.minor = element_line(color = "black",
+                                    linewidth = 0.2,
+                                    linetype = 1),
+    panel.background = element_rect(fill = "#EDEDED"),
+    panel.border = element_rect(fill = "transparent",
+                                color = 1,
+                                linewidth = 2)
+  ) 
+```
 
 
 
