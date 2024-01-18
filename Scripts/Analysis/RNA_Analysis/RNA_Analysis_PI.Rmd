@@ -344,6 +344,8 @@ RNA_dif <- ggplot(long_data, aes( y = Value, x = Variable)) +
               tip_length = 0
   ) 
 
+print(RNA_dif)
+
 ```
 Interpretation: the p-value and plots demonstrate that the expression pattern of the control gene-sets are significantly different from that of the SoI.
 
@@ -403,6 +405,8 @@ RNA_TSS <- ggplot(main_data, aes(x = Sample, y = Mean_dif)) +
     strip.text = element_text(size = 12)) +
   guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
   facet_wrap(~TSS, ncol = 4, scales = "free_x", labeller = labeller(TSS = function(label) label))  
+
+print(RNA_TSS)
 
 ``` 
 Interpretation: The positive ∆ expression between the SoI and the control gene-set is maintained across all cancer types

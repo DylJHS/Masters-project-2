@@ -345,6 +345,8 @@ CNV_Dif <- ggplot(merged_data, aes( y = Value, x = Variable)) +
               textsize = 5.5,
               tip_length = 0
   ) 
+
+print(CNV_Dif)
 ```
 
 
@@ -380,7 +382,7 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 CN
 
 
 CNV_TSS <- ggplot(main_data, aes(x = Sample, y = Mean_dif)) + 
-  geom_col(alpha = 0.72, fill = "#6B990F") +
+  geom_col(alpha = 0.72, fill = "#00688B") +
   theme_minimal() +
   labs(y = expression("Copy Number Δ" ~ (log[2])),
        x = "Samples",
@@ -401,6 +403,8 @@ CNV_TSS <- ggplot(main_data, aes(x = Sample, y = Mean_dif)) +
     strip.text = element_text(size = 12)) +
   guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
   facet_wrap(~TSS, ncol = 4, scales = "free_x", labeller = labeller(TSS = function(label) label))   
+
+print(CNV_TSS)
 
 ``` 
 Interpretation: The ∆ Copy Number between the SoI and the control gene-set shows much more variation compared to the expression data. Certain cancer types show distinct patterns, directional (Kidney) or magnitude (Thyroid, Ovarian) based. 
@@ -515,6 +519,7 @@ CNV_Bar <- ggplot(Results_table, aes(x = TSS, y = Mean_diff)) +
         panel.border = element_rect(fill = "transparent",
                                     color = 1,
                                     linewidth = 2)) 
+print(CNV_Bar)
 
 ``` 
 Interpretation: Indicates that the Copy Number pattern of positive ∆ mean Copy Number between the SoI and the control gene-set is present across all cancer types and that there are some differences in these levels. 

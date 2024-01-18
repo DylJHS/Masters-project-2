@@ -1,0 +1,59 @@
+---
+title: "Gene Subset analysis"
+output: html_document
+date: "2024-01-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+Load the libraries
+```{r}
+library(dplyr)
+library(broom)
+library(knitr)
+library(coin)
+library(data.table)
+library(ggpubr)
+library(rstatix)
+library(tidyverse)
+library(jmuOutlier)
+library(paletteer)
+``` 
+
+Load other options
+```{r}
+getOption("max.print")
+```
+
+
+1. Load the data
+```{r}
+first <- fread("Data/RNA_Data/Genes_of_Interest_RNA_df.csv")
+
+print(head(first))
+```
+
+
+2. Sample the data 
+
+```{r}
+set.seed(123)
+
+
+Sample_data <- first[sample(1:10000, 500),]
+print(Sample_data)
+```
+
+
+3. Correlate the genes in the data
+
+```{r}
+Gene_correlations <- 
+```
+
+
+
+
+
+
