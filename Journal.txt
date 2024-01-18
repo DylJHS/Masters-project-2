@@ -2,7 +2,7 @@
 
 Log:
 - Configured the plots in Q2.A & B of the RNA_analysis_longer top handle the script following the changes for the multiple control sets.
-- Edited the RNA_Analysis_logner script to maintain the same control set (for sole use) following the demonstration that the control sets all demonstrate a similar expression pattern.
+- Edited the RNA_Analysis_longer script to maintain the same control set (for sole use) following the demonstration that the control sets all demonstrate a similar expression pattern.
 - Read up on the binomial distribution and differential gene expression analyses. 
 
 Questions: 
@@ -71,8 +71,8 @@ Changes that will need to be made to the graphs in the script include:
 Log: 
 - Switched the method of paired permutation from one-sided to two-sided due to bias after observing the data
 - Edited the script in the Q2 to use the full control set dataset
-- Applied the Benjamini-Hochberg method of multple comparison correction due to the number of tests being applied and the assumption that there are no dependencies between the tests
-- Used Facets in the Q2.A graph (expresion dif across samples by TSS) instead of filling using colours due to the 33 groups which are slightly numerous
+- Applied the Benjamini-Hochberg method of multiple comparison correction due to the number of tests being applied and the assumption that there are no dependencies between the tests
+- Used Facets in the Q2.A graph (expression difference across samples by TSS) instead of filling using colours due to the 33 groups which are slightly numerous
 - Replaced the CEA pvalue vs mean dif expression plot with a barplot due to all TSS showing up as highly significant (pval < 0)
 - Split the RNA_analysis into 2 Rmd files (Part I and II)
 
@@ -90,7 +90,7 @@ Log:
 - Lit reading on CNV based analysis and the GISTIC2.0 documentation
 
 Remarks:
-- Still need to finish updatign the CNV Analysis script
+- Still need to finish updating the CNV Analysis script
 
 
 09/01/24
@@ -102,3 +102,65 @@ Log:
 Remarks: 
 - Need to complete the Notes segment for the CNV analysis for Part I
 - Test for the variance in the distributions of both the CNV and the RNA sets
+
+
+10/01/24
+
+Log:
+- Configured the CNV Analysis past Question 2
+- Edited the graphs in both CNV and RNA analysis
+- Finished updating the CNV analysis
+- Updated the graphs in the RNA analysis (significance bars)
+- Wrote down the remarks/questions for Stefan (PPI database pull down cutoff, Permutation tests, negative binomial in the RNA-seq data, differential analysis on different genes)
+
+
+11/01/24
+
+Log:
+- Updated graphs in the RNA analysis
+- met with Theo. Advised to renormalise the data 
+- should it be normalised per set (SoI & control) or across both (i.e. using the vlaues across both sets as the normalisation parameter)
+- Writing the rundown of the presentation
+- In order to figure out how to re-normalise the data, figure out how it was normalised in the first place. 
+- Was it across rows (samples) or columns (genes) or something different
+ 
+Remarks:
+- try to implement some form of PCA 
+- Or combine the graphs from the 2 analyses in some way
+- Based on the meaning of the interaction score, it might be prudent to set a higher interaction cutoff
+
+
+12/01/24
+
+Log:
+- Wrote the Rundown for the presentation
+- Wrote the script for the presentation
+
+
+13/01/24
+
+Log:
+- Wrote the script for the presentation
+- Constructed the Slides for the presentation
+- Created a Notes file for the Main Literature References that will be used in my report(s)/presentations
+
+
+14/01/24
+
+Log:
+- Monday presentation prep
+
+
+15/01/24
+
+Log:
+- Presented to the Lens & Janssen group
+
+
+16/01/24
+
+Log:
+- My Anh's PhD Defence
+- Reading up on the different methods for RNA-Seq normalisation (within&between samples & datasets)
+
+

@@ -89,7 +89,7 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 10/01/24
 
 - Configuring the CNV Analysis past Question 2
-- Ediuting the graphs in both CNV and RNA analysis
+- Editing the graphs in both CNV and RNA analysis
 
 - Finish updating the CNV analysis
 - update the graphs in the RNA analysis (significance bars)
@@ -117,3 +117,36 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Writing the script for the presentation
 
 
+13/01/24
+
+- Writing the script for the presentation
+- Constructing the Slides for the presentation
+- Created a Notes file for the Main Literature References that will be used in my report(s)/presentations
+
+
+
+14/01/24
+
+- Using Whimsical for presentation pipeline diagram
+
+- Whimsical is a scam
+
+
+15/01/24
+
+- Finished the presentation 
+- Presented to the Lens & Janssen group
+
+
+16/01/24
+
+- My Anh's PhD Defense
+- Reading up on the different methods for RNASeq normlisation (within&between samples & datasets)
+
+
+17/01/24
+
+- find out if re-normalisation is truly worth it
+
+- Thinking of not normalising for the inter-set comparison
+- But normalising for the intra-set analyses

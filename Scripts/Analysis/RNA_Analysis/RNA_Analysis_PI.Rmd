@@ -75,6 +75,7 @@ print(head(used_first))
 Choose a random set of 5 control gene-sets that will be used in the graphs
 
 ```{r}
+set.seed(123)
 controls <- sample(1:num_datasets, 5)
 ```
 
@@ -215,24 +216,24 @@ Interpretation: Despite that fact that the Friedman Test and the Contrast Analys
 E) Calculate the significance of the difference between the mean expression of the control-sets and the Set-of-Interest using a two-sided Paired Permutation Test for each control/SoI pair followed by a correction for multiple testing. 
 
 ```{r}
-# # Loop over each of the control datasets in the folder.
-# # For each control-set perform a two-sided paired permutation test with the SoI.
-# # Save the pvalue for each test in a dataframe.
-# 
-# paired_tests_list <- list()
-# for (i in 1:num_datasets) {
-#   ctrl <- paste("Mean_cntrl", i, sep ="")
-#   permutation_res <- perm.test(used_first$Mean_set, used_first[,get(ctrl)], alternative = "two.sided", mu = 0,
-#       paired = TRUE, all.perms = TRUE, num.sim = 10000, plot = FALSE, stat = mean)
-#   pair <- paste("Pair", i, sep ="_")
-#   pair_frame = data.frame(Pairing = pair, Pvalue = as.numeric(permutation_res$p.value), Corrected_Pval = as.numeric(p.adjust(permutation_res$p.value, method = "BH", n = num_datasets)))
-#   paired_tests_list[[i]] <- pair_frame
-# }
-# 
-# # Correct the P-value due to multiple testing by using the BH method.
-# 
-# full_paired <- do.call(rbind, paired_tests_list) %>% arrange(desc(Pvalue))
-# print(head(full_paired))
+# Loop over each of the control datasets in the folder.
+# For each control-set perform a two-sided paired permutation test with the SoI.
+# Save the pvalue for each test in a dataframe.
+
+paired_tests_list <- list()
+for (i in 1:num_datasets) {
+  ctrl <- paste("Mean_cntrl", i, sep ="")
+  permutation_res <- perm.test(used_first$Mean_set, used_first[,get(ctrl)], alternative = "two.sided", mu = 0,
+      paired = TRUE, all.perms = TRUE, num.sim = 10000, plot = FALSE, stat = mean)
+  pair <- paste("Pair", i, sep ="_")
+  pair_frame = data.frame(Pairing = pair, Pvalue = as.numeric(permutation_res$p.value), Corrected_Pval = as.numeric(p.adjust(permutation_res$p.value, method = "BH", n = num_datasets)))
+  paired_tests_list[[i]] <- pair_frame
+}
+
+# Correct the P-value due to multiple testing by using the BH method.
+
+full_paired <- do.call(rbind, paired_tests_list) %>% arrange(desc(Pvalue))
+print(head(full_paired))
 
 ```
 Result: The results show a p-value of 0 for all pairings.
@@ -244,39 +245,104 @@ F) Demonstrate difference by showing the individual expression distributions of 
   and some (5) of the control gene-sets
 
 ```{r}
-# Select 3 control gene-sets at random to compare their distributions with that of the SoI.
+# # Select 5 control gene-sets at random to compare their distributions with that of the SoI.
+# 
+# controls_names <- "Mean_set"
+# controls_names <- append(controls_names, unlist(lapply(controls, function(i) paste("Mean_cntrl", i, sep =""))))
+# 
+# # Pivot the data into a form that can be used by boxplot.
+# 
+# long_data <- used_first %>% 
+#   pivot_longer(cols = all_of(controls_names),
+#                names_to = "Variable",
+#                values_to = "Value")
 
 controls_names <- "Mean_set"
-controls_names <- append(controls_names, unlist(lapply(controls, function(i) paste("Mean_cntrl", i, sep =""))))
+mean_cntrl_names <- unlist(lapply(controls, function(i) paste("Mean_cntrl", i, sep ="")))
+controls_names <- append(controls_names, mean_cntrl_names)
+
 
 # Pivot the data into a form that can be used by boxplot.
 
 long_data <- used_first %>% 
-  pivot_longer(cols = all_of(controls_names),
-               names_to = "Variable",
-               values_to = "Value")
+  select(all_of(controls_names)) %>% 
+  pivot_longer( cols = everything(), names_to = "Variable", values_to = "Value")
 
-ggplot(long_data, aes( y = Value, x = Variable)) +
-  geom_boxplot(outlier.colour = 2) +
+# Extract control set numbers from the Pairing column in full_paired_wilc
+full_paired$Control_Num <- as.numeric(sub("Pair_", "", full_paired$Pairing))
+
+full_paired$Sig <- ifelse (full_paired$Corrected_Pval <= 0.001, "***",
+                           ifelse (full_paired$Corrected_Pval <= 0.01, "**",
+                                   ifelse (full_paired$Corrected_Pval <= 0.05, "*",
+"NS" )))
+    
+
+# Create a new column in full_paired_wilc to match the Variable column in long_data
+full_paired$Variable <- paste("Mean_cntrl", full_paired$Control_Num, sep="")
+
+# Merge full_paired_wilc with long_data
+merged_data <- merge(long_data, full_paired, by="Variable", all.x=TRUE)
+
+# Reorder the Variable column in merged_data
+# merged_data$Variable <- factor(merged_data$Variable, levels = desired_order)
+
+
+# Define the specific comparisons
+specific_comparisons <- list(
+  c("Mean_set", mean_cntrl_names[1]), 
+  c("Mean_set", mean_cntrl_names[2]), 
+  c("Mean_set", mean_cntrl_names[3]),
+  c("Mean_set", mean_cntrl_names[4]), 
+  c("Mean_set", mean_cntrl_names[5])
+)
+    
+specific_comparisons_ordered <-  specific_comparisons[order(sapply(specific_comparisons, function(x) x[2]))]    
+
+# Extract corresponding p-values for these comparisons
+specific_p_values <- sapply(specific_comparisons_ordered, function(comp) {
+  # Filter for rows where the Variable is either the Mean_set or the specific control
+  subset_data <- merged_data[merged_data$Variable %in% comp[2],]
+
+  # If there are multiple rows (as there should be for each pair), we take the unique p-value
+  unique_pval <- unique(subset_data$Sig)
+
+  # Return the unique p-value, or NA if not found
+  if (length(unique_pval) == 1) {
+    return(unique_pval)
+  } else {
+    return(NA)
+  }
+})
+
+
+RNA_dif <- ggplot(long_data, aes( y = Value, x = Variable)) +
+  geom_boxplot(outlier.colour = 2, fill = "gray88") +
   stat_boxplot(geom = "errorbar") +
   theme_minimal() +
-  labs(title = "Distribution of the Mean Expression in the \n Set-of-Interest vs various Control-Sets",
-       y = "Log2 Expression") +
-  # scale_x_discrete(label = c("Control gene-set", "Set of Interest")) +
-  # scale_fill_hue(labels = c("Control gene-set", "Set of Interest"))+
+  labs(title = "DISTRIBUTION OF THE MEAN EXPRESSION IN THE SET-OF-INTEREST VS VARIOUS CONTROL-SETS",
+       y = expression("Expression" ~ (log[2])),) +
+  scale_x_discrete(labels = c("Control Set 118","Control Set 14","Control Set 179","Control Set 195","Control Set 306", "Set of Interest")) +
   theme(
         legend.position = "None",
-        axis.title.y = element_text(size= 13),
+        axis.title.y = element_text(size= 20),
         plot.subtitle = element_text(hjust= 0.5),
         axis.title.x = element_blank(),
-        axis.text.x = element_text(size = 11),
+        axis.text.x = element_text(size = 17, angle = 45, vjust = 0.6),
+        axis.text.y = element_text(size = 17),
         plot.title = element_text(hjust = 0.5,
-                                  size = 14),
-        panel.background = element_rect(fill = "#EDEDED"),
+                                  size = 25),
+        panel.background = element_rect(fill = "white"),
         panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 2),
         panel.border = element_rect(fill = "transparent",
                                     color = 1,
-                                    linewidth = 2)) 
+                                    linewidth = 2)) +
+  geom_signif(comparisons = specific_comparisons_ordered,
+               annotations = specific_p_values,
+              step_increase = 0.09,
+              map_signif_level = TRUE,
+              textsize = 5.5,
+              tip_length = 0
+  ) 
 
 ```
 Interpretation: the p-value and plots demonstrate that the expression pattern of the control gene-sets are significantly different from that of the SoI.
@@ -315,26 +381,26 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 RN
 ```{r}
 
 
-ggplot(main_data, aes(x = Sample, y = Mean_dif)) + 
+RNA_TSS <- ggplot(main_data, aes(x = Sample, y = Mean_dif)) + 
   geom_col(alpha = 0.72, fill = "#00688B") +
   theme_minimal() +
-  labs(y = "Δ Mean Log2 Expression",
+  labs(y = expression("Expression Δ" ~ (log[2])),
        x = "Samples",
-       title = "Expression Difference across Samples by TSS") +
+       title = "EXPRESSION DIFFERENCE ACROSS SAMPLES BY TSS") +
   theme(
     axis.text.x = element_blank(),
-    axis.title.y = element_text(size = 15), 
-    axis.text.y = element_text(size = 11),
+    axis.title.y = element_text(size = 17), 
+    axis.text.y = element_text(size = 13),
     axis.title.x = element_blank(), 
-    plot.title = element_text(hjust = 0.5, size = 18),
+    plot.title = element_text(hjust = 0.5, size = 23),
     plot.title.position = "plot",
-    panel.background = element_rect(fill = "#EDEDED"),
+    panel.background = element_rect(fill = "white"),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.5, linetype = 2),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.x = element_blank(),
     axis.line = element_line(linewidth = 0.35, linetype = "solid", colour = "black"),
     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
-    strip.text = element_text(size = 13)) +
+    strip.text = element_text(size = 12)) +
   guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
   facet_wrap(~TSS, ncol = 4, scales = "free_x", labeller = labeller(TSS = function(label) label))  
 

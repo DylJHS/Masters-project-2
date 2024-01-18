@@ -80,6 +80,7 @@ print(head(used_first))
 Choose a random set of 5 control gene-sets that will be used in the graphs
 
 ```{r}
+set.seed(123)
 controls <- sample(1:num_datasets, 5)
 ```
 
@@ -316,20 +317,22 @@ specific_p_values <- sapply(specific_comparisons_ordered, function(comp) {
 
 
 
-ggplot(merged_data, aes( y = Value, x = Variable)) +
+CNV_Dif <- ggplot(merged_data, aes( y = Value, x = Variable)) +
   geom_boxplot(outlier.colour = 2, fill = "gray88") +
   stat_boxplot(geom = "errorbar") +
   theme_minimal() +
-  labs(title = "Distribution of average Copy Number in the \n Set-of-Interest vs various Control-Sets",
-       y = expression(Copy~Number ~ (log[2]))) +
+  labs(title = "DISTRIBUTION OF AVERAGE COPY NUMBER IN THE SET-OF-INTEREST VS VARIOUS CONTROL-SETS",
+       y = expression(Copy~Number ~ (log[2])))+
+  scale_x_discrete(labels = c("Control Set 118","Control Set 14","Control Set 179","Control Set 195","Control Set 306", "Set of Interest")) +
   theme(
         legend.position = "None",
-        axis.title.y = element_text(size= 13),
+        axis.title.y = element_text(size= 20),
         plot.subtitle = element_text(hjust= 0.5),
         axis.title.x = element_blank(),
-        axis.text.x = element_text(size = 11),
+        axis.text.x = element_text(size = 17, angle = 45, vjust = 0.6),
+        axis.text.y = element_text(size = 17),
         plot.title = element_text(hjust = 0.5,
-                                  size = 14),
+                                  size = 25),
         panel.background = element_rect(fill = "white"),
         panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 2),
         panel.border = element_rect(fill = "transparent",
@@ -337,12 +340,13 @@ ggplot(merged_data, aes( y = Value, x = Variable)) +
                                     linewidth = 2)) +
   geom_signif(comparisons = specific_comparisons_ordered,
                annotations = specific_p_values,
-              step_increase = 0.05,
+              step_increase = 0.09,
               map_signif_level = TRUE,
-              textsize = 2.5,
+              textsize = 5.5,
               tip_length = 0
   ) 
 ```
+
 
 
 
@@ -375,18 +379,18 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 CN
 ```{r}
 
 
-ggplot(main_data, aes(x = Sample, y = Mean_dif)) + 
-  geom_col(alpha = 0.72, fill = "black") +
+CNV_TSS <- ggplot(main_data, aes(x = Sample, y = Mean_dif)) + 
+  geom_col(alpha = 0.72, fill = "#6B990F") +
   theme_minimal() +
   labs(y = expression("Copy Number Δ" ~ (log[2])),
        x = "Samples",
-       title = "Average Set-of-Interest to Control-set \n Copy Number Difference across Samples by TSS") +
-  theme(
+       title = "AVERAGE COPY NUMBER DIFFERENCE ACROSS SAMPLES BY TSS") +
+ theme(
     axis.text.x = element_blank(),
-    axis.title.y = element_text(size = 13), 
-    axis.text.y = element_text(size = 11),
+    axis.title.y = element_text(size = 17), 
+    axis.text.y = element_text(size = 13),
     axis.title.x = element_blank(), 
-    plot.title = element_text(hjust = 0.5, size = 15),
+    plot.title = element_text(hjust = 0.5, size = 23),
     plot.title.position = "plot",
     panel.background = element_rect(fill = "white"),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.5, linetype = 2),
@@ -394,9 +398,9 @@ ggplot(main_data, aes(x = Sample, y = Mean_dif)) +
     panel.grid.major.x = element_blank(),
     axis.line = element_line(linewidth = 0.35, linetype = "solid", colour = "black"),
     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
-    strip.text = element_text(size = 13)) +
+    strip.text = element_text(size = 12)) +
   guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
-  facet_wrap(~TSS, ncol = 4, scales = "free_x", labeller = labeller(TSS = function(label) label))  
+  facet_wrap(~TSS, ncol = 4, scales = "free_x", labeller = labeller(TSS = function(label) label))   
 
 ``` 
 Interpretation: The ∆ Copy Number between the SoI and the control gene-set shows much more variation compared to the expression data. Certain cancer types show distinct patterns, directional (Kidney) or magnitude (Thyroid, Ovarian) based. 
@@ -476,7 +480,7 @@ for (i in 1:length(unique_TSS)) {
   mean_diff <- mean(subset_data$Mean_dif)
   
   # Store the result in  'Results_table' 
-  Results_table <- rbind(Results_table, data.frame(TSS = current_TSS, P_Value = test_result$p.value, Adj_P_Value = Corrected_Pval,
+  Results_table <- rbind(Results_table, data.frame(TSS = current_TSS, P_Value = Q2wlcx_paired_res$p.value, Adj_P_Value = Corrected_Pval,
                                                    Significant_value  = Significant_val, Mean_diff = mean_diff)) %>% arrange(desc(Mean_diff))
 }
 
@@ -491,8 +495,8 @@ D) Create barplot of each TSS group, based on mean Copy Number difference.
 
 ```{r}
 
-ggplot(Results_table, aes(x = TSS, y = Mean_diff)) +
-  geom_bar(stat = "identity", fill = "#27408B") +
+CNV_Bar <- ggplot(Results_table, aes(x = TSS, y = Mean_diff)) +
+  geom_bar(stat = "identity", fill = "#6B990F") +
   theme_minimal() +
   labs(title = "Average Copy Number Difference in Set-of-Interest vs control gene-set", 
        y = expression("Copy Number Δ" ~ (log[2])))+
