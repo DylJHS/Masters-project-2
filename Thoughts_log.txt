@@ -150,3 +150,100 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 - Thinking of not normalising for the inter-set comparison
 - But normalising for the intra-set analyses
+
+
+18/01/24
+
+- Starting the process of figuring out how to renormalise the set-of-interest subset
+
+
+- Starting on the next Part of the Project (part II)
+- Need to cut down the data to the set of interest only while renormalising the data
+
+
+- In terms of the re-normalisation of the subset of genes it may no longer be a good idea. The process of normalising the data would average out some of the characteristics of the genes in the sample which may not be the best in terms of interpretaiton due to the fact that my hypothesis presumes that the genes in this set are distinct from the rest of the genome. Therefore even an average gene expression in this set could be indicative of something on a wider scale. Also the set is overexpressed when compared to the rest of the genome so lower expressed genes would not appear more like the rest of the genome but would show up as distinct on the lower side. 
+
+
+- Talk with Stefan
+- The iteration testing for the expression data was 'Overkill'
+- Only showed what was expected in the most difficult way possible
+- The genes of interest are likely just on the higher end of the overall expression histogram
+- Using a normal control would prove more evident as that would show that there is a differnece in the expected expression (normal vs cancerous)
+- Moving forward suggested to:
+- Correlate the genes within the subset to determine if there are genes that are covariates of one-another
+- These correlated genes can then be grouped based on a z-score based signature 
+- Signature can then be used for further analyses
+
+
+- Talk did not go well, under the impression that my project is far too simple and convoluted than it should be
+- Need to Organise the workflow better
+- plan and determine which analyses to implement and why each one of them is beneficial and what they provide individual (i.e. what their purpose is)
+- You are only using PanCan data so need to give extra thought to the meaning of the analyses that you are performing 
+- Getting a healthy control set would be beneficial to the project as it would provide some basis for the normal functioning of the data that you are looking at
+
+- Was also mentioned that STRING is likely not the best way to go about expanding the list of genes
+- Would be more accurate to expand based on specific experimental data from select researchers
+
+- Was slightly condescending
+- Think more about finding other resources to assist you or give you suggestions
+
+- Started writing the Gene_Subset_Analyis.Rmd which will contain the analyses for the correlations and the gene signature creation
+
+
+19/01/24
+
+- Continuing the Correlation analysis
+
+- found a potential dataset for healthy data from different tissue types
+- Saved as 'GSE120795_norm_counts_TPM_GRCh38.p13_NCBI.tsv' in the Raw_Data folder
+- Copied and saved as 'Healthy_Data' in the RNA_Data folder 
+- Data in only composed of RNAseq data 
+- The values are normalised using TPM
+
+- Also added the dataset for the values in their raw count form 
+- Saved as 'GSE120795_raw_counts_GRCh38.p13_NCBI.tsv.gz' in the Raw_Data folder
+- Copied and saved as 'Healthy_Data_raw_counts' in the RNA_Data folder 
+
+
+- Reading up on GREAT at 'http://great.stanford.edu/public/html/splash.php' 
+- This tool may not be relevatn conerning the work that i am doing as it focuses on the cis regulatory regions of the input regions
+- Returns the annotation terms that re significanlty associated with the input regions/genes and their cis elements
+- My focus is on the gene/regions themselves already knowing the function of most of the genes
+
+- Recall that Stefan also mentioned a means of clustering such as k-means
+
+- Correlated the RNA data using a Pearson correlation score (not measuring the distances but the similarity between the genes)
+- Creating a heatmap for the correlation matrix
+- Using Bioconductor's 'ComplexHeatmap' package
+- 307*307 genes makes for a large matrix
+- would like to turn it into a triangle plot seeing as the plot is symmetrical across the diagonal half the plot is redundant
+
+- Would like to follow up the correlation matrix and test using a PCA to identfy the clusters with more precision, create the signature genes and use those signatures as variables instead of the original list of genes which is quite long
+
+- Created the same Correlation analysis file but for the CNV instead of the RNA data
+- This seems like it might be the better approach as it comes from the CIN trait (CNV) back to the genetic trait as opposed to grouping by the RNA expression level and then trying to identify specific sets of genes for each 
+- This way i am starting from the characteristic that I am interested in, CIN, and grouping at this level in order to identify traits that might be shared by different genes 
+- Starting off with the CNV and then adding other CIN metrics to this in order to gain insight
+
+- Need to find a way to break apart the different groupings in the clustermap 
+- This will hopefully give me the individual genes that make up each of the groups
+
+
+20/01/24
+
+
+- Trying to find ways to extract the relevant clusters from the clusterplot
+
+- Transforming the correlation map into a distance map
+
+- Slightly confused baout how the process will work so here is the rundown of how i see it:
+- Create CNV signatures. These signatures are created based on the correlation between the CNVs that are observed in different genes within the data. The genes that are closely related based on the distance matrix (ex: 1 - Pearson's coef) are grouped together using a method such as k-means. 
+- Each group makes up a CNV signature. 
+
+
+21/01/24
+
+- Might be uselful to consider different clustering methods
+- K-means clustering beased on the Pearson correlation, but also others such as Mutual Information / Entropy
+- Reading up on the methods for correlating RNA and feature extraction
+- Thinking that using a Mutual information as the basis for the signatures could be beneficial due to the non-linearity of some of the relation
