@@ -236,14 +236,80 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 - Transforming the correlation map into a distance map
 
-- Slightly confused baout how the process will work so here is the rundown of how i see it:
+- Slightly confused about how the process will work so here is the rundown of how i see it:
 - Create CNV signatures. These signatures are created based on the correlation between the CNVs that are observed in different genes within the data. The genes that are closely related based on the distance matrix (ex: 1 - Pearson's coef) are grouped together using a method such as k-means. 
 - Each group makes up a CNV signature. 
 
 
 21/01/24
 
-- Might be uselful to consider different clustering methods
-- K-means clustering beased on the Pearson correlation, but also others such as Mutual Information / Entropy
+- Might be useful to consider different clustering methods
+- K-means clustering based on the Pearson correlation, but also others such as Mutual Information / Entropy
 - Reading up on the methods for correlating RNA and feature extraction
 - Thinking that using a Mutual information as the basis for the signatures could be beneficial due to the non-linearity of some of the relation
+
+
+22/01/24
+
+- Reading up more on the Mutual Information approach and the use of Spline functions to estimate RNA distributions
+- Reading up on other features that could be added to the CIN set 
+- Such as the HRD (Homologous Recombination Deficiency), hrd-loh, ai1 & lst1 Scores which are available on the XenaBrowser 
+
+- Going to start with using Pearson's correlation as the basis of the RNA & CNV signatures
+- Will then move on to using Mutual Information or another method
+- And will increase the features for the CIN variables 
+
+- Changing the distance measure for the CNV to euclidean is likely better
+- This is because when dealing with Copy Number there is more than just directional changes that matter
+
+- Created one distance matrix based on the Pearson and another based on the Euclidean distance
+- finding a way to select the optimal number of groups using the k-means method
+- Using the Silhouette method
+- The Silhouette method does not show the best divisions between the groups when using k-means with the Pearson distance as well as the Euclidean distance
+- The Silhouette score for both shows maximal at 2 clusters 
+- Creating 2 broad CNV signatures does not seem effective for the purpose of extracting features from the variable
+- Will likely have to implement a different clustering method (MI, Entropy ...) sooner than expected
+
+
+23/01/24
+
+- Emailing Reza about the updates to the Project and the Interim presentation
+
+
+24/01/24
+
+- Might be a good idea to remove genes that have NA values across any type of cancer for both the expression and the CNA data
+
+ 
+- Might be thinking about this wrong
+- Should i only be using the expression data of the genes of interest
+- and then the CIN data (CNV adn such) for the rest of the entire genome
+- Instead of CIN data for only the genes of interest as well
+- This is becuase i expect that a change in the regulation of the genes of interest is responsible for CIN in the LAD domains
+- These LAD domains contain chromatin that is not related ot the sequences for the genes of interest
+- I need to associate the expresoin patterns of the genes of interest to CIN signs (SV, Micronuclei, CNV) throughout the nucleus or specifically at LAD regions
+- Can find specific sequences of cLADs to look at the issue at LAD specific regions
+- Or gather as much CIN data about the samples as possible
+
+- Can continue with the pearson/euclidean/MI distance clustering 
+- But base it only on the expression data not on the CNV data
+- to get teh expression patterns/signatures
+
+- I want to relate the expression changes to changes in CIN data
+- Need to perform clustering grouping such as i've been doing witht the CNVs but using the entire genome data as opposed to solely the SoI
+- Using this data that is genome wide and the patterns/signatures generated from this 
+- Would like to relate it back to expression patterns in teh Set of Interest (using either signatures/groupings or individual genes)
+
+
+- Can do the above by creating two sets of signatures
+- One that is/are expression signatures based solely on the expression patterns of the set of interest 
+- Another that is/are CIN signatures that are based on the CIN data from the genome as a whole 
+- Can also try to limit the CIN data to cLAD specific regions
+
+ 
+- redownloaded the PanCan data as it somehow disappeared from the Raw_Data folder
+- The data that was redownloaded includes RNA & CNV accross mutliple forms (SNP6, before and after germline removal, raw & norm counts...) 
+- The data also includes the other data that refers to different datatypes (HDR signatures, survival info, phenotypes...) 
+
+ 
+- Need to reformat the CNV data for the full genome data. Not sure if i should only use the after germline removal or the before as well. Will default to the post-removal
