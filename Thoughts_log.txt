@@ -50,7 +50,7 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Changing the test in Q1.D so that it is not only two-sided but also corrected for using the BH method
 - Edited the script in RNA_Analysis Part II in order to upload the entire dataset for the selected control set instead of using filtering the concatenated one
 - The use of the full (only selected ~2000 rows of the 11000) allows for better analyses using more of the data
--Need to explore the data some more to check the number of samples for each cancer type and other such analyses that will help determine the types of tests that i can perform
+- Need to explore the data some more to check the number of samples for each cancer type and other such analyses that will help determine the types of tests that i can perform
 - Should do the above using the Pre_Analysis script 
 - All the paired tests grouping by cnacer types come back as siginificant with a pvlaue of 0 for all. This means that plotting them as i had in the previous version won't produce a highly discernable graph as all the points will appear on the same line
 - I will use a barplot instead to show the average differential expression by cancer type (TSS) 
@@ -65,7 +65,7 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Editing the Notes file for the Project part I
 - Added the interpretation to the mean TSS expression barplot (Q2.D)
 
--Edited the RNA_Analysis script to replace the 'Differential' terms with 'Difference'
+- Edited the RNA_Analysis script to replace the 'Differential' terms with 'Difference'
 - Considering changing the metric from Difference when assissing the differnces in expression levels to Fold Change (ratio). This might be easier for interpretation given familiarity and removes the factor of the unit seeing as it is solely a relative (comparative) metric, which makes sense for the analyses at hand
 
 - Reading the documetation on the CNV data generated using the GISTIC2.0 method
@@ -94,13 +94,13 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Finish updating the CNV analysis
 - update the graphs in the RNA analysis (significance bars)
 
-- Write down the remarks/questioons for Stefan (PPI database pull down cutoff, Permutation tests, negative binomial in the RNA-seq data, differnetial analysis on differnet genes)
+- Write down the remarks/questions for Stefan (PPI database pull down cutoff, Permutation tests, negative binomial in the RNA-seq data, differnetial analysis on differnet genes)
 
 
 
 11/01/24
 
-- Updat eht egraphs in the RNA analysis
+- Update the graphs in the RNA analysis
 - try to implement some form of PCA 
 - Or combine the graphs from the 2 analyses in some way
 - Based on the meaning of the interaction score, it might be prudent to set a higher interaction cutoff
@@ -194,16 +194,14 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 - Continuing the Correlation analysis
 
-- found a potential dataset for healthy data from different tissue types
+- found a potential dataset for healthy data from different tissue types from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE120795
 - Saved as 'GSE120795_norm_counts_TPM_GRCh38.p13_NCBI.tsv' in the Raw_Data folder
 - Copied and saved as 'Healthy_Data' in the RNA_Data folder 
 - Data in only composed of RNAseq data 
 - The values are normalised using TPM
-
 - Also added the dataset for the values in their raw count form 
 - Saved as 'GSE120795_raw_counts_GRCh38.p13_NCBI.tsv.gz' in the Raw_Data folder
 - Copied and saved as 'Healthy_Data_raw_counts' in the RNA_Data folder 
-
 
 - Reading up on GREAT at 'http://great.stanford.edu/public/html/splash.php' 
 - This tool may not be relevatn conerning the work that i am doing as it focuses on the cis regulatory regions of the input regions
@@ -283,33 +281,137 @@ And therefore also removing the paired t.test that was in the Analysis previousl
  
 - Might be thinking about this wrong
 - Should i only be using the expression data of the genes of interest
-- and then the CIN data (CNV adn such) for the rest of the entire genome
+- and then the CIN data (CNV and such) for the rest of the entire genome
 - Instead of CIN data for only the genes of interest as well
-- This is becuase i expect that a change in the regulation of the genes of interest is responsible for CIN in the LAD domains
+- This is because i expect that a change in the regulation of the genes of interest is responsible for CIN in the LAD domains
 - These LAD domains contain chromatin that is not related ot the sequences for the genes of interest
-- I need to associate the expresoin patterns of the genes of interest to CIN signs (SV, Micronuclei, CNV) throughout the nucleus or specifically at LAD regions
+- I need to associate the expression patterns of the genes of interest to CIN signs (SV, Micronuclei, CNV) throughout the nucleus or specifically at LAD regions
 - Can find specific sequences of cLADs to look at the issue at LAD specific regions
 - Or gather as much CIN data about the samples as possible
 
-- Can continue with the pearson/euclidean/MI distance clustering 
+- Can continue with the Pearson/euclidean/MI distance clustering 
 - But base it only on the expression data not on the CNV data
-- to get teh expression patterns/signatures
+- to get the expression patterns/signatures
 
 - I want to relate the expression changes to changes in CIN data
-- Need to perform clustering grouping such as i've been doing witht the CNVs but using the entire genome data as opposed to solely the SoI
+- Need to perform clustering grouping such as i've been doing with the CNVs but using the entire genome data as opposed to solely the SoI
 - Using this data that is genome wide and the patterns/signatures generated from this 
-- Would like to relate it back to expression patterns in teh Set of Interest (using either signatures/groupings or individual genes)
-
+- Would like to relate it back to expression patterns in the Set of Interest (using either signatures/groupings or individual genes)
 
 - Can do the above by creating two sets of signatures
 - One that is/are expression signatures based solely on the expression patterns of the set of interest 
 - Another that is/are CIN signatures that are based on the CIN data from the genome as a whole 
 - Can also try to limit the CIN data to cLAD specific regions
-
  
 - redownloaded the PanCan data as it somehow disappeared from the Raw_Data folder
-- The data that was redownloaded includes RNA & CNV accross mutliple forms (SNP6, before and after germline removal, raw & norm counts...) 
+- The data that was redownloaded includes RNA & CNV across multiple forms (SNP6, before and after germline removal, raw & norm counts...) 
 - The data also includes the other data that refers to different datatypes (HDR signatures, survival info, phenotypes...) 
 
  
 - Need to reformat the CNV data for the full genome data. Not sure if i should only use the after germline removal or the before as well. Will default to the post-removal
+
+
+25/01/24
+
+- Meeting with Aniek & Adi
+- Need to integrate the Healthy RNAseq into the Analysis
+- Forgot to mention about the Interim report that also needs to be written for the presentation
+
+- Following up on the Healthy dataset by the Russian Academy of Sciences
+- Looking through the list of cited by articles, looks to be cited by various papers
+- Reliability of the data is a bit better given the citations
+- Also found the citation to another dataset within the GTExPortal website
+- This set may be better due to extensive number of samples and tissue sources 
+
+- The GTEx Dataset (V8) has over 17000 samples 
+- From 948 Donors
+- Covering 54 Tissue types
+- The healthy status of the donor is determined by the Death hardy Scale (DTHHRDY) which ranges from 0-4
+- Only the 0th, 1st, 2nd, 3rd cases should satisfy your analysis
+- The TPM RNA data that was downloaded was normalised for within sample variation (transcript length & seq depth)
+- None of the data was normalised for a within Dataset normalisation
+- Need to do that first applying either Quantile or TMM normalisation methods
+
+- Back to reformatting the CNV data to incorporate the full genome data as opposed to only the set of interest
+
+- Attended Marieke Oudelaar's seminar at Hubrecht 
+- Went for the 3C and other chromatin conformation capturing techniques
+
+- Met Lucia Barbadilla while I was there, she was speaking with Adi
+- Would like to meet her again to get her input on some of the analyses
+
+- Reza messaged me back
+- Wants to have the presentation on the 16th of Feb 
+- At VU
+- Can do zoom for Aniek or Adi if cannot attend
+- Need to send slides ahead of time
+- NEED TO WRITE THE INTERIM REPORT
+- presentation at around 2pm
+
+ 
+26/01/24
+
+- finish transforming the dataset with the CNVs for the full set
+- The transformation is taking a long time due to the size of the dataset
+
+- Handling the GTEx Healthy Set creation and preprocessing at the same time due to the time constraints imposed by the size of the datasets
+
+- Created the csv file for the full CNV datatset
+- Creating the csv file for the full GTEx dataset
+
+- Downloaded and using the annotation file to identify samples (subjects) that need to be removed from the dataset
+ 
+- Using Dask to clean/preprocess the GTEx dataset
+- Using the values from the DTHHRDY variable in the meta data to remove the unhealthy samples from the full GTEx RNA dataset
+- Values of 1-3 (exclude 0 and 4) are kept and considered healthy
+
+- Using the Samples that come from the sources other than diseased (cancer...) cases
+- Using the ventilator (0) cases as well as there is no indication that these subjects had a disease such as cancer prior to death
+- In total this adds up to 842 distinct subjects
+- End up with around 10,000 samples for healthy set
+
+
+ 27/01/24
+
+- Continuing with the GTEx Healthy Samples Dataframe creation
+
+- Saved the Healthy RNA GTEx samples in multiple files in the GTEx_RNA_Healthy folder in the RNA_Data folder
+- Still need to normalise the samples for within dataset effects (TMM or quantile) 
+- 
+- TMM is the likely option 
+- This method would work due to the fact that the Samples are assumed to be from healthy individuals and not differentially expressed
+- Created the usable CSV file for the count data as the DESeq2 only uses count data and not pre-normalised
+- Once the data file for the count GTEx RNA data is created, will go through the preprocessing to remove the unwanted (unhealthy) samples
+- Using GPT to translate the python processing script to R seeing as there is no DESeq2 python package
+
+- Might be a good idea to translate the other scripts that were written in python over to R for improved consistency and overall readability
+
+
+
+
+28/01/24
+
+- Editing the GTEx csv file so that it does not contain an index when read into R script
+- For comparing the healthy samples to the cancerous ones likely to need ot apply a DGE analysis
+- Will need to use the raw counts for this 
+- Will also need to use DESeq2 library
+- Should not normalise the counts for this
+- Need to make sure that the genes are the smae across datasets (i.e. remove the genes that are not common across datasets)
+- Need to merge the datasets based on teh common genes
+- Need to ensure that the gene names are standardised across sets
+
+- First want to put the healthy dataset through the same analysis that was done with TCGA dataset
+- This will enable me to determine whether the genes of interest are differentially expressed in a healthy sample as well
+- A DGE alone would only allow me to determine whether the genes are differentially expressed/regulated between cancer and healthy
+- It would not allow me to determine if the difference between the control sets and SOI is also observed in healthy samples or not
+- Need to do a TMM normalisation of the GTEx data for this part
+- Actually keeping the values as TPM may be best for this part as the samples are not assumed to be differentially expressed and they are all from the same library therefore even though there are batch effects this is of no concern given that the interest is between genes
+- Will be concerned with this later on though when comparing between samples and cancer types
+- May have to remove the samples with RIN < 6 as they are considered unsuitable for RNA analyses
+- Therefore downloaded the dataset wich contains this meta data
+- This will also be useful for the DGE and intraset comparisons for batch effect normalisation
+ 
+- Something to add to the tests that I have done in Part I of the project is that I was calculating the average expression values using the logs which means that I was calculating the geometric averages which are less prone to skewness by highly or lowly expressed genes
+ 
+- I also need to figure out the GTEx sample labels based on the tissue type that they represent
+- I need to reduce the genes in the GTEx dataset to the same ones that are in the TCGA dataset 
