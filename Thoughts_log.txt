@@ -415,3 +415,16 @@ And therefore also removing the paired t.test that was in the Analysis previousl
  
 - I also need to figure out the GTEx sample labels based on the tissue type that they represent
 - I need to reduce the genes in the GTEx dataset to the same ones that are in the TCGA dataset 
+
+
+
+29/01/24
+- Configuring the datasets for the TGEx Data
+- Cleaning the Data
+- removing the unusable samples
+- Creating the GETx Set of Interest
+- Creating the GTEx control sets that match up as well as possible with the TCGA control sets
+
+ 
+- Need to run the script so that i have the files for use
+- Will convert the script that is able to create the metrics datasets (comparing the SoI to the Controls based on the mean/median) to an R script so that the whole Part I Analysis can be run in the same script 
