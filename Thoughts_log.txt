@@ -428,3 +428,37 @@ And therefore also removing the paired t.test that was in the Analysis previousl
  
 - Need to run the script so that i have the files for use
 - Will convert the script that is able to create the metrics datasets (comparing the SoI to the Controls based on the mean/median) to an R script so that the whole Part I Analysis can be run in the same script 
+ 
+
+30/01/24
+
+- Running the GTEx RNA DF configs again for the control sets that were not created
+
+- Important to note that the RNA files that have been used so far from the GTEx are TPM normalised and therefore not suitable for inter-sample comparisons
+- Finished creating the control sets for the GTEx RNA data
+- The meta data variabels that will likely be of use are:
+- SAMPID: the ID for the sample
+- The batch variables (SMNABTCH, SMNABTCHT, SMNABTCHD, SMGEBTCH, SMGEBTCHD, SMGEBTCHT, SMCEBNTER) that will used when correcting for batch effects
+- SMTS/SMTSD: Th Tissue type that the sample comes from
+ 
+Aniek Lecture:
+- CIN is defined by the amount of instability in throughout the genome 
+- This instability can be indicated by abnormal amount of variation in the genome as well
+- Could be interesting to look at the variation patterns instead of static patterns for the signatures in the project
+- Signatures could be based on Aneuploidy, Single Strand Breaks, DSBs, Micronuclei presence ... 
+- Would be nice to be able to find a singature based on the SVs that occur in teh samples maybe using the average or the count (need to find the seq data for each of the samples) (Luan's Phd book)
+- Using log2(tpm+0.001) as the unit for the Part I of the GTEx analysis to avoid -inf values 
+- This is also the unit that is used for the TCGA TPM RNA data
+- Need to change the data that is used for the original RNA analysis to suit the analysis that is used now
+- This means using the TPM data for the initial part
+- Followed by the batch effect one later on
+
+- Still configuring the Part I analysis for the GTEx RNA set
+
+
+31/01/24
+
+
+- Running the GTEx througth the same tests as the TCGA set, shows that the differnece between the set of interest and the controls may be present in healthy samples as well
+- Will need ot assess the degree of the difference after confirming that there is in fact a difference there
+- Comparing the effect size of the differences between the conditions will likely also be of use

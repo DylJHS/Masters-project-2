@@ -33,73 +33,75 @@ Load the RNA datasets
 ```{r}
 set.seed(123)
 
-Healthy_Set_of_Interest <- read.csv("Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/GTEx_RNA_SoI.csv")
-Heatlhy_Sample_Meta <- read.csv("Data/RNA_Data/GTEx_RNA/GTEx_Annotations.csv")
+SOI_Healthy <- read.csv("Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/GTEx_RNA_SoI.csv")
+Meta_data_Healthy <- read.csv("Data/RNA_Data/GTEx_RNA/GTEx_Annotations.csv")
 
 ```
 
-Configure the set of interest metrics for the healthy data
+Configure function that builds the set of interest metrics
 ```{r}
-# use the log2 of the values
-cols_to_log <- names(Healthy_Set_of_Interest)[-1]
+calculate_summary <- function(input_dataframe) {
+  df_name <- deparse(substitute(input_dataframe))
+  cols_to_log <- names(input_dataframe)[-1]
 
-Logs_Healthy_Set_of_Interest <- Healthy_Set_of_Interest %>% 
-  mutate(across(.cols = cols_to_log, .fns = ~log2(. + 0.001), .names = "log2_{.col}")) %>% 
-  select(1, starts_with("log2_"))
+  Logs_Dataframe <- input_dataframe %>%
+    mutate(across(.cols = cols_to_log, .fns = ~log2(. + 0.001), .names = "log2_{.col}")) %>% 
+    select(1, starts_with("log2_"))
 
-Summary_Healthy_SoI <- Logs_Healthy_Set_of_Interest %>%
-  mutate(geom_mean = rowMeans(select(., -1), na.rm = TRUE),
-         medians = apply(select(.,-1),1, median, na.rm = TRUE)) %>%
-  select(SampleID, geom_mean, medians)
+  Summary_Dataframe <- Logs_Dataframe %>%
+    mutate(geom_mean = rowMeans(select(., -1), na.rm = TRUE),
+           medians = apply(select(., -1), 1, median, na.rm = TRUE)) %>%
+    select(SampleID, geom_mean, medians)
+  
+  prefix <- sub("^(.*?)_.*$", "\\1", df_name)
+  
+  colnames(Summary_Dataframe)[colnames(Summary_Dataframe) == "geom_mean"] <- paste0(prefix, "_geom_mean")
+  colnames(Summary_Dataframe)[colnames(Summary_Dataframe) == "medians"] <- paste0(prefix, "_medians")
+  
+  return(Summary_Dataframe)
+}
 ```
 
 
 ```{r}
-control_set1 <- 
 
 
 
-# used_first <- first[random_rows,c("Sample", "Mean_set", "Mean_cntrl","TSS","Hist_group", "TSS_Abbrvs")]
-# setnames(used_first, old = "Mean_cntrl", new = "Mean_cntrl1")
-# used_first[, Mean_diff1 := (Mean_set - Mean_cntrl1)]
-# 
-# num_datasets <- 412
-# 
-# # Loop over the datasets
-# for (i in 2:num_datasets) {
-#   
-#   file_name <- paste("Data/RNA_Data/Full_RNA_metrics", i, ".csv", sep = "")
-#   
-# 
-#   # Read the CSV file into a data.table
-#   current_dataset <- fread(file_name)
-#   current_dataset[, Mean_diff := (Mean_set - Mean_cntrl)]
-# 
-#   new_name1 = paste('Mean_cntrl', i, sep = "")
-#   new_name2 = paste('Mean_diff', i, sep = "")
-# 
-#   rename_map <- c("Mean_cntrl" = new_name1, "Mean_diff" = new_name2)
-# 
-#   # Rename columns in 'current_dataset' using the named vector
-#   setnames(current_dataset, old = names(rename_map), new = rename_map)
-# 
-#   # Select columns with their original names from 'current_dataset' and rename them
-#   selected_columns <- current_dataset[random_rows, c("Sample", new_name1, new_name2), with = FALSE]
-# 
-#   # Perform a merge based on Sample ID
-#   used_first <- merge(used_first, selected_columns, by = "Sample", all = FALSE, suffixes = c("", i))
-# 
-# }
-# 
-# print(head(used_first))
-# ``` 
-# 
-# 
-# Choose a random set of 5 control gene-sets that will be used in the graphs
-# 
-# ```{r}
-# set.seed(123)
-# controls <- sample(1:num_datasets, 5)
+SOI_summary <- calculate_summary(SOI_Healthy)
+
+Metrics_table <- data.frame(SampleID = SOI_summary$SampleID)
+
+
+num_datasets <- 412
+
+# Loop over the datasets
+for (i in 1:num_datasets) {
+  start_time <- Sys.time()
+
+  ctrl_file <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_Control_RNA_Data_df", i, ".csv", sep = "")
+  
+  ctrl_set <- read.csv(ctrl_file)
+  
+  ctrl_set_summary <- merge(calculate_summary(ctrl_set), SOI_summary, by = "SampleID", all = FALSE, suffixes = c("", i))
+  ctrl_set_summary <- ctrl_set_summary %>% mutate(mean_dif = SOI_geom_mean - ctrl_geom_mean  ,
+                                                  median_dif = SOI_medians - ctrl_medians)
+  
+  Metrics_table <- merge(Metrics_table, ctrl_set_summary %>% select(SampleID , mean_dif, median_dif), by = "SampleID", all = FALSE, suffixes = c("", i))
+  
+  end_time <- Sys.time()
+  # cat('\n',i,"th iteration duration: ", end_time - start_time, "seconds")
+}
+
+
+```
+
+
+
+Choose a random set of 5 control gene-sets that will be used in the graphs
+
+```{r}
+set.seed(123)
+controls <- sample(1:num_datasets, 5)
 ```
 
 
@@ -116,17 +118,17 @@ A) Create violin plots of the differences of the average log2 expression to asse
 
 ```{r}
 
-dif_pairing_names <- unlist(lapply(controls, function(i) paste("Mean_diff", i, sep ="")))
+dif_pairing_names <- unlist(lapply(controls, function(i) paste("mean_dif", i, sep ="")))
 
-violin_graph_long_data <- used_first %>% 
+violin_graph_long_data <- Metrics_table[dif_pairing_names] %>%
   pivot_longer(cols = dif_pairing_names,
                names_to = "Variable",
-               values_to = "Value") 
+               values_to = "Value")
 
 ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE, fill = "gray88")+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
-  labs(x = "Unique SoI / Control Pairings ", y = "Δ Log2 Expression",
+  labs(x = "Unique SOI to Control-set Pairings ", y = "Δ Log2 Expression",
        title = "Distribution of the Set-of-Interest to Control Gene-Set \n  Expression Difference Across Various Pairings") +
   theme(
     legend.position = "none",
@@ -155,11 +157,11 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 
 
 ```{r}
-# Fried_test_data <- used_first %>%
-#   gather(key = "Pairing", value = "Difference", starts_with("Mean_cntrl")) %>%
-#   mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>% 
-#   select(Sample, Pairing, Difference)
-# 
+Fried_test_data <- Metrics_table %>%
+  gather(key = "Pairing", value = "Difference", starts_with("Mean_cntrl")) %>%
+  mutate(Sample = as.factor(Sample), Pairing = as.factor(Pairing)) %>%
+  select(Sample, Pairing, Difference)
+
 # friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
 # print(friedman_result)
 ```

@@ -121,12 +121,12 @@ and whose composition is as close to the TCGA controls as possible.
 
 # # Create the control sets that match up as closely as possible to the TCGA controls
 
-## If the Full control set has already been created
-# GTEx_Cntrl_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_RNA_Full_Cntrl.csv')
+# If the Full control set has already been created
+GTEx_Cntrl_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_RNA_Full_Cntrl.csv')
 
-n = 8
+n = 1
 
-while True:
+while n < 4:
 
 	try:
 
