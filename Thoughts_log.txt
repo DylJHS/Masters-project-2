@@ -392,12 +392,12 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 28/01/24
 
 - Editing the GTEx csv file so that it does not contain an index when read into R script
-- For comparing the healthy samples to the cancerous ones likely to need ot apply a DGE analysis
+- For comparing the healthy samples to the cancerous ones likely to need to apply a DGE analysis
 - Will need to use the raw counts for this 
 - Will also need to use DESeq2 library
 - Should not normalise the counts for this
-- Need to make sure that the genes are the smae across datasets (i.e. remove the genes that are not common across datasets)
-- Need to merge the datasets based on teh common genes
+- Need to make sure that the genes are the same across datasets (i.e. remove the genes that are not common across datasets)
+- Need to merge the datasets based on the common genes
 - Need to ensure that the gene names are standardised across sets
 
 - First want to put the healthy dataset through the same analysis that was done with TCGA dataset
@@ -462,3 +462,41 @@ Aniek Lecture:
 - Running the GTEx througth the same tests as the TCGA set, shows that the differnece between the set of interest and the controls may be present in healthy samples as well
 - Will need ot assess the degree of the difference after confirming that there is in fact a difference there
 - Comparing the effect size of the differences between the conditions will likely also be of use
+
+
+01/02/24
+
+- Finishing running the script for the GTEx part I Analysis
+
+
+- Running the Part I analyss on the GTEx data shows that there is a significant differnece between the set of interest and the other control sets
+- Need to evaluate if this difference between the differences is signficant as well
+
+
+- This can be done by comparing the differences between one of the statistically significant pairings of the GTEx data and one of the statistically signfiicant pairings of the TCGA data
+
+- Finsished Q1 of part I of the GTEx RNA analysis
+- In order to run Q2 (looking at the expression (SOI-control) set difference I must first normalise the data to factor in library size at the least and perhaps other batch effects as well
+- Will have to repeat this process for the same part of the analysis with the TCGA data as well 
+- Actually if the TCGA data is corrected for batch effects then this process does not require a renormalisation
+
+
+02/02/24
+
+- Reading about the different normalisation methods for the RNAseq data
+- Reading the TMM paper and the reasons why this normalisation method is needed
+- It improves on the usual scalling based solely on the number of reads (library size) but fail to account for gene composition 
+- Meaning some genes may be more expressed than others in a specific lane (library) which will then skew the comparison with samples from other lanes (libraries)
+- The above is caused by the limited sequencing ability that is provided by RNAseq 
+- There is a certain amount of RNA reads available to be hybridised and elongated and therefore the most prevalent mRNA from the most highly expressed genes will be read
+- And thereby obfuscating the rest of the transcriptome especially for comparative analyses
+
+- This means when normalising the data, make sure to do it before subsetting the data
+- Check whehter or not the Tumour Purity is in the metadata for the TCGA data
+ 
+
+03/02/24
+
+- Reading u pon the PRPS normalisation method that is meant to remove library size variation as well as plate effects from RNA data
+
+- will need to apply a PCA to my raw data in order to indentify potential causes of variation 
