@@ -34,6 +34,8 @@ and whose composition is as close to the TCGA controls as possible.
 # ### The GTEx dataset contains 17384 columns (subjects) ###
 
 
+
+
 # """
 # Gathering the information that is needed from the various datasets 
 # """
@@ -96,10 +98,12 @@ and whose composition is as close to the TCGA controls as possible.
 # for col in GTEx_SOI_df.columns[1:]:
 # 	GTEx_SOI_df[col] = pd.to_numeric(GTEx_SOI_df[col], errors='coerce')
 
-# GTEx_SOI_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/GTEx_RNA_SoI.csv', index = False)
+# # GTEx_SOI_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/GTEx_RNA_SoI.csv', index = False)
 
 # # print(GTEx_SOI_df.iloc[:5,:5])
 # # print(GTEx_SOI_df.shape)
+
+
 
 # # Create the dataframe for the GTEx using the genes that are not of interest.
 
@@ -115,8 +119,8 @@ and whose composition is as close to the TCGA controls as possible.
 
 # GTEx_Cntrl_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_RNA_Full_Cntrl.csv', index = False)
 
-# # print(GTEx_SOI_df.iloc[:5,:5])
-# # print(GTEx_SOI_df.shape)
+# print(GTEx_SOI_df.iloc[:5,:5])
+# print(GTEx_SOI_df.shape)
 
 
 # # Create the control sets that match up as closely as possible to the TCGA controls
@@ -151,6 +155,9 @@ while n < 4:
 		# list using random selection.
 
 		gene_dif = len(TCGA_cntrl_list) - len(GTEx_ctrl_set_list)
+
+		print(" The number of genes that are commmon to both TCGA and GTEx sets: ", gene_dif)
+
 		if gene_dif > 0:
 
 			random_genes = random.sample(leftover_ctrl_set_list, k=gene_dif)
@@ -163,7 +170,7 @@ while n < 4:
 
 			# Save the formatted gene set and control set dataframes as CSV files.
 
-			GTEx_ctrl_new_set.to_csv(f'../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_Control_RNA_Data_df{n}.csv', index = False)
+			# GTEx_ctrl_new_set.to_csv(f'../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_Control_RNA_Data_df{n}.csv', index = False)
 
 		n += 1
 

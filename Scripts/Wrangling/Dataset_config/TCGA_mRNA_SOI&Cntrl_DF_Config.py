@@ -33,21 +33,20 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from io import StringIO
 
-from STRING_GENE_LIST import Gene_list
+from STRING_GENE_LIST_function import Gene_list
 
 pd.set_option('display.max_colwidth', None)
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
-Data_type = 'RNA_Data'
-
 
 
 protein_genes_of_interest = [
     "MAN1","TMPO", "EMD", "TOR1AIP1", 
     'IFFO1', "LMNA", "LMNB1", "LMNB2", 
-    "LBR", "LEMD2", "PRR14", "CBX5"
+    "LBR", "LEMD2", "PRR14", "CBX5",
+    "CBX1","CBX3", "LEMD3"
 ]
 
 
@@ -59,7 +58,7 @@ STRING_SoI = Gene_list(protein_genes_of_interest)
 
 # Read raw TCGA mRNA data from a file and store each line in raw_data.
 
-with open('../../Data/RNA_Data/TCGA_mRNA_Norm', 'r') as file:
+with open('../../../Data/RNA_Data/TCGA_Batch/TCGA_mRNA_Norm.txt', 'r') as file:
 	raw_data = file.readlines()
 
 
@@ -82,7 +81,7 @@ for item in reformated_data:
     if item[0] in STRING_SoI and item[0] not in SoI_seen:
         SoI.append(item)
         SoI_seen.add(item[0])
-
+ 
 
 # Construct a dataframe from genes of interest, 
 # with genes as rows and samples as columns.
@@ -194,12 +193,14 @@ while dif_ctrl != 0:
 
 
 		if globals()[var].shape == SoI_df.shape:
-			print('\n'
-				dif_ctrl, 
+			print('\n',
+				'Iteration number: ',n,
 				'\n',
-				num_discovered_genes, 
+				'number of unused genes in the full control set that remain:', dif_ctrl, 
+				'\n',
+				'number of genes in the new control set which are not part of any previous control set:',num_discovered_genes, 
 				'\n', 
-				n, 
+				'Dimensions of the new control set: ', SoI_df.shape,
 				'\n')
 
 			print(globals()[var].iloc[:3,:10])
@@ -208,6 +209,8 @@ while dif_ctrl != 0:
 						ctrl_used.add(gene_data[0])
 
 			dif_ctrl = len(ctrl_set_seen) - len(ctrl_used)
+
+			print(dif_ctrl)
 
 			# Save the formatted gene set and control set dataframes as CSV files.
 

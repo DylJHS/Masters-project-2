@@ -33,7 +33,7 @@ Load the RNA datasets
 ```{r}
 set.seed(123)
 
-SOI_Healthy <- read.csv("Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/GTEx_RNA_SOI.csv")
+SOI_Healthy <- read.csv("Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_RNA_TPM_SoI.csv")
 Meta_data_Healthy <- read.csv("Data/RNA_Data/GTEx_RNA/GTEx_Annotations.csv")
 
 ```
@@ -72,13 +72,13 @@ Means_table <- SOI_summary[,-3]
 # Create a table that contains all the SOI-Control_set differences for each of the controls sets
 Dif_table <- data.frame(SampleID = SOI_summary$SampleID)
 
-# Loop over the datasets
-num_datasets <- 412
+# Loop over the control datasets
+num_datasets <- 25
 
 for (i in 1:num_datasets) {
   start_time <- Sys.time()
 
-  ctrl_file <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_Control_RNA_Data_df", i, ".csv", sep = "")
+  ctrl_file <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/Controls/GTEx_Control_RNA_Data_df", i, ".csv", sep = "")
   
   ctrl_set <- read.csv(ctrl_file)
   
@@ -108,17 +108,12 @@ Means_table <- Means_table %>%  rename(ctrl_geom_mean1 = ctrl_geom_mean)
 Choose a random set of 5 control gene-sets that will be used in the graphs
 
 ```{r}
-set.seed(123)
 controls <- sample(1:num_datasets, 5)
 
 ```
 
 
-
-
-
 Part I. Inter-genomic Expression analysis 
-
 
 QUESTION 1 
 
@@ -157,9 +152,7 @@ ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
 
 
 ``` 
-Interpretation: Plots clearly show distinct pairings which violate a normal distribution. This follows that a non-parametric test of paired differences between the means can be performed for all pairings. This method is more stringent but more efficient than evaluating each distribution individually to decide on whether to apply a parametric or non-parametric test to the distributions. 
-The data is however not symmetrical around the median and the paired Wilcoxon test has this as an assumption which will come into play for the statistical comparisons between the SOI and control gene-sets. Should not be an issue when comparing amongst each other though as the skew is in the same direction for all pairings. 
-The plots also demonstrate that the variance of the different pairings (width) is quite similar despite the fact that the shape may deviate somewhat between pairings. 
+Interpretation: 
 
 
 B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t-test for more than 2 groups) to test whether the different control groups differ significantly in their distributions.
@@ -390,13 +383,11 @@ Impact on analyses: future test can now use a single control gene-set to test ag
 
 QUESTION 2
 
-
-
 Data using only a single control gene-set with more rows
 ```{r}
 main_ctrl_num <- controls[2]
 
-file_name <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_Control_RNA_Data_df", main_ctrl_num, ".csv", sep = "")
+file_name <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/Controls/GTEx_Control_RNA_Data_df", main_ctrl_num, ".csv", sep = "")
 ctrl <- read.csv(file_name)
 
 duo_table <- merge(SOI_summary[1:2], calculate_summary(ctrl) %>% select(SampleID , ctrl_geom_mean), 
@@ -483,7 +474,7 @@ C) Apply a two-sided paired permutation test between the SOI and the control gen
 
 ```{r}
 # Get unique values of 'Tissue Type' for grouping
-unique_SMTS <- unique(main_data$SMTS_Abbrvs)
+unique_SMTS <- unique(duo_table$SMTS_Abbrvs)
 
 # Initialize a df to store the test results
 Results_table <- data.frame(SMTS = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant_value= character(0), mean_dif = numeric(0))
@@ -493,7 +484,7 @@ for (i in 1:length(unique_SMTS)) {
   current_SMTS <- unique_SMTS[i]
   
   # Subset the data for the current group
-  subset_data <- main_data[main_data$SMTS_Abbrvs == current_SMTS, ]
+  subset_data <- duo_table[duo_table$SMTS_Abbrvs == current_SMTS, ]
   
   # Perform the paired permutation test for the current group
   test_result <- perm.test(subset_data$Mean_set, subset_data$Mean_ctrl,

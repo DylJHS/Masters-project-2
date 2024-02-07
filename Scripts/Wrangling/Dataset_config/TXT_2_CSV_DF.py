@@ -17,7 +17,7 @@ pd.set_option('display.width', None)
 
 # Read raw CNV data from a file and store each line in raw_data.
 
-with open('../../../Data/RNA_Data/TCGA_mRNA_Norm', 'r') as file:
+with open('../../../Data/RNA_Data/tcga_RSEM_gene_tpm', 'r') as file:
 	raw_data = file.readlines()
 
 
@@ -29,11 +29,16 @@ columns = raw_data[0].strip('\n').split('\t')
 values = raw_data[1:]
 reformated_values = [item.strip('\n').split('\t') for item in values]
 
-# print(len(columns))
-# print(columns,'\n')
+print(columns[:4],'\n')
 
-# print(len(reformated_values))
-# print(reformated_values[19:22])
+for i in reformated_values[:4]:
+	print(i[:4],'\n')
+
+print(len(columns),'\n')
+# # print(columns,'\n')
+
+print(len(reformated_values),'\n')
+# # print(reformated_values[19:22])
 
 
 # # Construct a dataframe from genes of interest, 
@@ -45,8 +50,8 @@ Df = pd.DataFrame(reformated_values, columns=columns)
 print(Df.iloc[:100,:10])
 
 
-# Save the formatted gene set and control set dataframes as CSV files.
+# # Save the formatted gene set and control set dataframes as CSV files.
 
-# Df.to_csv('../../../Data/RNA_Data/TCGA_mRNA_Norm.csv', index = False)
+# Df.to_csv('../../../Data/RNA_Data/TCGA_mRNA_TPM.csv', index = False)
 
 

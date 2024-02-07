@@ -1,0 +1,239 @@
+---
+title: "TCGA RNA TPM Analysis"
+output: html_document
+date: "2024-02-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+Load the libraries
+```{r}
+library(dplyr)
+library(broom)
+library(knitr)
+library(coin)
+library(ggpubr)
+library(rstatix)
+library(tidyverse)
+library(jmuOutlier)
+library(paletteer)
+library(factoextra)
+
+``` 
+
+Load other options
+```{r}
+getOption("max.print")
+```
+
+
+Load the RNA datasets
+```{r}
+set.seed(123)
+
+Raw_SOI_TPM <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_RNA_TPM_SOI.csv")
+
+## Drop the empty rows and columns 
+SOI_TPM <- Raw_SOI_TPM[!rowSums(is.na(Raw_SOI_TPM)), ]
+SOI_TPM <- SOI_TPM[, !colSums(is.na(SOI_TPM)) ]
+
+```
+
+Load Metadata datasets and create  dataframes
+```{r}
+TSS_Meta_data <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv",sep="\t")
+SampleType_Meta_data <- read.csv("Data/Other/TCGA_meta/sampleType.tsv",sep="\t")
+
+
+Sample_meta <- SOI_TPM %>%  
+  rowwise %>% 
+  mutate(TSS_Code = str_split(SampleID, "-")[[1]][2],
+         Participant_Code = str_split(SampleID, "-")[[1]][3],
+                                   Sample_Code = as.integer( str_split(SampleID, "-")[[1]][4])) %>% 
+  select(SampleID, TSS_Code, Participant_Code, Sample_Code)
+
+ ## DF containing all Meta data 
+Full_Sample_meta <- Sample_meta %>% merge(TSS_Meta_data, by.x = "TSS_Code",by.y = "TSS.Code", all.x = TRUE) %>% merge(SampleType_Meta_data, by.x = "Sample_Code",by.y = "Code", all.x = TRUE) %>% select(SampleID, everything()) 
+
+## DF containing the useful Meta data 
+ Main_Sample_meta <- Sample_meta %>% merge(TSS_Meta_data[c("TSS.Code", "Study.Name")], by.x = "TSS_Code",by.y = "TSS.Code", all.x = TRUE) %>% merge(SampleType_Meta_data[c("Code", "Definition")], by.x = "Sample_Code",by.y = "Code", all.x = TRUE) %>% select(SampleID, everything()) 
+ kable(head(Main_Sample_meta))
+
+ 
+Sample_Type_counts <- Main_Sample_meta %>%  count(Definition) %>% arrange(desc(n))
+kable(Sample_Type_counts)
+```
+
+Rename the "Additional" Types and drop the Analyte
+```{r}
+Main_Sample_meta <- Main_Sample_meta %>%
+  mutate(Definition = ifelse(Definition == "Additional - New Primary", "Primary Solid Tumor", ifelse(Definition == "Additional Metastatic", "Metastatic", Definition))) 
+
+Sample_Type_counts <- Main_Sample_meta %>%  count(Definition) %>% arrange(desc(n))
+kable(Sample_Type_counts)
+```
+
+
+Create PCA of the full expression data 
+```{r}
+PCA_SOI_TPM <- SOI_TPM  %>% merge(Full_Sample_meta, by = "SampleID") %>%  column_to_rownames(var = "SampleID") %>% mutate(Study.Name = as.factor(Study.Name)) %>% filter(Definition != "Control Analyte")
+
+res.pca <- prcomp( PCA_SOI_TPM[,-(308:315)], scale = TRUE)
+
+## Scree plot showing the contribution of each dimension to the explanation of the variability
+fviz_eig(res.pca)
+
+## Full PCA with the outlier samples
+full_pca <- fviz_pca_ind(res.pca,
+             label = "none",
+             col.ind = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+             )
+
+## Zoomed in version of the PCA for a closer look at the distribution
+zoom_pca <-fviz_pca_ind(res.pca,
+             label = "none",
+             col.ind = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+             ) +
+  xlim(-23, 35) +
+  ylim(-16, 18)
+
+
+fviz_pca_ind(res.pca,
+             label = "none",
+             habillage = PCA_SOI_TPM$Definition
+             # gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+             ) +
+  xlim(-23, 35) +
+  ylim(-16, 18)
+
+
+# fviz_pca_biplot(res.pca, label = "none", habillage = PCA_SOI_TPM$Definition, 
+#                 col.ind = "red", # Color for individuals
+#                 gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))+
+#   xlim(-23, 35) +
+#   ylim(-16, 18)
+
+```
+
+Create PCA of the Cancer expression data 
+```{r}
+
+## Remove the normal tissues types as well as the outlier
+subs_PCA_SOI_TPM <- SOI_TPM  %>% merge(Full_Sample_meta, by = "SampleID") %>%  filter(SampleID != "TCGA-25-1870-01") %>% column_to_rownames(var = "SampleID") %>% mutate(Study.Name = as.factor(Study.Name)) %>% filter(Definition != "Control Analyte" & Definition != "Solid Tissue Normal")
+
+res.pca <- prcomp( subs_PCA_SOI_TPM[,-(308:315)], scale = TRUE)
+
+## Scree plot showing the contribution of each dimension to the explanation of the variability
+fviz_eig(res.pca)
+
+## Full PCA with the outlier samples
+full_pca <- fviz_pca_ind(res.pca,
+             label = "none",
+             col.ind = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+             )
+
+## Zoomed in version of the PCA for a closer look at the distribution
+zoom_pca <-fviz_pca_ind(res.pca,
+             label = "none",
+             col.ind = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+             ) +
+  xlim(-23, 35) +
+  ylim(-16, 18)
+
+
+fviz_pca_ind(res.pca,
+             label = "none",
+             habillage = subs_PCA_SOI_TPM$Definition
+             # gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+             ) 
+
+
+# fviz_pca_biplot(res.pca, label = "none", habillage = subs_PCA_SOI_TPM$Definition, 
+#                 col.ind = "red", # Color for individuals
+#                 gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))+
+#   xlim(-23, 35) +
+#   ylim(-16, 18)
+
+```
+
+
+Configure function that builds the set of interest metrics
+```{r}
+calculate_summary <- function(input_dataframe) {
+  df_name <- deparse(substitute(input_dataframe))
+  cols_to_log <- names(input_dataframe)[-1]
+
+  Logs_Dataframe <- input_dataframe %>%
+    mutate(across(.cols = cols_to_log, .fns = ~log2(. + 0.001), .names = "log2_{.col}")) %>% 
+    select(1, starts_with("log2_"))
+
+  Summary_Dataframe <- Logs_Dataframe %>%
+    mutate(geom_mean = rowMeans(select(., -1), na.rm = TRUE),
+           medians = apply(select(., -1), 1, median, na.rm = TRUE)) %>%
+    select(SampleID, geom_mean, medians)
+  
+  prefix <- sub("^(.*?)_.*$", "\\1", df_name)
+  
+  colnames(Summary_Dataframe)[colnames(Summary_Dataframe) == "geom_mean"] <- paste0(prefix, "_geom_mean")
+  colnames(Summary_Dataframe)[colnames(Summary_Dataframe) == "medians"] <- paste0(prefix, "_medians")
+  
+  return(Summary_Dataframe)
+}
+```
+
+
+
+```{r}
+SOI_summary <- calculate_summary(SOI_TPM)
+
+# Create a table that contains the means of all the groups
+Means_table <- SOI_summary[,-3] 
+
+# Create a table that contains all the SOI-Control_set differences for each of the controls sets
+Dif_table <- data.frame(SampleID = SOI_summary$SampleID)
+
+# Loop over the datasets
+num_datasets <- 12
+
+for (i in 1:num_datasets) {
+  start_time <- Sys.time()
+
+  ctrl_file <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_Control_RNA_Data_df", i, ".csv", sep = "")
+  
+  ctrl_set <- read.csv(ctrl_file)
+  
+  ctrl_set_summary <- merge(calculate_summary(ctrl_set), SOI_summary, by = "SampleID", all = FALSE, suffixes = c("", i))
+  ctrl_set_summary <- ctrl_set_summary %>% mutate(mean_dif = SOI_geom_mean - ctrl_geom_mean  ,
+                                                  median_dif = SOI_medians - ctrl_medians)
+  
+  Dif_table <- merge(Dif_table, ctrl_set_summary %>% select(SampleID , mean_dif, median_dif), 
+                     by = "SampleID", all = FALSE, suffixes = c("", i)
+                     )
+  
+  Means_table <- merge(Means_table, ctrl_set_summary %>% select(SampleID , ctrl_geom_mean), 
+                     by = "SampleID", all = FALSE, suffixes = c("", i)
+                     )
+  
+  end_time <- Sys.time()
+  cat('\n',i,"th iteration duration: ", end_time - start_time, "seconds")
+}
+
+Dif_table <- Dif_table %>%  rename(mean_dif1 = mean_dif,
+                          median_dif1 = median_dif)
+Means_table <- Means_table %>%  rename(ctrl_geom_mean1 = ctrl_geom_mean)
+```
+
+
+
+Choose a random set of 5 control gene-sets that will be used in the graphs
+
+```{r}
+set.seed(123)
+controls <- sample(1:num_datasets, 5)
+
+```
