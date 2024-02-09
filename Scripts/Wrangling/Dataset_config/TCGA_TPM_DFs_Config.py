@@ -110,7 +110,7 @@ for col in TPM_ctrl_df.columns[1:]:
 	TPM_ctrl_df[col] = pd.to_numeric(TPM_ctrl_df[col], errors='coerce')
 
 
-TPM_ctrl_df.to_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_RNA_TPM_Ctrl_Full.csv')
+# TPM_ctrl_df.to_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_RNA_TPM_Ctrl_Full.csv')
 
 print(TPM_ctrl_df.iloc[:5,:5])
 print(TPM_ctrl_df.shape)
@@ -157,7 +157,7 @@ while n < 413:
 
 			# Save the formatted gene set and control set dataframes as CSV files.
 
-			TPM_ctrl_set_list_new.to_csv(f'../../../Data/RNA_Data/TCGA_TPM/TPM_RNA_Control_Data_df{n}.csv', index = False)
+			# TPM_ctrl_set_list_new.to_csv(f'../../../Data/RNA_Data/TCGA_TPM/TPM_RNA_Control_Data_df{n}.csv', index = False)
 
 		n += 1
 
