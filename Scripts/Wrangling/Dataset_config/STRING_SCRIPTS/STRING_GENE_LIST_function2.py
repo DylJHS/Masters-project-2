@@ -8,7 +8,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
 
-def Gene_list(protein_genes):
+def Gene_list(protein_genes, interaction_score):
     """
     Queries the STRING PPI database to retrieve a list of genes interacting with a given list of proteins.
 
@@ -22,6 +22,7 @@ def Gene_list(protein_genes):
 
     Parameters:
     protein_genes_of_interest (list of str): A list of protein names to query in the STRING database.
+    interaction_score: a confidence score from 0-1000. High scores > 700,  Low scores < 400
 
     Returns:
     list: A list containing unique names of physically interacting genes, derived from the initial list of proteins of interest.
@@ -33,7 +34,7 @@ def Gene_list(protein_genes):
 
     # Base URL and output format for STRING API
 
-    string_api_url = "https://version-11-5.string-db.org/api"
+    string_api_url = "https://string-db.org/api"
     output_format = "tsv-no-header"
         
 
@@ -53,11 +54,11 @@ def Gene_list(protein_genes):
     request_url = "/".join([string_api_url, output_format, 'get_string_ids'])
 
 
+
     # Call STRING for the list of IDs corresonding to those
     # of the genes in the proteins of interest list
 
     protein_id_results = requests.post(request_url, data=params)
-    # print(protein_id_results)
 
 
     # Call STRING for the list of IDs corresonding to those
@@ -72,7 +73,9 @@ def Gene_list(protein_genes):
     identifiers = []
     for line in protein_id_results.text.strip().split("\n"):
         new_line = line.split("\t")
+        # print(new_line)
         input_identifier, string_identifier = new_line[0], new_line[2]
+        # print(input_identifier, string_identifier)
         identifiers.append(string_identifier)
 
 
@@ -83,6 +86,7 @@ def Gene_list(protein_genes):
         "species" : 9606, # Human NCBI identifier 
         "limit": 1500, # limit for the number of interaction partners
         "network_type": "physical", # type of interaction network
+        "required_score": interaction_score, # threshold of significance to include a interaction, a number between 0 and 1000 
         "caller_identity" : "www.awesome_app.org" # identity of the caller
         }
 
@@ -110,7 +114,6 @@ def Gene_list(protein_genes):
 
     all_unqiue_genes = list(all_genes)
     return all_unqiue_genes
-
 
 
 

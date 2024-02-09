@@ -29,8 +29,6 @@ Note:
 
 import random
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 from io import StringIO
 
 from STRING_SCRIPTS.STRING_GENE_LIST_function2 import Gene_list
@@ -56,36 +54,45 @@ protein_genes_of_interest = [
 STRING_SoI = Gene_list(protein_genes_of_interest, interaction_score)
 
 
-
 # Reading the  RNA TPM metadata dataset that contains the gene names
 TPM_annotations_df = pd.read_csv("../../../Data/Other/TCGA_meta/TCGA_PanCan_TPM_Annotations.csv")
 
 
 # Get the ENSEMBL ids that represent the Genes of interest and are in the TCGA dataset
 SOI_ENS_ids = TPM_annotations_df[TPM_annotations_df['gene'].isin(STRING_SoI)].id
-print(str(SOI_ENS_ids.count()) + " TCGA genes of the total " + str(len(STRING_SoI)) + " interacting STRING genes were found in the dataset \n")
+print(str(SOI_ENS_ids.count()) + " TCGA genes of the total " + str(len(STRING_SoI)) + 
+	" interacting STRING genes were found in the dataset \n")
 
 
 # Read raw TCGA mRNA data from a file and store each line in raw_data.
-
 with open('../../../Data/RNA_Data/TCGA_TPM/tcga_RSEM_gene_tpm.txt', 'r') as file:
 	raw_data = file.readlines()
-	print(raw_data)
+
+
+# Process raw data to separate sample headers 
+# and reformat the data into a usable structure.
+IDs = raw_data[0].strip('\n').split('\t')
+data = raw_data[1:]
+reformated_data = [item.strip('\n').split('\t') for item in data]
+
+
+Df = pd.DataFrame(reformated_data, columns=IDs)
+print(Df.iloc[:100,:10])
 
 
 
-# # Process raw data to separate sample headers 
-# # and reformat the data into a usable structure.
-
-# samples = raw_data[0].strip('\n').split('\t')
-# print(samples[:2])
-# data = raw_data[1:]
-# reformated_data = [item.strip('\n').split('\t') for item in data]
-# print(reformated_data[:2])
+Full_df = (TPM_annotations_df[['id','gene']]
+	.merge(Df, left_on = "id", right_on = "IDs")
+	.drop(columns = ['id', 'sample'])
+	.rename(columns = {'gene':'Gene'})
+	)
 
 
-# # Create a list of data for genes of interest, 
-# # ensuring each gene is unique.
+# Df.to_csv('../../../Data/RNA_Data/TCGA_mRNA_TPM.csv', index = False)
+
+
+# Create a list of data for genes of interest, 
+# ensuring each gene is unique.
 
 # SoI_seen = set()
 # SoI = []

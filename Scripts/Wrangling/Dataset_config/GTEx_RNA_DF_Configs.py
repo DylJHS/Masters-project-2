@@ -22,105 +22,105 @@ and whose composition is as close to the TCGA controls as possible.
 
 """
 
-# # Reading the full RNA GTEx dataset
-# GTEx_Samp_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/Raw_GTEx_RNA_Norm.csv", index_col = 0)
+# Reading the full RNA GTEx dataset
+GTEx_Samp_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/Raw_GTEx_RNA_Norm.csv", index_col = 0)
 
-# # Reading the first RNA GTEx metadata dataset that contains the phenotype of the subject
-# GTEx_meta_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Subject_meta.csv")
+# Reading the first RNA GTEx metadata dataset that contains the phenotype of the subject
+GTEx_meta_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Subject_meta.csv")
 
-# # Reading the second metadata dataset that contains the rest of the metadata for the subjects
-# GTEx_Annotations_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/GTEx_Annotations.csv")
+# Reading the second metadata dataset that contains the rest of the metadata for the subjects
+GTEx_Annotations_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/GTEx_Annotations.csv")
 
-# ### The GTEx dataset contains 17384 columns (subjects) ###
-
-
-
-
-# """
-# Gathering the information that is needed from the various datasets 
-# """
-
-# # Get the SUBJIDS that correspond to the samples to be used
-# Healthy_Subjects = GTEx_meta_df[GTEx_meta_df['DTHHRDY'].isin([1, 2, 3, 0])]['SUBJID'].unique()
-
-# # Get the column names from the full RNA GTEX dataset
-# cols = GTEx_Samp_df.columns[3:]
-
-# # Get the columns that should be dropped from the dataset
-# cols_to_drop = [col for col in cols if not col[:10] in Healthy_Subjects]
-
-# # Create a new DataFrame without the columns to be dropped
-# GTEx_Healthy_df = GTEx_Samp_df.drop(columns=cols_to_drop)
-
-# ### The GTEx Healthy dataframe contains 10696 columns (subjects) ###
+### The GTEx dataset contains 17384 columns (subjects) ###
 
 
 
-# # Get the Sample IDs that correspond to the samples to be used
-# selected_samples = GTEx_Annotations_df[GTEx_Annotations_df['SMRIN'] >= 6]['SAMPID']
-# selected_samples_list = ["Description"] + selected_samples.tolist()
 
-# # Create a DataFrame with the columns to be used
-# GTEx_Viable_Healthy = GTEx_Healthy_df[[col for col in selected_samples_list if col in GTEx_Healthy_df]]
-# ### The GTEx Healthy dataframe contains 9645 columns (subjects) ###
+"""
+Gathering the information that is needed from the various datasets 
+"""
 
+# Get the SUBJIDS that correspond to the samples to be used
+Healthy_Subjects = GTEx_meta_df[GTEx_meta_df['DTHHRDY'].isin([1, 2, 3, 0])]['SUBJID'].unique()
 
-# GTEx_Viable_Healthy = GTEx_Viable_Healthy.groupby('Description').mean().reset_index().set_index('Description')
-# GTEx_Viable_Healthy.index = GTEx_Viable_Healthy.index.str.upper()
+# Get the column names from the full RNA GTEX dataset
+cols = GTEx_Samp_df.columns[3:]
 
-# # print(GTEx_Viable_Healthy.iloc[:5,:5])
-# # print(GTEx_Viable_Healthy.shape)
+# Get the columns that should be dropped from the dataset
+cols_to_drop = [col for col in cols if not col[:10] in Healthy_Subjects]
 
+# Create a new DataFrame without the columns to be dropped
+GTEx_Healthy_df = GTEx_Samp_df.drop(columns=cols_to_drop)
 
-
-# # Get the genes that are used in the TCGA PanCan Dataset
-
-# TCGA_Pancan_df =  pd.read_csv("../../../Data/RNA_Data/TCGA_mRNA_Norm.csv", usecols = [0])
-# ### 17885 Genes are common to both datasets, with the TCGA set containing a total of 20530 unique genes ###
-
-
-# # Get the Genes of Interest that are used in the TCGA PanCan 
-
-# SoI_list =  pd.read_csv('../../../Data/RNA_Data/Genes_of_Interest_RNA_Data_df.csv', index_col=0, nrows=0).columns.tolist()
-# SoI_list = [word.upper() for word in SoI_list]
-# ### 304 Genes are common to both the TCGA SoI and the GTEx gene-set ###
-
-
-# # Create the dataframe for the GTEx using the genes of interest.
-
-# GTEx_SOI_df = (GTEx_Viable_Healthy[GTEx_Viable_Healthy.index.isin(SoI_list)]
-# 	.T
-# 	.reset_index(drop = False)
-# 	.rename(columns = {'index':'SampleID'})
-# 	.rename_axis(None, axis = 1)
-# 	)
-
-# for col in GTEx_SOI_df.columns[1:]:
-# 	GTEx_SOI_df[col] = pd.to_numeric(GTEx_SOI_df[col], errors='coerce')
-
-# # GTEx_SOI_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/GTEx_RNA_SoI.csv', index = False)
-
-# # print(GTEx_SOI_df.iloc[:5,:5])
-# # print(GTEx_SOI_df.shape)
+### The GTEx Healthy dataframe contains 10696 columns (subjects) ###
 
 
 
-# # Create the dataframe for the GTEx using the genes that are not of interest.
+# Get the Sample IDs that correspond to the samples to be used
+selected_samples = GTEx_Annotations_df[GTEx_Annotations_df['SMRIN'] >= 6]['SAMPID']
+selected_samples_list = ["Description"] + selected_samples.tolist()
 
-# GTEx_Cntrl_df = (GTEx_Viable_Healthy[~GTEx_Viable_Healthy.index.isin(SoI_list)]
-# 	.T
-# 	.reset_index(drop = False)
-# 	.rename(columns = {'index':'SampleID'})
-# 	.rename_axis(None, axis = 1)
-# 	)
+# Create a DataFrame with the columns to be used
+GTEx_Viable_Healthy = GTEx_Healthy_df[[col for col in selected_samples_list if col in GTEx_Healthy_df]]
+### The GTEx Healthy dataframe contains 9645 columns (subjects) ###
 
-# for col in GTEx_Cntrl_df.columns[1:]:
-# 	GTEx_Cntrl_df[col] = pd.to_numeric(GTEx_Cntrl_df[col], errors='coerce')
 
-# GTEx_Cntrl_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_RNA_Full_Cntrl.csv', index = False)
+GTEx_Viable_Healthy = GTEx_Viable_Healthy.groupby('Description').mean().reset_index().set_index('Description')
+GTEx_Viable_Healthy.index = GTEx_Viable_Healthy.index.str.upper()
+
+# print(GTEx_Viable_Healthy.iloc[:5,:5])
+# print(GTEx_Viable_Healthy.shape)
+
+
+
+# Get the genes that are used in the TCGA PanCan Dataset
+
+TCGA_Pancan_df =  pd.read_csv("../../../Data/RNA_Data/TCGA_mRNA_Norm.csv", usecols = [0])
+### 17885 Genes are common to both datasets, with the TCGA set containing a total of 20530 unique genes ###
+
+
+# Get the Genes of Interest that are used in the TCGA PanCan 
+
+SoI_list =  pd.read_csv('../../../Data/RNA_Data/Genes_of_Interest_RNA_Data_df.csv', index_col=0, nrows=0).columns.tolist()
+SoI_list = [word.upper() for word in SoI_list]
+### 304 Genes are common to both the TCGA SoI and the GTEx gene-set ###
+
+
+# Create the dataframe for the GTEx using the genes of interest.
+
+GTEx_SOI_df = (GTEx_Viable_Healthy[GTEx_Viable_Healthy.index.isin(SoI_list)]
+	.T
+	.reset_index(drop = False)
+	.rename(columns = {'index':'SampleID'})
+	.rename_axis(None, axis = 1)
+	)
+
+for col in GTEx_SOI_df.columns[1:]:
+	GTEx_SOI_df[col] = pd.to_numeric(GTEx_SOI_df[col], errors='coerce')
+
+# GTEx_SOI_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/GTEx_RNA_SoI.csv', index = False)
 
 # print(GTEx_SOI_df.iloc[:5,:5])
 # print(GTEx_SOI_df.shape)
+
+
+
+# Create the dataframe for the GTEx using the genes that are not of interest.
+
+GTEx_Cntrl_df = (GTEx_Viable_Healthy[~GTEx_Viable_Healthy.index.isin(SoI_list)]
+	.T
+	.reset_index(drop = False)
+	.rename(columns = {'index':'SampleID'})
+	.rename_axis(None, axis = 1)
+	)
+
+for col in GTEx_Cntrl_df.columns[1:]:
+	GTEx_Cntrl_df[col] = pd.to_numeric(GTEx_Cntrl_df[col], errors='coerce')
+
+# GTEx_Cntrl_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Healthy/Controls/GTEx_RNA_Full_Cntrl.csv', index = False)
+
+print(GTEx_SOI_df.iloc[:5,:5])
+print(GTEx_SOI_df.shape)
 
 
 # # Create the control sets that match up as closely as possible to the TCGA controls

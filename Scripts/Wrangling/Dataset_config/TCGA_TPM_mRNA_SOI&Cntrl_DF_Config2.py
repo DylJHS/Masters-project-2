@@ -29,9 +29,6 @@ Note:
 
 import random
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
-from io import StringIO
 
 from STRING_SCRIPTS.STRING_GENE_LIST_function2 import Gene_list
 
@@ -52,90 +49,70 @@ protein_genes_of_interest = [
 
 # Query STRING database to obtain a set (Set-of-Interest, SoI) of genes 
 # that interact with the products of the genes in protein_genes_of_interest.
-
 STRING_SoI = Gene_list(protein_genes_of_interest, interaction_score)
 
 
-
-# Reading the  RNA TPM metadata dataset that contains the gene names
+# Reading the  RNA TPM metadata dataset that contains the gene names.
 TPM_annotations_df = pd.read_csv("../../../Data/Other/TCGA_meta/TCGA_PanCan_TPM_Annotations.csv")
 
 
-# Get the ENSEMBL ids that represent the Genes of interest and are in the TCGA dataset
+# Get the ENSEMBL ids that represent the Genes of interest and are in the TCGA dataset.
 SOI_ENS_ids = TPM_annotations_df[TPM_annotations_df['gene'].isin(STRING_SoI)].id
-print(str(SOI_ENS_ids.count()) + " TCGA genes of the total " + str(len(STRING_SoI)) + " interacting STRING genes were found in the dataset \n")
+print(str(SOI_ENS_ids.count()) + " TCGA genes of the total " + str(len(STRING_SoI)) + 
+	" interacting STRING genes were found in the dataset \n")
 
 
-# Read raw TCGA mRNA data from a file and store each line in raw_data.
+## If the full tpm df is already created and saved, read it in.
+Full_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM.csv')
+print(Full_tpm_df.iloc[:5,:5],'\n')
+print(Full_tpm_df.shape,'\n')
 
-with open('../../../Data/RNA_Data/TCGA_TPM/tcga_RSEM_gene_tpm.txt', 'r') as file:
-	raw_data = file.readlines()
-	print(raw_data)
+## Else create it the full tpm df.
+# raw_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/tcga_RSEM_gene_tpm.txt', sep = "\t")
 
+# Full_tpm_df = (TPM_annotations_df[['id','gene']]
+# 	.merge(raw_tpm_df, left_on = "id", right_on = "sample")
+#   .drop_duplicates('sample')
+# 	.drop(columns = "sample")
+# 	.rename(columns = {"gene": "Gene"})
+# 	.reset_index(drop = True)
+# 	)
 
-
-# # Process raw data to separate sample headers 
-# # and reformat the data into a usable structure.
-
-# samples = raw_data[0].strip('\n').split('\t')
-# print(samples[:2])
-# data = raw_data[1:]
-# reformated_data = [item.strip('\n').split('\t') for item in data]
-# print(reformated_data[:2])
-
-
-# # Create a list of data for genes of interest, 
-# # ensuring each gene is unique.
-
-# SoI_seen = set()
-# SoI = []
-
-# for item in reformated_data:
-	# print(item[1])
-    # if item[0] in STRING_SoI and item[0] not in SoI_seen:
-    #     SoI.append(item)
-    #     SoI_seen.add(item[0])
- 
-
-# # Construct a dataframe from genes of interest, 
-# # with genes as rows and samples as columns.
-
-# SoI_df = (
-#     pd.DataFrame(SoI, columns=samples)
-# 	.set_index('sample')
-# 	.T
-# 	.reset_index()
-# 	.rename_axis(None, axis=1)
-# 	.rename(columns = {'index':'Sample'})
-# 	.drop_duplicates('Sample')
-# )
+## Save the Full Tpm df.
+# Full_tpm_df.to_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM.csv', index = False)
 
 
-# # Convert all values in dataframe to float, handling non-numeric values as NaN.
+## If the Set of Interest tpm df is already created and saved, read it in.
+SOI_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv')
+print(SOI_tpm_df.iloc[:5,:5],'\n')
+print(SOI_tpm_df.shape,'\n')
 
+## Else create the SOI tpm df.
+# SOI_tpm_df = Full_tpm_df[Full_tpm_df['Gene'].isin(STRING_SoI)].reset_index(drop = True)
+
+## Save the SOI Tpm df.
+# SOI_tpm_df.to_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv', index = False)
+
+
+## If the full Control tpm df is already created and saved, read it in.
+# Full_Ctrl_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_CTRL.csv')
+# print(Full_Ctrl_tpm_df.iloc[:5,:5],'\n')
+# print(Full_Ctrl_tpm_df.shape,'\n')
+
+
+# Else Create the df with all control genes
+Full_Ctrl_tpm_df = Full_tpm_df[~Full_tpm_df['Gene'].isin(STRING_SoI)].reset_index(drop = True)
+
+# Save the Ctrl Tpm df.
+Full_Ctrl_tpm_df.to_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_CTRL.csv', index = False)
+print(Full_Ctrl_tpm_df.iloc[:5,:5],'\n')
+print(Full_Ctrl_tpm_df.shape,'\n')
+
+
+
+## Convert all values in dataframe to float, handling non-numeric values as NaN.
 # for col in SoI_df.columns[1:]:
 # 	SoI_df[col] = pd.to_numeric(SoI_df[col], errors='coerce')
-
-
-# # Save the formatted gene set and control set dataframes as CSV files.
-
-# # SoI_df.to_csv(f'../../Data/{Data_type}/Genes_of_Interest_{Data_type}_df.csv', index = False)
-
-
-
-# # Generate a control list containing the data for the 
-# # genes not in genes of interest.
-
-# ctrl_set_seen = set()
-# ctrl_set = []
-
-# for gene_data in reformated_data:
-#     if gene_data[0] not in STRING_SoI and gene_data[0] not in ctrl_set_seen:
-#         ctrl_set.append(gene_data)
-#         ctrl_set_seen.add(gene_data[0])
-
-
-# # print(len(ctrl_set_seen), len(ctrl_set))
 
 
 
