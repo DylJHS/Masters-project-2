@@ -80,7 +80,6 @@ Df = pd.DataFrame(reformated_data, columns=IDs)
 print(Df.iloc[:100,:10])
 
 
-
 Full_df = (TPM_annotations_df[['id','gene']]
 	.merge(Df, left_on = "id", right_on = "IDs")
 	.drop(columns = ['id', 'sample'])

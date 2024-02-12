@@ -32,6 +32,7 @@ import pandas as pd
 import numpy as np
 import dask.dataframe as dd
 import subprocess
+import time
 
 from STRING_SCRIPTS.STRING_GENE_LIST_function2 import Gene_list
 
@@ -41,7 +42,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
 
-nrows = 400
+nrows = None
 interaction_score = 400
 
 protein_genes_of_interest = [
@@ -54,9 +55,9 @@ protein_genes_of_interest = [
 
 
 
-# Query STRING database to obtain a set (Set-of-Interest, SoI) of genes 
-# that interact with the products of the genes in protein_genes_of_interest.
-STRING_SoI = Gene_list(protein_genes_of_interest, interaction_score)
+# # Query STRING database to obtain a set (Set-of-Interest, SoI) of genes 
+# # that interact with the products of the genes in protein_genes_of_interest.
+# STRING_SoI = Gene_list(protein_genes_of_interest, interaction_score)
 
 
 ###############      TCGA SPECIFIC DF CREATION.       #################
@@ -156,10 +157,10 @@ print("TCGA Set of Interest tpm df",'\n',
 ###### GTEx Full TPM DF 
 
 
-## If the full GTEx tpm df is already created and saved, read it in.
-GTEx_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_RNA_TPM.csv', nrows = nrows)
-print("GTEx full tpm df",'\n',GTEx_tpm_df.iloc[:5,:5],'\n')
-print(GTEx_tpm_df.shape,'\n')
+# ## If the full GTEx tpm df is already created and saved, read it in.
+# GTEx_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_RNA_TPM.csv', nrows = nrows)
+# print("GTEx full tpm df",'\n',GTEx_tpm_df.iloc[:5,:5],'\n')
+# print(GTEx_tpm_df.shape,'\n')
 
 # # Else create the full tpm df.
 # raw_GTEx_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/Raw_GTEx_RNA_TPM.txt', sep='\t', skiprows=2)
@@ -203,13 +204,13 @@ print(GTEx_tpm_df.shape,'\n')
 ###### GTEx Set of interest DF
 
 
-# If the GTEx Set of Interest tpm df is already created and saved, read it in.
-GTEx_SOI_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_mRNA_TPM_SOI.csv', nrows = nrows)
-GTEx_SOI_tpm_df = GTEx_SOI_tpm_df.rename(columns = {"Name":"id"})
-print("GTEx Set of Interest tpm df",'\n',
-	GTEx_SOI_tpm_df.iloc[:5,:5],'\n', 
-	GTEx_SOI_tpm_df.shape,'\n'
-)
+# # If the GTEx Set of Interest tpm df is already created and saved, read it in.
+# GTEx_SOI_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_mRNA_TPM_SOI.csv', nrows = nrows)
+# GTEx_SOI_tpm_df = GTEx_SOI_tpm_df.rename(columns = {"Name":"id"})
+# print("GTEx Set of Interest tpm df",'\n',
+# 	GTEx_SOI_tpm_df.iloc[:5,:5],'\n', 
+# 	GTEx_SOI_tpm_df.shape,'\n'
+# )
 
 # # Else create the SOI tpm df.
 # GTEx_SOI_tpm_df = GTEx_tpm_df[
@@ -228,12 +229,12 @@ print("GTEx Set of Interest tpm df",'\n',
 
 
 # # If the GTEx full Control tpm df is already created and saved, read it in.
-GTEx_Full_Ctrl_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_mRNA_TPM_CTRL.csv', nrows = nrows)
-GTEx_Full_Ctrl_tpm_df = GTEx_Full_Ctrl_tpm_df.rename(columns = {"Name":"id"})
-print("GTEx Full Control tpm df",'\n',
-	GTEx_Full_Ctrl_tpm_df.iloc[:5,:5],'\n', 
-	GTEx_Full_Ctrl_tpm_df.shape,'\n'
-)
+# GTEx_Full_Ctrl_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_mRNA_TPM_CTRL.csv', nrows = nrows)
+# GTEx_Full_Ctrl_tpm_df = GTEx_Full_Ctrl_tpm_df.rename(columns = {"Name":"id"})
+# print("GTEx Full Control tpm df",'\n',
+# 	GTEx_Full_Ctrl_tpm_df.iloc[:5,:5],'\n', 
+# 	GTEx_Full_Ctrl_tpm_df.shape,'\n'
+# )
 
 # # Else Create the df with all control genes
 # GTEx_Full_Ctrl_tpm_df = GTEx_tpm_df[~GTEx_tpm_df['Gene'].isin(GTEx_SOI_tpm_df.Gene.to_list())].reset_index(drop = True)
@@ -246,10 +247,11 @@ print("GTEx Full Control tpm df",'\n',
 
 
 # # # If the TCGA Shared Control tpm df is already created and saved, read it in.
-# TCGA_Shrd_Ctrl_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_CTRL_SHRD.csv', nrows = nrows)
-# print("TCGA Shared Control tpm df",'\n',TCGA_Shrd_Ctrl_tpm_df.iloc[:5,:5],'\n')
-# print(TCGA_Shrd_Ctrl_tpm_df.shape,'\n')
-
+TCGA_Shrd_Ctrl_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_CTRL_SHRD.csv', nrows = nrows)
+print("TCGA Shared Control tpm df",'\n',
+	TCGA_Shrd_Ctrl_tpm_df.iloc[:5,:5],'\n',
+	TCGA_Shrd_Ctrl_tpm_df.shape,'\n'
+)
 
 # # If the GTEx Shared Control tpm df is already created and saved, read it in.
 GTEx_Shrd_Ctrl_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_mRNA_TPM_CTRL_SHRD.csv', nrows = nrows)
@@ -258,16 +260,15 @@ print("GTEx Shared Control tpm df",'\n',
 	GTEx_Shrd_Ctrl_tpm_df.shape,'\n'
 )
 
-
 # ## Else Create the Dataframes:
-# # # Identify shared genes and IDs
+# # Identify shared genes and IDs
 # shared_genes = set(TCGA_Full_Ctrl_tpm_df['Gene']).intersection(set(GTEx_Full_Ctrl_tpm_df['Gene']))
-# # print("Shared Genes: ", len(shared_genes), '\n')
+# print("Shared Genes: ", len(shared_genes), '\n')
 
 # shared_ids = set(TCGA_Full_Ctrl_tpm_df['id']).intersection(set(GTEx_Full_Ctrl_tpm_df['id']))
-# # print("Shared IDs: ", len(shared_ids), '\n')
+# print("Shared IDs: ", len(shared_ids), '\n')
 
-# # Filter both dataframes to only include rows with shared genes or IDs, remove any duplicate IDs 
+# Filter both dataframes to only include rows with shared genes or IDs, remove any duplicate IDs 
 # TCGA_Shrd_Ctrl_tpm_df = (TCGA_Full_Ctrl_tpm_df[TCGA_Full_Ctrl_tpm_df['Gene'].isin(shared_genes) | 
 # 	TCGA_Full_Ctrl_tpm_df['id'].isin(shared_ids)]
 # 	.drop_duplicates(subset = "id")
@@ -280,7 +281,9 @@ print("GTEx Shared Control tpm df",'\n',
 # 	.reset_index(drop = True)
 # )
 
-### Save the DFs
+
+
+# ## Save the DFs
 # #GTEx_Shrd_Ctrl_tpm_df.to_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_mRNA_TPM_CTRL_SHRD.csv', index = False)
 # #TCGA_Shrd_Ctrl_tpm_df.to_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_CTRL_SHRD.csv', index = False)
 
@@ -292,99 +295,138 @@ print("GTEx Shared Control tpm df",'\n',
 Smaller control sets creation.
 '''
 
+# Basing the control sets lengths off of the df for the set of interest
 SOI_len = len(TCGA_SOI_tpm_df.Gene.to_list())
+# SOI_len = 15
 
-# # List containing the control genes that have
-# # already appeared in a control dataset.
-# ctrl_genes_used = set()
-# ctrl_ids_used = set()
+all_ctrl_genes = len(TCGA_Shrd_Ctrl_tpm_df)
+print("the number of all the control genes is: ", all_ctrl_genes, '\n')
 
+# Variable to keep track of the number of control genes 
+# which remain unaccounted for in any of the control datasets.
+dif_ctrl = all_ctrl_genes
 
-# # Variable to keep track of the number of control genes 
-# # which remain unaccounted for in any of the control datasets.
-# dif_ctrl = len(ctrl_set_seen) - len(ctrl_used)
+# Empty list to contain the gene IDs that have been used
+used_Gene_ids = set()
 
-
-# # # Variable to name and keep track of the current control dataset
-
-# # n=1
-
-
-# # # Control datasets are created while there are still control genes 
-# # # that have not yet been used in a control dataset.
-
-# # while dif_ctrl != 0:
-
-# # 	# Randomly select genes for the control set to match the 
-# # 	# number of genes in the SoI. Repeat selection until the control
-# # 	# set dataframe matches the shape of the gene set dataframe.
-
-# # 	while True:
-
-# # 		rndm_ctrl_set = random.sample(ctrl_set, k=len(SoI))
+step = 1
+while dif_ctrl > 0:
+	start_time = time.time()
+	print('\n\n\n\n\t',step, '\n')
 
 
-# # 		# Variable to keep track of the number of genes in this control set 
-# # 		# which do not show up in any other control dataset
+	# Create a random TCGA control df the same size as the SOI using all the shared control genes 
+	rndm_TCGA_ctrl_set = TCGA_Shrd_Ctrl_tpm_df.sample(n = SOI_len).reset_index(drop = True)
+	len_rndm_TCGA_ctrl_set = len(rndm_TCGA_ctrl_set)
+	print("Random TCGA control set",'\n', 
+		rndm_TCGA_ctrl_set.iloc[:5,:5], '\n',
+		len_rndm_TCGA_ctrl_set, '\n'
+	)
 
-# # 		num_discovered_genes = len(
-# # 			[gene[0] for gene in rndm_ctrl_set if gene[0] not in ctrl_used]
-# # 		)
+	# Variable to keep track of the genes that are being assigned to the new df
+	rndm_ids = rndm_TCGA_ctrl_set.id.to_list()
+
+	# Variable to keep track of the number of newly added ids
+	new_ids = len(set([ID for ID in rndm_ids if ID not in used_Gene_ids]))
+
+	# If all the genes in the new random df have already been used, 
+	# then start over.
+	if new_ids == 0:
+		print("no new genes were found", '\n')
+
+		end_time = time.time()
+		duration = end_time - start_time
+		print("Duration:", duration, "seconds",'\n\n\n')
+		continue
+
+	# If some genes have not been used, 
+	# then proceed
+	else:
+		print("The number of new genes in this set is: ", new_ids,'\n')
+
+		# Create the corresponding GTEx control df based on the IDs
+		Corres_GTEx_ctrl_set = GTEx_Shrd_Ctrl_tpm_df[GTEx_Shrd_Ctrl_tpm_df.id.isin(rndm_ids)].reset_index(drop = True)
+		len_Corres_GTEx_ctrl_set = len(Corres_GTEx_ctrl_set)
+		print("Corresponding GTEx control set",'\n',
+			# Corres_GTEx_ctrl_set.iloc[:5,:5], '\n',
+			len_Corres_GTEx_ctrl_set, '\n'
+		)
+
+		# If there is a mismatch between the TCGA and GTEx controls,
+		# fill in the difference using the missing gene names instead of IDs
+		if len_rndm_TCGA_ctrl_set != len_Corres_GTEx_ctrl_set:
+			print("Mistmatch identified", '\n')
+			remaining_genes = list(rndm_TCGA_ctrl_set[~rndm_TCGA_ctrl_set.id.isin(Corres_GTEx_ctrl_set.id.to_list())].Gene)
+
+			# Number of genes that need to be added to the control df
+			remaining_number = len(remaining_genes)
+			print(" Remaining genes to be filled :", '\n',
+			 remaining_genes,'\n' ,
+			 remaining_number, '\n'
+			)
+
+			# Dataframe with the data from the remaining identified genes
+			remaining_genes_df = GTEx_Shrd_Ctrl_tpm_df[GTEx_Shrd_Ctrl_tpm_df.Gene.isin(remaining_genes)]
+			# print(" Remaining genes dataframe", '\n',
+			#  remaining_genes_df.iloc[:5,:5], '\n',
+			#  len(remaining_genes_df), '\n'
+			# )
+
+			# If the number of genes in the dataframe built using the remaining genes 
+			# is smaller than the required number of genes, then start over.
+			if len(remaining_genes_df) < remaining_number:
+				print("Not enough genes in the remaining genes df to fill in the control", '\n')
+
+				end_time = time.time()
+				duration = end_time - start_time
+				print("Duration:", duration, "seconds",'\n\n\n')
+				continue
+
+			else:
+				# Subset of the remaining df with the correct number of genes
+				subset_remaining_genes_df = remaining_genes_df.sample(n = remaining_number)
+				# print(" Subset of Remaining genes dataframe", '\n',
+				#  subset_remaining_genes_df.iloc[:5,:5], '\n',
+				#  len(subset_remaining_genes_df), '\n'
+				# )
+
+				Filled_Corres_GTEx_ctrl_set = pd.concat([Corres_GTEx_ctrl_set, subset_remaining_genes_df]).reset_index(drop = True)
+				print(" Filled dataframe", '\n',
+				 Filled_Corres_GTEx_ctrl_set.iloc[:5,:5], '\n',
+				 len(Filled_Corres_GTEx_ctrl_set), '\n'
+				)
+
+				# Add the IDs to the list of used gene ids
+				All_used = Filled_Corres_GTEx_ctrl_set.id.to_list() + rndm_TCGA_ctrl_set.id.to_list()
+				used_Gene_ids.update(All_used)
+
+				#Save the dfs
+				rndm_TCGA_ctrl_set.to_csv(f'../../../Data/RNA_Data/TCGA_TPM/Control_sets/TCGA_TPM_RNA_Control_df{step}.csv', index = False)
+				Filled_Corres_GTEx_ctrl_set.to_csv(f'../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/Control_sets/GTEx_TPM_RNA_Control_df{step}.csv', index = False)
 
 
-# # 		# Do not create control datasets that do not contain a single 
-# # 		# previously unseen gene
-		
-# # 		if num_discovered_genes == 0:
-# # 			continue
-
-# # 		var = f'rndm_ctrl_set_df{n}'
-
-# # 		globals()[var] = (
-# # 		    pd.DataFrame(rndm_ctrl_set, columns=samples)
-# # 		    .drop_duplicates()
-# # 		    .set_index('sample')
-# # 		    .T
-# # 		    .reset_index()
-# # 		    .rename_axis(None, axis=1)
-# # 		    .rename(columns = {'index':'Sample'})
-# # 		    .drop_duplicates('Sample')
-# # 		)
 
 
-# # 		# Convert all values in both dataframes to float, handling non-numeric values as NaN.
+		# If the TCGA and GTEx controls matchup, save the sets
+		else: 
+			print("All Good",'\n')
+			rndm_TCGA_ctrl_set.to_csv(f'../../../Data/RNA_Data/TCGA_TPM/Control_sets/TCGA_TPM_RNA_Control_df{step}.csv', index = False)
+			Corres_GTEx_ctrl_set.to_csv(f'../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/Control_sets/GTEx_TPM_RNA_Control_df{step}.csv', index = False)
 
-# # 		for col in globals()[var].columns[1:]:
-# # 			globals()[var][col] = pd.to_numeric(globals()[var][col], errors='coerce')
-# # 			# print(globals()[var].shape, globals()[var].Sample.nunique()) 
+		print("Number of genes that have been used: ", len(used_Gene_ids),'\n')
+
+		# Update the difference variable
+		dif_ctrl = all_ctrl_genes - len(used_Gene_ids)
+		print("The Number of genes that have yet to be used: ", dif_ctrl,'\n')
+
+		end_time = time.time()
+		duration = end_time - start_time
+		print("Duration:", duration, "seconds",'\n\n\n')
+		step +=1 
 
 
 
-# # 		if globals()[var].shape == SoI_df.shape:
-# # 			print('\n',
-# # 				'Iteration number: ',n,
-# # 				'\n',
-# # 				'number of unused genes in the full control set that remain:', dif_ctrl, 
-# # 				'\n',
-# # 				'number of genes in the new control set which are not part of any previous control set:',num_discovered_genes, 
-# # 				'\n', 
-# # 				'Dimensions of the new control set: ', SoI_df.shape,
-# # 				'\n')
 
-# # 			print(globals()[var].iloc[:3,:10])
-
-# # 			for gene_data in rndm_ctrl_set:
-# # 						ctrl_used.add(gene_data[0])
-
-# # 			dif_ctrl = len(ctrl_set_seen) - len(ctrl_used)
-
-# # 			print(dif_ctrl)
-
-# # 			# Save the formatted gene set and control set dataframes as CSV files.
-
-# # 			# globals()[var].to_csv(f'../../Data/{Data_type}/Control_Genes_{Data_type}_df{n}.csv', index = False)
-# # 			n += 1
-# # 			break  # Exit the loop if the shapes are equal
-return_code = subprocess.call(["afplay", "/Users/Dyll/Downloads/alert.mp3"])
+return_code = subprocess.call(["afplay", "/Users/Dyll/Downloads/mixkit-hawk-bird-squawk-1268.wav"])
 
 
