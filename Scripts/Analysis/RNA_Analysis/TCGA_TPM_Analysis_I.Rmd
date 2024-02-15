@@ -448,79 +448,45 @@ RNA_TSS <- ggplot(duo_table2, aes(x = factor(SAMPID), y = mean_dif)) +
     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
     strip.text = element_text(size = 12)) +
   guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
-  facet_wrap(~Study.Name, ncol = 4, scales = "free_x", labeller = labeller(SMTS = function(label) label))  
+  facet_wrap(~Study.Name, ncol = 4, scales = "free_x", labeller = labeller(Study = function(label) label))  
 
 print(RNA_TSS)
 ``` 
 Interpretation: The positive ∆ expression between the SOI and the control gene-set is maintained across all cancer types
 
 
-B) Create a barplot of the samples vs their differences in the mean log2 RNA values segmented by SMTSD
 
-```{r}
-RNA_Study <- ggplot(duo_table2, aes(x = factor(SAMPID), y = mean_dif)) + 
-  geom_col(alpha = 0.72, fill = "#8B6508") +
-  theme_minimal() +
-  labs(y = expression("Expression Δ" ~ (log[2])),
-       x = "Samples",
-       title = "EXPRESSION DIFFERENCE ACROSS SAMPLES BY TUMOUR TYPE") +
-  theme(
-    axis.text.x = element_blank(),
-    axis.title.y = element_text(size = 17), 
-    axis.text.y = element_text(size = 13),
-    axis.title.x = element_blank(), 
-    plot.title = element_text(hjust = 0.5, size = 23),
-    plot.title.position = "plot",
-    panel.background = element_rect(fill = "white"),
-    panel.grid.major.y = element_line(color = "black", linewidth = 0.5, linetype = 2),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.major.x = element_blank(),
-    axis.line = element_line(linewidth = 0.35, linetype = "solid", colour = "black"),
-    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
-    strip.text = element_text(size = 12)) +
-  guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
-  facet_wrap(~Study.Name, ncol = 4, scales = "free_x", labeller = labeller(SMTS = function(label) label))  
-
-print(RNA_Study)
-
-# my_palette <- paletteer_d("colorBlindness::paletteMartin")
-
-# duo_table <- duo_table %>%
-#   mutate( id = factor(id, levels = id[order(SMTSD)]))
-``` 
-
-
-C) Apply a two-sided paired permutation test between the SOI and the control gene-set while grouping by cancer type in the form of Tissue Type and calculate the mean difference of each group
+B) Apply a two-sided paired permutation test between the SOI and the control gene-set while grouping by cancer type in the form of Tissue Type and calculate the mean difference of each group
 
 
 ```{r}
 # Get unique values of 'Tissue Type' for grouping
-unique_TSS <- unique(duo_table$SMTS_Abbrvs)
+unique_Study <- unique(duo_table2$Study.Name)
 
 # Initialize a df to store the test results
-Results_table <- data.frame(SMTS = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant_value= character(0), mean_dif = numeric(0))
+Results_table <- data.frame(Study = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant_value= character(0), mean_dif = numeric(0))
 
 # Loop through each unique value of 'Tissue Type'
-for (i in 1:length(unique_SMTS)) {
-  current_SMTS <- unique_SMTS[i]
+for (i in 1:length(unique_Study)) {
+  current_Study <- unique_Study[i]
   
   # Subset the data for the current group
-  subset_data <- duo_table[duo_table$SMTS_Abbrvs == current_SMTS, ]
+  subset_data <- duo_table2[duo_table2$Study.Name == current_Study, ]
   
   # Perform the paired permutation test for the current group
-  test_result <- perm.test(subset_data$Mean_set, subset_data$Mean_ctrl,
+  test_result <- perm.test(subset_data$SOI_geom_mean, subset_data$ctrl_geom_mean,
                             alternative = "two.sided", mu = 0, paired = TRUE,
                             all.perms = TRUE, num.sim = 10000, plot = FALSE, stat = mean)
 
   # Correct the p_value using the Benjamini Hochberg correction method
-  Corrected_Pval <- p.adjust(test_result$p.value, method = "BH", n = length(unique_SMTS)) 
+  Corrected_Pval <- p.adjust(test_result$p.value, method = "BH", n = length(unique_Study)) 
   Significant_val <- if(Corrected_Pval < 0.05) "TRUE" else "FALSE"
   
   # Calculate the mean Expression value per group
-  mean_dif <- mean(subset_data$Mean_dif)
+  mean_dif <- mean(subset_data$mean_dif)
   
   # Store the result in  'Results_table' 
-  Results_table <- rbind(Results_table, data.frame(SMTS = current_SMTS, P_Value = test_result$p.value, Adj_P_Value = Corrected_Pval,
+  Results_table <- rbind(Results_table, data.frame(Study = current_Study, P_Value = test_result$p.value, Adj_P_Value = Corrected_Pval,
                                                    Significant_value  = Significant_val, mean_dif = mean_dif)) %>% arrange(desc(mean_dif))
 }
 
@@ -533,7 +499,7 @@ D) Create barplot of each Tissue Type group, based on mean Expression difference
 
 ```{r}
 
-ggplot(Results_table, aes(x = SMTS, y = mean_dif)) +
+ggplot(Results_table, aes(x = Study, y = mean_dif)) +
   geom_bar(stat = "identity", fill = "gray47") +
   theme_minimal() +
   labs(title = "Average Expression Difference in Set-of-Interest vs control gene-set", 
