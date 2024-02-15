@@ -60,51 +60,55 @@ calculate_summary <- function(input_dataframe) {
 
 
 ```{r}
-SOI_summary <- calculate_summary(SOI_Healthy)
+Healthy_sum <- calculate_summary(SOI_Healthy)
 
-# Create a table that contains the means of all the groups
-Means_table <- SOI_summary 
 ```
 
 
 ```{r}
-
-
-# Create a table that contains the means of all the groups
-Means_table <- SOI_summary[,-3] 
-
+start_time <- Sys.time()
 # Create a table that contains all the SOI-Control_set differences for each of the controls sets
-Dif_table <- data.frame(SampleID = SOI_summary$SampleID)
+Dif_table <- data.frame(id = rownames(Healthy_sum))
+Mean_table <- data.frame(id = rownames(Healthy_sum), SOI_mean = Healthy_sum$SOI_geom_mean)
+
 
 # Loop over the control datasets
-num_datasets <- 25
+num_datasets <- 547
 
 for (i in 1:num_datasets) {
-  start_time <- Sys.time()
+ 
 
-  ctrl_file <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/Controls/GTEx_Control_RNA_Data_df", i, ".csv", sep = "")
-  
+  ctrl_file <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_control_sets/GTEx_TPM_RNA_Control_df", i, ".csv", sep = "")
   ctrl_set <- read.csv(ctrl_file)
-  
-  ctrl_set_summary <- merge(calculate_summary(ctrl_set), SOI_summary, by = "SampleID", all = FALSE, suffixes = c("", i))
-  ctrl_set_summary <- ctrl_set_summary %>% mutate(mean_dif = SOI_geom_mean - ctrl_geom_mean  ,
-                                                  median_dif = SOI_medians - ctrl_medians)
-  
-  Dif_table <- merge(Dif_table, ctrl_set_summary %>% select(SampleID , mean_dif, median_dif), 
-                     by = "SampleID", all = FALSE, suffixes = c("", i)
+
+  ctrl_summary <- calculate_summary(ctrl_set)
+
+  summary <- merge(ctrl_summary %>% rownames_to_column(var = "id"),
+                 Healthy_sum %>% rownames_to_column(var = "id"),
+                 by = "id",
+                 all = FALSE,
+                 suffixes = c("", i)) %>%
+  mutate(mean_dif = SOI_geom_mean - ctrl_geom_mean)
+
+  Dif_table <- merge(Dif_table, summary %>% select(id, mean_dif),
+                     by = "id", all = FALSE, suffixes = c("", i)
                      )
-  
-  Means_table <- merge(Means_table, ctrl_set_summary %>% select(SampleID , ctrl_geom_mean), 
-                     by = "SampleID", all = FALSE, suffixes = c("", i)
+  Mean_table <- merge(Mean_table, summary %>% select(id, ctrl_geom_mean),
+                     by = "id", all = FALSE, suffixes = c("", i)
                      )
-  
   end_time <- Sys.time()
   cat('\n',i,"th iteration duration: ", end_time - start_time, "seconds")
 }
+```
 
-Dif_table <- Dif_table %>%  rename(mean_dif1 = mean_dif,
-                          median_dif1 = median_dif)
-Means_table <- Means_table %>%  rename(ctrl_geom_mean1 = ctrl_geom_mean)
+
+
+
+
+
+```{r}
+Dif_table <- Dif_table %>%  rename(mean_dif1 = mean_dif)
+Mean_table <- Mean_table %>%  rename(ctrl_geom_mean1 = ctrl_geom_mean)
 ```
 
 
@@ -112,6 +116,7 @@ Means_table <- Means_table %>%  rename(ctrl_geom_mean1 = ctrl_geom_mean)
 Choose a random set of 5 control gene-sets that will be used in the graphs
 
 ```{r}
+set.seed(123)
 controls <- sample(1:num_datasets, 5)
 
 ```
@@ -131,22 +136,22 @@ dif_pairing_names <- unlist(lapply(controls, function(i) paste("mean_dif", i, se
 violin_graph_long_data <- Dif_table[dif_pairing_names] %>%
   pivot_longer(cols = dif_pairing_names,
                names_to = "Variable",
-               values_to = "Value")
+               values_to = "Value") 
 
-ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
-  geom_violin(trim = FALSE, fill = "gray88")+
+plot1 <- ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
+  geom_violin(trim = FALSE, fill = alpha("#778899", 0.5))+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SOI to Control-set Pairings ", y = expression("Δ Expression" ~ (log[2])),
-       title = "Distribution of the Set-of-Interest to Control Gene-Set \n  Expression Difference Across Various Pairings") +
+       title = "NON-CANCEROUS: DISTRIBUTION OF THE SET-OF-INTEREST \n TO CONTROL-SET EXPRESSION DIFFERENCE ACROSS VARIOUS PAIRINGS") +
   theme(
     legend.position = "none",
-    axis.title = element_text(size = 13, color = "black"),
-    axis.text = element_text(color = "black", size = 10),
+    axis.title = element_text(size = 16, color = "black"),
+    axis.text = element_text(color = "black", size = 13),
     axis.text.x = element_blank(),
     panel.background = element_rect(fill = "white"),
     legend.text = element_blank(),
-    plot.title = element_text(hjust = 0.6, size = 15),
-    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
+    plot.title = element_text(hjust = 0.5, size = 19),
+    panel.border = element_rect(fill = "transparent", color = "#698B69", linewidth = 2),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
@@ -163,13 +168,13 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 
 
 ```{r}
-Fried_test_data <- Dif_table %>%
-  gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
-  mutate(Sample = as.factor(SampleID), Pairing = as.factor(Pairing)) %>%
-  select(Sample, Pairing, Difference)
-
-friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
-print(friedman_result)
+# Fried_test_data <- Dif_table %>%
+#   gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
+#   mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
+#   select(Sample, Pairing, Difference)
+# 
+# friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
+# print(friedman_result)
 ```
 Result: The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
 
@@ -219,27 +224,27 @@ graph_long_data <- Dif_table %>%
 
 
 
-ggplot(graph_long_data, aes(y = Value, x = Variable)) +
+plot2 <- ggplot(graph_long_data, aes(y = Value, x = Variable)) +
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
-    coord_cartesian(ylim = c(0, 6)) +
-  scale_y_continuous() +
-  labs(x = "Unique SOI / Control Pairings ", y = "Δ Log2 Expression",
-       title = "Distribution of the Set-of-Interest to Control gene-set \n Log2 Expression Difference Across All Pairings") +
+    coord_cartesian(ylim = c(0, 11)) +
+  scale_y_continuous(breaks = seq(0, 11, by = 2)) +
+  labs(x = "Set-of-Interest / Control-set Pair ", y = expression("Δ Expression" ~ (log[2])),
+       title = "NON-CANCEROUS: DISTRIBUTION OF THE SET-OF-INTEREST TO \n CONTROL-SET EXPRESSION DIFFERENCE ACROSS ALL PAIRINGS") +
   theme(
-    plot.title = element_text(hjust = 0.6, size = 15),
+    plot.title = element_text(hjust = 0.5, size = 19),
     plot.title.position = "plot",
-    axis.title = element_text(size = 13, color = "black", face = "bold"),
-    axis.text = element_text(color = "black", size = 10),
+    axis.title = element_text(size = 16, color = "black"),
+    axis.text = element_text(color = "black", size = 12),
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
     legend.text = element_blank(),
     legend.position = "none",
-    panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
+    panel.border = element_rect(fill = "transparent", color = "#698B69", linewidth = 2),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
-    panel.background = element_rect(fill = "#EDEDED")
+    panel.background = element_rect(fill = alpha("white", 0.1))
 )
 ``` 
 Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in expression difference amongst the control gene-set to SOI pairings), the plot above clearly demonstrates that the expression difference pattern between every control gene-set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). And that the difference between the general expression of both sets is consistantly positive, demonstrating increased expression within the SOI compared to all control gene-sets.
@@ -255,8 +260,12 @@ E) Calculate the significance of the difference between the mean expression of t
 paired_tests_list <- list()
 for (i in 1:num_datasets) {
   ctrl <- paste("ctrl_geom_mean", i, sep ="")
-  permutation_res <- perm.test(Means_table$SOI_geom_mean, Means_table[[ctrl]], alternative = "two.sided", mu = 0,
-      paired = TRUE, all.perms = TRUE, num.sim = 10000, plot = FALSE, stat = mean)
+  
+  # cat("Data types of SOI_mean and", ctrl, "columns:\n")
+  # str(Mean_table[c("SOI_mean", ctrl)])
+  
+  permutation_res <- perm.test(Mean_table$SOI_mean, Mean_table[[ctrl]], alternative = "two.sided", mu = 0,
+      paired = TRUE, all.perms = TRUE, num.sim = 1000, plot = FALSE, stat = mean)
   pair <- paste("Pair", i, sep ="_")
   pair_frame = data.frame(Pairing = pair, Pvalue = as.numeric(permutation_res$p.value), Corrected_Pval = as.numeric(p.adjust(permutation_res$p.value, method = "BH", n = num_datasets)))
   paired_tests_list[[i]] <- pair_frame
@@ -277,13 +286,13 @@ F) Demonstrate difference by showing the individual expression distributions of 
   and some (5) of the control gene-sets
 
 ```{r}
-controls_names <- "SOI_geom_mean"
+controls_names <- "SOI_mean"
 controls_names <- append(controls_names,  unlist(lapply(controls, function(i) paste("ctrl_geom_mean", i, sep =""))))
 
 
 # Pivot the data into a form that can be used by boxplot.
 
-long_data <- Means_table %>%
+long_data <- Mean_table %>%
   select(all_of(controls_names)) %>%
   pivot_longer( cols = everything(), names_to = "Variable", values_to = "Value")
 
@@ -343,10 +352,11 @@ specific_p_values <- sapply(specific_comparisons_ordered, function(comp) {
 
 ```{r}
 RNA_dif <- ggplot(long_data, aes( y = Value, x = Variable)) +
-  geom_boxplot(outlier.colour = 2, fill = "gray88") +
+  geom_boxplot(outlier.colour = 2, fill = "#778899") +
   stat_boxplot(geom = "errorbar") +
+  coord_cartesian(ylim = c(-8, 8)) +
   theme_minimal() +
-  labs(title = "DISTRIBUTION OF THE MEAN EXPRESSION IN THE SET-OF-INTEREST VS VARIOUS CONTROL-SETS",
+  labs(title = "NON-CANCEROUS: \n DISTRIBUTION OF THE MEAN EXPRESSION IN THE SET-OF-INTEREST VS VARIOUS CONTROL-SETS",
        y = expression("Expression" ~ (log[2])),) +
   scale_x_discrete(labels = c("Control Set 118","Control Set 14","Control Set 179","Control Set 195","Control Set 306", "Set of Interest")) +
   theme(
@@ -354,20 +364,21 @@ RNA_dif <- ggplot(long_data, aes( y = Value, x = Variable)) +
         axis.title.y = element_text(size= 20),
         plot.subtitle = element_text(hjust= 0.5),
         axis.title.x = element_blank(),
-        axis.text.x = element_text(size = 17, angle = 45, vjust = 0.6),
+        axis.text.x = element_text(size = 17, angle = 0, vjust = 0.6),
         axis.text.y = element_text(size = 17),
         plot.title = element_text(hjust = 0.5,
                                   size = 25),
         panel.background = element_rect(fill = "white"),
         panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 2),
+        panel.grid.minor.y = element_line(color = "black", linewidth = 0.25, linetype = 2),
         panel.border = element_rect(fill = "transparent",
-                                    color = 1,
+                                    color = "#698B69",
                                     linewidth = 2)) +
   geom_signif(comparisons = specific_comparisons_ordered,
                annotations = specific_p_values,
-              step_increase = 0.09,
+              step_increase = 0.04,
               map_signif_level = TRUE,
-              textsize = 5.5,
+              textsize = 4.5,
               tip_length = 0
   )
 
@@ -391,14 +402,19 @@ Data using only a single control gene-set with more rows
 ```{r}
 main_ctrl_num <- controls[2]
 
-file_name <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/Controls/GTEx_Control_RNA_Data_df", main_ctrl_num, ".csv", sep = "")
+file_name <- paste("Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_control_sets/GTEx_TPM_RNA_Control_df", main_ctrl_num, ".csv", sep = "")
 ctrl <- read.csv(file_name)
 
-duo_table <- merge(SOI_summary[1:2], calculate_summary(ctrl) %>% select(SampleID , ctrl_geom_mean), 
-                   by = "SampleID", all = FALSE) %>% mutate(mean_dif = SOI_geom_mean - ctrl_geom_mean)
+ctrl_sum1 <- calculate_summary(ctrl)
 
-duo_table <- merge( duo_table, Meta_data_Healthy[c("SAMPID", "SMTS", "SMTSD")], 
-                    by.x = "SampleID",by.y = "SAMPID", , all = FALSE)
+duo_table <- merge(Healthy_sum, ctrl_sum1 %>% select( ctrl_geom_mean), by = 0, all = FALSE) %>% 
+  mutate(mean_dif = SOI_geom_mean - ctrl_geom_mean) %>%  
+  rename(SAMPID = Row.names)
+
+Meta_data_Healthy$SAMPID <- gsub("-", ".", Meta_data_Healthy$SAMPID)
+
+duo_table2 <- merge(duo_table, Meta_data_Healthy[c("SAMPID", "SMTS", "SMTSD")],
+                    by = "SAMPID", all = FALSE)
 
 
 ```
@@ -409,18 +425,18 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 RN
 ```{r}
 
 
-RNA_SMTS <- ggplot(duo_table, aes(x = SampleID, y = mean_dif)) + 
-  geom_col(alpha = 0.72, fill = "#00688B") +
+RNA_SMTS <- ggplot(duo_table2, aes(x = factor(SAMPID), y = mean_dif)) + 
+  geom_col(alpha = 0.72, fill = "#698B69") +
   theme_minimal() +
   labs(y = expression("Expression Δ" ~ (log[2])),
        x = "Samples",
-       title = "EXPRESSION DIFFERENCE ACROSS SAMPLES BY TISSUE TYPE") +
+       title = "NON-CANCEROUS: EXPRESSION DIFFERENCE ACROSS SAMPLES BY TISSUE TYPE") +
   theme(
     axis.text.x = element_blank(),
     axis.title.y = element_text(size = 17), 
     axis.text.y = element_text(size = 13),
     axis.title.x = element_blank(), 
-    plot.title = element_text(hjust = 0.5, size = 23),
+    plot.title = element_text(hjust = 0.5, size = 20),
     plot.title.position = "plot",
     panel.background = element_rect(fill = "white"),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.5, linetype = 2),
@@ -433,7 +449,6 @@ RNA_SMTS <- ggplot(duo_table, aes(x = SampleID, y = mean_dif)) +
   facet_wrap(~SMTS, ncol = 4, scales = "free_x", labeller = labeller(SMTS = function(label) label))  
 
 print(RNA_SMTS)
-
 ``` 
 Interpretation: The positive ∆ expression between the SOI and the control gene-set is maintained across all cancer types
 
@@ -441,7 +456,7 @@ Interpretation: The positive ∆ expression between the SOI and the control gene
 B) Create a barplot of the samples vs their differences in the mean log2 RNA values segmented by SMTSD
 
 ```{r}
-RNA_SMTS <- ggplot(duo_table, aes(x = SampleID, y = mean_dif)) + 
+RNA_SMTS <- ggplot(duo_table2, aes(x = SAMPID, y = mean_dif)) + 
   geom_col(alpha = 0.72, fill = "#00688B") +
   theme_minimal() +
   labs(y = expression("Expression Δ" ~ (log[2])),
@@ -469,7 +484,7 @@ print(RNA_SMTS)
 # my_palette <- paletteer_d("colorBlindness::paletteMartin")
 
 # duo_table <- duo_table %>%
-#   mutate( SampleID = factor(SampleID, levels = SampleID[order(SMTSD)]))
+#   mutate( id = factor(id, levels = id[order(SMTSD)]))
 ``` 
 
 
