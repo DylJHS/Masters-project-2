@@ -22,8 +22,8 @@ pd.set_option('display.width', None)
 # GTEx_Annotations_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/GTEx_Annotations.csv")
 
 
-# Full_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM.csv', nrows = 400)
+TCGA_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_CTRL_SHRD.csv', nrows = None)
 GTEx_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_RNA_TPM.csv', nrows = None)
 
 
-print(GTEx_tpm_df.id.count())
+print(TCGA_tpm_df.shape, '\n\n\n', GTEx_tpm_df.shape)
