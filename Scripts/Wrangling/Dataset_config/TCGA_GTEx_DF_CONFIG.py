@@ -43,7 +43,7 @@ pd.set_option('display.width', None)
 
 
 nrows = None
-interaction_score = 400
+interaction_score = 900
 
 protein_genes_of_interest = [
     "MAN1","TMPO", "EMD", "TOR1AIP1", 
@@ -59,7 +59,8 @@ protein_genes_of_interest = [
 # # Query STRING database to obtain a set (Set-of-Interest, SoI) of genes 
 # # that interact with the products of the genes in protein_genes_of_interest.
 STRING_SoI = Gene_list(protein_genes_of_interest, interaction_score)
-print(len(STRING_SoI))
+
+print(len(STRING_SoI), '\n', STRING_SoI)
 
 
 # ###############      TCGA SPECIFIC DF CREATION.       #################
@@ -85,10 +86,10 @@ print(len(STRING_SoI))
 # # print(Full_tpm_df.shape,'\n')
 
 # # # ## Else create the full tpm df.
-# # raw_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/tcga_RSEM_gene_tpm.txt', sep = "\t")
+# raw_tpm_df = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/tcga_RSEM_gene_tpm.txt', sep = "\t")
 
 # # # list of the tumour types coodes that are NOT allowed in the analysis 
-# # tumour_type_codes = ['11','15','16','20','50','60','61','99']
+# tumour_type_codes = ['10','12', '13','14' ,'11','15','16','20','50','60','61','99']
 
 # # # list of the TSS codes that are NOT allowed in the analysis 
 # # tss_codes = ['07','AV']

@@ -1,0 +1,30 @@
+---
+title: "TCGA RNA CONTROL ANALYSIS"
+output: html_document
+date: "2024-02-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+Load the libraries
+```{r}
+library(dplyr)
+library(plyr)
+library(knitr)
+library(tidyverse)
+``` 
+Load other options
+```{r}
+getOption("max.print")
+```
+
+Load the RNA datasets
+```{r}
+set.seed(123)
+
+# Get the headers (genes) that make up the SOI in the TCGA set
+SOI <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv", nrows = 1)
+
+
+Meta_data <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
