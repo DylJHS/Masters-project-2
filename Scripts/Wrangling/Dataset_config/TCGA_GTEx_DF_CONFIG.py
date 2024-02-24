@@ -43,7 +43,7 @@ pd.set_option('display.width', None)
 
 
 nrows = None
-interaction_score = 900
+interaction_score = 950
 
 protein_genes_of_interest = [
     "MAN1","TMPO", "EMD", "TOR1AIP1", 
@@ -294,28 +294,28 @@ print(len(STRING_SoI), '\n', STRING_SoI)
 
 
 
-# '''
-# Smaller control sets creation.
-# '''
+'''
+Smaller control sets creation.
+'''
 
-# # Basing the control sets lengths off of the df for the set of interest
-# SOI_len = len(TCGA_SOI_tpm_df.Gene.to_list())
-# # SOI_len = 15
+# Basing the control sets lengths off of the df for the set of interest
+SOI_len = len(TCGA_SOI_tpm_df.Gene.to_list())
+# SOI_len = 15
 
-# all_ctrl_genes = len(TCGA_Shrd_Ctrl_tpm_df)
-# print("the number of all the control genes is: ", all_ctrl_genes, '\n')
+all_ctrl_genes = len(TCGA_Shrd_Ctrl_tpm_df)
+print("the number of all the control genes is: ", all_ctrl_genes, '\n')
 
-# # Variable to keep track of the number of control genes 
-# # which remain unaccounted for in any of the control datasets.
-# dif_ctrl = all_ctrl_genes
+# Variable to keep track of the number of control genes 
+# which remain unaccounted for in any of the control datasets.
+dif_ctrl = all_ctrl_genes
 
-# # Empty list to contain the gene IDs that have been used
-# used_Gene_ids = set()
+# Empty list to contain the gene IDs that have been used
+used_Gene_ids = set()
 
-# step = 1
-# while dif_ctrl > 0:
-# 	start_time = time.time()
-# 	print('\n\n\n\n\t',"DATASET #: ", step, '\n')
+step = 1
+while dif_ctrl > 0:
+	start_time = time.time()
+	print('\n\n\n\n\t',"DATASET #: ", step, '\n')
 
 
 # 	# Create a random TCGA control df the same size as the SOI using all the shared control genes 

@@ -17,7 +17,6 @@ library(ggpubr)
 library(rstatix)
 library(tidyverse) 
 library(jmuOutlier)
-library(paletteer)
 
 ``` 
 

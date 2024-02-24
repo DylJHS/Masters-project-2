@@ -128,22 +128,22 @@ print("TCGA NORMAL ALL CONTROL GENES",'\n',TCGA_Normal_SOI_tpm_df.iloc[:5,:5],'\
 # repeat until each of the small control sets has been viewed and their corresponding Normal types have been created
 
 
-df_number = 1
+# df_number = 1
 
 
-while True:
+# while True:
 
-	# Find and read the genes that are part of the corresponding Tumour control set.
-	Cancer_ctrl_geneids = pd.read_csv(f'../../../Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df{df_number}.csv', usecols = ["id"]).id.to_list()
+# 	# Find and read the genes that are part of the corresponding Tumour control set.
+# 	Cancer_ctrl_geneids = pd.read_csv(f'../../../Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df{df_number}.csv', usecols = ["id"]).id.to_list()
 
-	Normal_ctrl_set = TCGA_Normal_All_Ctrl_df[TCGA_Normal_All_Ctrl_df.id.isin(Cancer_ctrl_geneids)].reset_index(drop = True)
-	print(f"TCGA NORMAL CONTROL SET {df_number}",'\n',Normal_ctrl_set.iloc[:5,:5],'\n', Normal_ctrl_set.shape,'\n\n\n')
+# 	Normal_ctrl_set = TCGA_Normal_All_Ctrl_df[TCGA_Normal_All_Ctrl_df.id.isin(Cancer_ctrl_geneids)].reset_index(drop = True)
+# 	print(f"TCGA NORMAL CONTROL SET {df_number}",'\n',Normal_ctrl_set.iloc[:5,:5],'\n', Normal_ctrl_set.shape,'\n\n\n')
 
-	## Save the TCGA Normal Control Sets.
-	Normal_ctrl_set.to_csv(f'../../../Data/RNA_Data/TCGA_TPM/TCGA_Normal_CTRL_Sets/TCGA_Normal_mRNA_TPM_CTRL_Set{df_number}.csv', index = False)
+# 	## Save the TCGA Normal Control Sets.
+# 	Normal_ctrl_set.to_csv(f'../../../Data/RNA_Data/TCGA_TPM/TCGA_Normal_CTRL_Sets/TCGA_Normal_mRNA_TPM_CTRL_Set{df_number}.csv', index = False)
 
 
-	df_number += 1
+# 	df_number += 1
 
 
 
