@@ -1,0 +1,16 @@
+```{r}
+set.seed(123)
+
+
+
+
+soi_nrm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_Normal_mRNA_TPM_SOI.csv")
+soi_can <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+Meta_data <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
+
+```
+
+
+```{r}
+print("hello")
+```
