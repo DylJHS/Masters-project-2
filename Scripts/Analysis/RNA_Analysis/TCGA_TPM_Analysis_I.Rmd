@@ -72,12 +72,12 @@ Mean_table <- data.frame(id = rownames(SOI_sum), SOI_mean = SOI_sum$SOI_geom_mea
 
 
 # Loop over the control datasets
-num_datasets <- 547
+num_datasets <- 50
 
 for (i in 1:num_datasets) {
  
 
-  ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_control_sets/TCGA_TPM_RNA_Control_df", i, ".csv", sep = "")
+  ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df", i, ".csv", sep = "")
   ctrl_set <- read.csv(ctrl_file)
 
   ctrl_summary <- calculate_summary(ctrl_set)
@@ -95,9 +95,10 @@ for (i in 1:num_datasets) {
   Mean_table <- merge(Mean_table, summary %>% select(id, ctrl_geom_mean),
                      by = "id", all = FALSE, suffixes = c("", i)
                      )
-  end_time <- Sys.time()
-  cat('\n',i,"th iteration duration: ", end_time - start_time, "seconds")
+
 }
+end_time <- Sys.time()
+cat("Total duration: ", end_time - start_time, "minutes")
 ```
 
 
@@ -106,8 +107,8 @@ for (i in 1:num_datasets) {
 
 
 ```{r}
-Dif_table <- Dif_table %>%  rename(mean_dif1 = mean_dif)
-Mean_table <- Mean_table %>%  rename(ctrl_geom_mean1 = ctrl_geom_mean)
+Dif_table <- Dif_table %>%  dplyr::rename(mean_dif1 = mean_dif)
+Mean_table <- Mean_table %>% dplyr::rename(ctrl_geom_mean1 = ctrl_geom_mean)
 ```
 
 
@@ -139,7 +140,7 @@ violin_graph_long_data <- Dif_table[dif_pairing_names] %>%
   filter(Value != 0)
 
 plot1 <- ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
-  geom_violin(trim = FALSE, fill = alpha("#778899", 0.5))+
+  geom_violin(trim = FALSE, fill = "#778899", alpha = 0.5)+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SOI to Control-set Pairings ", y = expression("Δ Expression" ~ (log[2])),
        title = "CANCEROUS: DISTRIBUTION OF THE SET-OF-INTEREST \n TO CONTROL-SET EXPRESSION DIFFERENCE ACROSS VARIOUS PAIRINGS") +
@@ -159,6 +160,7 @@ plot1 <- ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
     plot.title.position = "plot"
   )
 
+plot1
 
 ``` 
 Interpretation: 
@@ -172,7 +174,7 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 #   gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
 #   mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
 #   select(Sample, Pairing, Difference)
-# # 
+# #
 # friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
 # print(friedman_result)
 ```
@@ -205,7 +207,7 @@ for (i in 1:num_datasets) {
                                                       Significant = Significant_value)) %>% arrange(desc(Adj_P_Value))
 }
 
-Contrast_agg_count_table <- Contrast_table %>% group_by(Significant) %>% summarise(count = n())
+Contrast_agg_count_table <- Contrast_table %>% group_by(Significant) %>% dplyr::summarise(count = n())
 print(Contrast_agg_count_table)
 ```
 Result: The Contrast analysis shows that the expression pattern of the control gene-sets seem to mostly differ significantly compared to their average with only 25/412 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
@@ -245,8 +247,10 @@ plot2 <- ggplot(graph_long_data, aes(y = Value, x = Variable)) +
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
-    panel.background = element_rect(fill = alpha("white", 0.1))
+    panel.background = element_rect(fill = "white")
 )
+
+plot2
 ``` 
 Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in expression difference amongst the control gene-set to SOI pairings), the plot above clearly demonstrates that the expression difference pattern between every control gene-set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). And that the difference between the general expression of both sets is consistantly positive, demonstrating increased expression within the SOI compared to all control gene-sets.
 
@@ -403,7 +407,7 @@ Data using only a single control gene-set with more rows
 ```{r}
 main_ctrl_num <- controls[2]
 
-file_name <- paste("Data/RNA_Data/TCGA_TPM/TCGA_control_sets/TCGA_TPM_RNA_Control_df", main_ctrl_num, ".csv", sep = "")
+file_name <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df", main_ctrl_num, ".csv", sep = "")
 ctrl <- read.csv(file_name)
 
 ctrl_sum1 <- calculate_summary(ctrl)
@@ -411,7 +415,7 @@ ctrl_sum1 <- calculate_summary(ctrl)
 duo_table <- merge(SOI_sum, ctrl_sum1 %>% select( ctrl_geom_mean), by = 0, all = FALSE) %>% 
   mutate(mean_dif = SOI_geom_mean - ctrl_geom_mean,
          TSS.Code = sapply(str_split(Row.names, "\\."), `[`, 2)) %>%  
-  rename(SAMPID = Row.names)
+  dplyr::rename(SAMPID = Row.names)
 
 
 duo_table2 <- merge(duo_table, Meta_data[c("TSS.Code","Study.Name")],
@@ -494,7 +498,7 @@ Results: All of the cancer types are shown to have a significant difference betw
 
 
 
-D) Create barplot of each Tissue Type group, based on mean Expression difference.
+C) Create barplot of each Tissue Type group, based on mean Expression difference.
 
 ```{r}
 

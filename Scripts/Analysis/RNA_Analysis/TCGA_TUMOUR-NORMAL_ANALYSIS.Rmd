@@ -29,7 +29,6 @@ library(dplyr)
 library(tidyr)
 library(plyr)
 library(coin)
-library(knitr)
 library(rstatix)
 library(ggpubr)
 library(GGally)
@@ -190,7 +189,7 @@ all_combos <- soi_combo
 
 results <- list()
 
-num_datasets <- 547
+num_datasets <- 5
 ```
 
 Perform pairwise wilcoxon signed rank test using the paired expression
@@ -312,7 +311,7 @@ Need to get info about the directionality of the differences across the sets.
 ```{r}
 set.seed(123)
 numbers_list <- seq(1, num_datasets)
-controls <- sample(1:547, 5)
+controls <- sample(1:num_datasets, 5)
 ```
 
 ```{r}
@@ -407,3 +406,4 @@ p2 <- ggplot(data=summary_pivot, aes(x=mean_log2fc, y=-log10(Adjusted_p))) +
 
 p2
 ```
+Interpretation: The Volcano plot cements the fact that the set of interest demonstrates a significant adn slight general up-regulation that varies greatly from the rest of the genome. 

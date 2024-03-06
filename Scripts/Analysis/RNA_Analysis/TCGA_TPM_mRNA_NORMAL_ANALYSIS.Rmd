@@ -70,7 +70,7 @@ Mean_table <- data.frame(id = rownames(SOI_sum), SOI_mean = SOI_sum$SOI_geom_mea
 
 
 # Loop over the control datasets
-num_datasets <- 547
+num_datasets <- 25
 
 for (i in 1:num_datasets) {
  
@@ -134,7 +134,7 @@ violin_graph_long_data <- Dif_table[dif_pairing_names] %>%
   filter(Value != 0)
 
 plot1 <- ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
-  geom_violin(trim = FALSE, fill = alpha("#778899", 0.5))+
+  geom_violin(trim = FALSE, fill = "#778899", alpha = 0.5)+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
   labs(x = "Unique SOI to Control-set Pairings ", y = expression("Expression Difference" ~ (log[2])),
        title = "CANCEROUS: DISTRIBUTION OF THE SET-OF-INTEREST \n TO CONTROL-SET EXPRESSION DIFFERENCE ACROSS VARIOUS PAIRINGS") +
@@ -173,7 +173,8 @@ Fried_test_data <- Dif_table %>%
 friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
 print(friedman_result)
 ```
-Result: 
+Result: the p-value for the Friedman test shows that there is at least a significant differnece between 2 of the sets.
+Interpretation: So we cannot come to the conclusion that the control sets are all similar (coming from the same distribution).
 
 
 C) Construct a contrast analysis to assess each of the pairings against the general trend (excluding the current set)
@@ -206,7 +207,7 @@ Contrast_agg_count_table <- Contrast_table %>% group_by(Significant) %>% dplyr::
 kable(Contrast_agg_count_table)
 ```
 
-Result: The Contrast analysis shows that the expression pattern of the control gene-sets seem to mostly differ significantly compared to their average with only 21/526 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
+Result: The Contrast analysis shows that the expression pattern of the control gene-sets differs significantly compared to the average for 526/547 with a p-value < 0.05 using the paired Wilcoxon Signed Rank Test. 
 
 
 
@@ -250,7 +251,7 @@ plot2 <- ggplot(graph_long_data, aes(y = Value, x = Variable)) +
 
 print(plot2)
 ``` 
-Interpretation:
+Interpretation: The trend of the SOI to Control set expression difference for each of the pairings shows a fairly consistent range between 6 and 10 on a log2 scale. Demonstrating the general over-expression of the SOI compared to the rest of the genome.
 
 
 
