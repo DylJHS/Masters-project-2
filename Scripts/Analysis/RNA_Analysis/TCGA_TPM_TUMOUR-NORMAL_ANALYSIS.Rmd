@@ -2,6 +2,7 @@
 title: "TCGA_TUMOUR_NORMAL_ANALYSIS"
 output: html_document
 date: "2024-02-22"
+Note: this is the script for the analysis of the cancerous vs non-cancerous samples from the TCGA data only. Does not incorporate the individual analyses. See TCGA_TPM_mRNA_FULL_ANALYSIS for the full analysis.
 editor_options: 
   markdown: 
     wrap: 72

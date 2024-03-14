@@ -1,0 +1,124 @@
+---
+title: "TCGA COUNT TUMOUR - NORMAL DGEA"
+format: html
+editor: visual
+Note: This script is for the anlysis of the Differential Gene expression between the cancerous and non-cancerous TCGA Expected count data.
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+Load the packages
+
+```{r}
+library(dplyr)
+library(knitr)
+library(tidyverse) 
+library(edgeR)
+library(limma)
+```
+
+Load the data
+
+```{r}
+original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+```
+
+
+```{r}
+transformed_data <- original[0:100,]
+```
+
+Re-transform the data from the y = 2(x+1) values to the actual counts using x = 2^y^−1.
+
+```{r}
+untransform <- function(x) {
+  return((2^x)-1)
+}
+
+count_data <- transformed_data %>%
+  mutate(across(-1, untransform))
+```
+
+Transform the column names
+```{r}
+ids <- colnames(count_data)[-1]
+participants <- sapply(ids, function(x) str_split(x, "\\.")[[1]][3])
+tissue_type <- sapply(ids, function(x) str_split(x, "\\.")[[1]][4])
+
+column_names <- c("Samples" ,  paste(participants, tissue_type, sep = "."))
+colnames(count_data) <- column_names
+```
+
+Edits to the columns 
+```{r}
+# Reset the row names to the Gene names
+data <- count_data %>%
+  column_to_rownames(var = "Samples") 
+
+# Remove the unwanted tissue types from the samples based on the code
+codes_to_use <- c("01","02","03","04","05","08","09","10","11","12","14","40")
+samples_to_use <- data %>%  select(ends_with(codes_to_use))
+
+#map the codes by health status (cancer <= 9 < Normal)
+mapped_data <- samples_to_use
+new_column_names <- colnames(samples_to_use)
+new_column_names <- ifelse(as.integer(substr(new_column_names, nchar(new_column_names) - 1, nchar(new_column_names))) > 9,
+                           paste0(substr(new_column_names, 1, nchar(new_column_names) - 2), "N"),
+                           paste0(substr(new_column_names, 1, nchar(new_column_names) - 2), "C"))
+
+colnames(mapped_data) <- new_column_names
+
+#remove columns with 0 values throughout
+cols_zeros <- which(apply(mapped_data, 2, function(x) all(x == 0)))
+mapped_data <- mapped_data[, -cols_zeros]
+
+```
+
+
+```{r}
+# convert df to matrix 
+ mapped_matrix <- mapped_data %>% as.matrix()
+
+d0 <- DGEList(mapped_matrix)
+dim(d0)
+
+
+keep<-filterByExpr(d0,group = colnames(mapped_data))
+d0<-d0[keep,keep.lib.size=FALSE]
+
+dim(d0)
+
+# Calculate the normalisation factor 
+
+d0 <- calcNormFactors(d0, method = "TMM")
+```
+
+
+```{r}
+
+participants <- sapply(colnames(mapped_matrix), function(x) str_split(x, "\\.")[[1]][1])
+tissue_type <- sapply(colnames(mapped_matrix), function(x) str_split(x, "\\.")[[1]][2])
+
+group <- interaction(participants, tissue_type)
+group
+
+# plotMDS(d0, col = as.numeric(group))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

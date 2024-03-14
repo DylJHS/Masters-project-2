@@ -75,10 +75,7 @@ IDs = raw_data[0].strip('\n').split('\t')
 data = raw_data[1:]
 reformated_data = [item.strip('\n').split('\t') for item in data]
 
-
 Df = pd.DataFrame(reformated_data, columns=IDs)
-print(Df.iloc[:100,:10])
-
 
 Full_df = (TPM_annotations_df[['id','gene']]
 	.merge(Df, left_on = "id", right_on = "IDs")

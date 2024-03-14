@@ -2,6 +2,7 @@
 title: "Combined TCGA Tests"
 output: html_document
 date: "2024-02-29"
+Note: This is the full analysis using solely the TCGA data, both cancerous and non-cancerous, without the data acquisition and wrangling steps which are performed in python.
 ---
 
 ```{r setup, include=FALSE}
@@ -22,6 +23,8 @@ library(rstatix)
 library(GGally)
 library(psych)
 library(ggsci)
+library(EnhancedVolcano)
+library(ggalt)
 ``` 
 Load other options
 ```{r}
@@ -30,17 +33,24 @@ getOption("max.print")
 
 Load the datasets
 ```{r}
-set.seed(123)
-
 soi_nrm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_Normal_mRNA_TPM_SOI.csv")
 soi_can <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
-Meta_data <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
+meta_data <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
+abbrvs_data <- read.csv("Data/Other/TCGA_meta/diseaseStudy.tsv", sep = "\t")
 ```
+
+Add the abbriviations to the full meta data df
+```{r}
+meta_data <- merge(meta_data,
+                   abbrvs_data,
+                   by = "Study.Name",
+                   All = FALSE)
+```
+
 
 Set the number of control sets to analyse
 ```{r}
 num_datasets <- 547
-
 ```
 
 Configure function that builds the set of interest metrics
@@ -629,9 +639,9 @@ Data using only a single control gene-set with more rows
 #   dplyr::rename(SAMPID = Row.names)
 # 
 # 
-# can_duo_table2 <- merge(can_duo_table, Meta_data[c("TSS.Code","Study.Name")],
+# can_duo_table2 <- merge(can_duo_table, meta_data[c("TSS.Code","Study.Abbreviation")],
 #                     by = "TSS.Code", all = FALSE)
-# nrm_duo_table2 <- merge(nrm_duo_table, Meta_data[c("TSS.Code","Study.Name")],
+# nrm_duo_table2 <- merge(nrm_duo_table, meta_data[c("TSS.Code","Study.Abbreviation")],
 #                     by = "TSS.Code", all = FALSE)
 
 
@@ -663,7 +673,7 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 RN
 #     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
 #     strip.text = element_text(size = 12)) +
 #   guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
-#   facet_wrap(~Study.Name, ncol = 4, scales = "free_x", labeller = labeller(Study = function(label) label))
+#   facet_wrap(~Study.Abbreviation, ncol = 4, scales = "free_x", labeller = labeller(Study = function(label) label))
 # 
 # nrm_RNA_TSS <- ggplot(nrm_duo_table2, aes(x = factor(SAMPID), y = mean_dif)) + 
 #   geom_col(alpha = 0.72, fill = "#9B30FF") +
@@ -686,7 +696,7 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 RN
 #     panel.border = element_rect(fill = "transparent", color = 1, linewidth = 1),
 #     strip.text = element_text(size = 12)) +
 #   guides(fill = guide_legend(ncol = 8, title = "Source Tissue Type", title.position = "top")) +
-#   facet_wrap(~Study.Name, ncol = 4, scales = "free_x", labeller = labeller(Study = function(label) label))
+#   facet_wrap(~Study.Abbreviation, ncol = 4, scales = "free_x", labeller = labeller(Study = function(label) label))
 # 
 # print(can_RNA_TSS)
 # print(nrm_RNA_TSS)
@@ -699,8 +709,8 @@ B) Apply a two-sided paired permutation test between the SOI and the control gen
 
 ```{r}
 # Get unique values of 'Tissue Type' for grouping
-# can_unique_Study <- unique(can_duo_table2$Study.Name)
-# nrm_unique_Study <- unique(nrm_duo_table2$Study.Name)
+# can_unique_Study <- unique(can_duo_table2$Study.Abbreviation)
+# nrm_unique_Study <- unique(nrm_duo_table2$Study.Abbreviation)
 # 
 # # Initialize a df to store the test results
 # can_Results_table <- data.frame(Study = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant_value= character(0), sample_n = numeric(0), mean_dif = numeric(0))
@@ -711,7 +721,7 @@ B) Apply a two-sided paired permutation test between the SOI and the control gen
 #   current_Study <- can_unique_Study[i]
 #   
 #   # Subset the data for the current group
-#   subset_data <- can_duo_table2[can_duo_table2$Study.Name == current_Study, ]
+#   subset_data <- can_duo_table2[can_duo_table2$Study.Abbreviation == current_Study, ]
 #   sample_num <- length(subset_data$SAMPID)
 #   
 #   # Perform the paired permutation test for the current group
@@ -741,7 +751,7 @@ B) Apply a two-sided paired permutation test between the SOI and the control gen
 #   current_Study <- nrm_unique_Study[i]
 #   
 #   # Subset the data for the current group
-#   subset_data <- nrm_duo_table2[nrm_duo_table2$Study.Name == current_Study, ]
+#   subset_data <- nrm_duo_table2[nrm_duo_table2$Study.Abbreviation == current_Study, ]
 #   sample_num <- length(subset_data$SAMPID)
 #   
 #   # Perform the paired permutation test for the current group
@@ -888,7 +898,7 @@ soi_merge <- merge(calculate_summary(soi_nrm) %>%
                    suffixes = c("_nrm", "_can"))
 
 soi_combo <- merge(soi_merge,
-                   Meta_data %>% select(c("TSS.Code", "Study.Name")),
+                   meta_data %>% select(c("TSS.Code", "Study.Abbreviation")),
                    by = "TSS.Code",
                    all = FALSE) %>% 
   select(-c("TSS.Code"))
@@ -897,7 +907,7 @@ soi_combo <- merge(soi_merge,
 soi_combo <- soi_combo %>%
   dplyr::rename(geom_mean_nrm_soi = geom_mean_soi_nrm,
                 geom_mean_can_soi = geom_mean_soi_can,
-                tissue_type = Study.Name)
+                tissue_type = Study.Abbreviation)
 ```
 
 construct a table to perform a paired wilcoxon test to assess the
@@ -1013,8 +1023,8 @@ for (i in 1:num_datasets) {
     i,
     ".csv", sep = ""
   )
+  
   nrm_ctrl_set <- read.csv(nrm_ctrl_file)
-
 
   new_combo <- merge(calculate_summary(nrm_ctrl_set) %>%
       rownames_to_column(var = "id") %>%
@@ -1029,6 +1039,7 @@ for (i in 1:num_datasets) {
     by = "Participant",
     all = FALSE
   )
+  
   new_combo <- new_combo %>%
     dplyr::mutate( dif = geom_mean_can - geom_mean_nrm) %>% 
     dplyr::rename(
@@ -1138,7 +1149,7 @@ bxp2 <- ggpaired(box_pivot_combos, x = "type", y = "Expression",
                  line.size = 1,
                  line.color = "purple",
                  ggtheme = theme_classic(), palette = "lancet") +
-  facet_wrap(~set_group, ncol = 6, scales = "free_y") +
+  facet_wrap(~set_group, ncol = 6, scales = "free") +
   geom_line(data = subset(
     box_pivot_combos, Participant %in% sample(unique(box_pivot_combos$Participant), 9)
   ),
@@ -1181,36 +1192,30 @@ summary_pivot <- merge(pivot_main %>%
 ```
 
 
-F) Volcano plot of demonstrating the effect of the up-regulation in the SOI and how it compares to the other sets
+F) Volcano plot demonstrating the effect of the up-regulation in the SOI and how it compares to the other sets
 
 ```{r}
-p2 <- ggplot(data=summary_pivot, aes(x=mean_log2fc, y=-log10(p))) + 
-   geom_point(aes(size = std_log2fc), color = "grey50", fill = "grey50", alpha = 0.1) +
-  geom_point(color = "black") + 
-  theme_minimal() + 
-  geom_hline(yintercept=-log10(0.05), col="red") +
-  geom_point(data = subset(
-    summary_pivot, set == "soi"),
-    aes(group = set),
-    color = "red",
-    size = 3,
-    shape = 1
-  )+
-  theme(legend.position = "none") +
-  geom_text(data = subset(summary_pivot, set == "soi"), 
-            label = "Set of Interest",
-            hjust = 1, vjust = 2, color = "red", size = 4)
+Full_Volcano <- EnhancedVolcano(summary_pivot,
+                lab = summary_pivot$set,
+                x = "mean_log2fc",
+                y = "p",
+                xlim = c(-0.25,0.25),
+                selectLab = c('soi'),
+                pCutoff = 0.01,
+                FCcutoff = 0.05)
 
-p2
+Full_Volcano
 ```
-Interpretation: The Volcano plot confirms that the set of interest demonstrates a significant and general up-regulation that varies greatly from the rest of the genome. 
+
+Interpretation: The Volcano plot confirms that the set of interest demonstrates a significant and general up-regulation that varies greatly from the rest of the genome. The SOI is the most significant set in the plot and demonstrates a meaningfully different fold change when compared to the control sets.
 
 
 
 Repeat the above looking at the effect across different cancer/tissue types
 - Parse the data along the lines of the tissue type
-- Perform the Wicoxon signed rank test between the two conditions
-- Create the corresponding volcano plot and df
+- Perform the Wilcoxon signed rank test between the two conditions
+- Create the corresponding volcano plot highlighting the SOI
+- Create the corresponding df
 - Repeat for the next tissue type
 
 ```{r}
@@ -1254,45 +1259,79 @@ for (tissue in unique(all_combos$tissue_type)){
   all_tissue_summary <- rbind(all_tissue_summary, tissue_summary)
   
   
-  assign(paste("p", tissue, sep = "_"),ggplot(data=tissue_summary, aes(x=avg_log2fc, y=-log10(p_val))) + 
-   geom_point(aes(color = Tissue), alpha = 0.7) +
-  geom_point(data = subset(
-  tissue_summary, Set == "soi"),
-  colour = "red",
-  size = 3,
-  shape = 1) +
-  theme_minimal() + 
-  geom_hline(yintercept=-log10(0.05), col="red") +
-  theme(legend.position = "none") )  
+  assign(paste("p", tissue, sep = "_"),EnhancedVolcano(tissue_summary,
+                lab = tissue_summary$Set,
+                x = "avg_log2fc",
+                y = "p_val",
+                selectLab = c('soi'),
+                xlim = c(min(tissue_summary$avg_log2fc), max(tissue_summary$avg_log2fc)),
+                pCutoff = 0.01,
+                FCcutoff = 0.1) )  
 }
  
 
 ```
 
 
-```{r}
-p3 <- ggplot(data=all_tissue_summary, aes(x=avg_log2fc, y=-log10(p_val))) + 
-   geom_point(aes(color = Tissue), alpha = 0.7) +
-  # geom_point(color = "black") +
-  theme_minimal() +
-  geom_hline(yintercept=-log10(0.05), col="red") +
-geom_point(data = subset(
-  all_tissue_summary, Set == "soi"),
-  colour = "red",
-  size = 3,
-  shape = 1
-) +
-  theme(legend.position = "None")
-  # facet_wrap(~Tissue, ncol = 4, scales = "free_y")
-#   geom_text(data = subset(tissue_summary, Set == "soi"), 
-#             label = "Set of Interest",
-#             hjust = 1, vjust = 2, color = "red", size = 4)
+Create the combined plot of each volcano plots for all tissue type into a single plot
+highlighting the sets of interest 
 
-p3
+```{r}
+all_tissue_volcano <- EnhancedVolcano(all_tissue_summary,
+                lab = all_tissue_summary$Set,
+                x = "avg_log2fc",
+                y = "p_val",
+                selectLab = c('soi'),
+                xlim = c(min(all_tissue_summary$avg_log2fc),max(all_tissue_summary$avg_log2fc)),
+                drawConnectors = TRUE,
+                widthConnectors = 0.2,
+                pCutoff = 0.01,
+                FCcutoff = 0.1) 
+
+all_tissue_volcano
 ```
 
 
+Create the individual and combined volcano plot only using the tumour types with 20 or more samples
+highlighting the sets of interest  
 
+
+```{r}
+
+usable_tissues <- all_tissue_summary[all_tissue_summary$Tissue %in%
+                                       (all_combos %>%
+                                          dplyr::count(tissue_type) %>%
+                                          filter(n > 19) %>% 
+                                          pull("tissue_type")),]
+
+usable_volcano_facet <- EnhancedVolcano(usable_tissues,
+                lab = usable_tissues$Set,
+                x = "avg_log2fc",
+                y = "p_val",
+                selectLab = c('soi'),
+                xlim = c(-0.95,0.95),
+                ylim = c(0,10),
+                pCutoff = 0.01,
+                FCcutoff = 0.1) +
+  facet_wrap(~Tissue, ncol = 3, scales = "free")
+
+usable_volcano <- EnhancedVolcano(usable_tissues,
+                lab = usable_tissues$Set,
+                x = "avg_log2fc",
+                y = "p_val",
+                selectLab = c('soi'),
+                pointSize = c(ifelse(usable_tissues$Set == "soi", 4, 1)),
+                drawConnectors = TRUE,
+                widthConnectors = 0.2,
+                xlim = c(-0.95,0.95),
+                ylim = c(0,10),
+                pCutoff = 0.05,
+                FCcutoff = 0.1)
+
+usable_volcano
+```
+
+Interpretation: Although the 
 
 
 

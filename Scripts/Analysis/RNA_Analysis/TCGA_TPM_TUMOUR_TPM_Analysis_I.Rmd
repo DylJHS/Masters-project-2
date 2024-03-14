@@ -1,7 +1,8 @@
 ---
-title: "TCGA RNA CONTROL ANALYSIS"
+title: "TCGA TUMOUR TPM ANALYSIS PI"
 output: html_document
-date: "2024-02-20"
+date: "2024-02-13"
+Note: This is the script for the analysis of the cancerous only TCGA data. For the combined analysis see TCGA_TUMOUR_NORMAL_ANALYSIS. For the full analysis see TCGA_TPM_mRNA_FULL_ANALYSIS. 
 ---
 
 ```{r setup, include=FALSE}
@@ -10,17 +11,21 @@ knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internsh
 Load the libraries
 ```{r}
 library(dplyr)
-library(plyr)
-library(coin)
+library(broom)
 library(knitr)
-library(jmuOutlier)
-library(tidyverse)
+library(coin)
 library(ggpubr)
+library(rstatix)
+library(tidyverse) 
+library(jmuOutlier)
+
 ``` 
+
 Load other options
 ```{r}
 getOption("max.print")
 ```
+
 
 Load the RNA datasets
 
@@ -28,7 +33,7 @@ Load the RNA datasets
 ```{r}
 set.seed(123)
 
-SOI <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_Normal_mRNA_TPM_SOI.csv")
+SOI <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 Meta_data <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
 
 ```
@@ -54,12 +59,10 @@ calculate_summary <- function(input_dataframe) {
 ```
 
 
-
 ```{r}
 SOI_sum <- calculate_summary(SOI)
 
 ```
-
 
 
 ```{r}
@@ -70,12 +73,12 @@ Mean_table <- data.frame(id = rownames(SOI_sum), SOI_mean = SOI_sum$SOI_geom_mea
 
 
 # Loop over the control datasets
-num_datasets <- 25
+num_datasets <- 50
 
 for (i in 1:num_datasets) {
  
 
-  ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Normal_CTRL_Sets/TCGA_Normal_mRNA_TPM_CTRL_Set", i, ".csv", sep = "")
+  ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df", i, ".csv", sep = "")
   ctrl_set <- read.csv(ctrl_file)
 
   ctrl_summary <- calculate_summary(ctrl_set)
@@ -93,14 +96,19 @@ for (i in 1:num_datasets) {
   Mean_table <- merge(Mean_table, summary %>% select(id, ctrl_geom_mean),
                      by = "id", all = FALSE, suffixes = c("", i)
                      )
-}
 
+}
 end_time <- Sys.time()
-cat('\n',i," iterations with a total duration of: ", end_time - start_time, "seconds")
+cat("Total duration: ", end_time - start_time, "minutes")
 ```
 
+
+
+
+
+
 ```{r}
-Dif_table <- Dif_table %>% dplyr::rename(mean_dif1 = mean_dif)
+Dif_table <- Dif_table %>%  dplyr::rename(mean_dif1 = mean_dif)
 Mean_table <- Mean_table %>% dplyr::rename(ctrl_geom_mean1 = ctrl_geom_mean)
 ```
 
@@ -113,7 +121,6 @@ set.seed(123)
 controls <- sample(1:num_datasets, 5)
 
 ```
-
 
 
 Part I. Inter-genomic Expression analysis 
@@ -136,7 +143,7 @@ violin_graph_long_data <- Dif_table[dif_pairing_names] %>%
 plot1 <- ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
   geom_violin(trim = FALSE, fill = "#778899", alpha = 0.5)+
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
-  labs(x = "Unique SOI to Control-set Pairings ", y = expression("Expression Difference" ~ (log[2])),
+  labs(x = "Unique SOI to Control-set Pairings ", y = expression("Δ Expression" ~ (log[2])),
        title = "CANCEROUS: DISTRIBUTION OF THE SET-OF-INTEREST \n TO CONTROL-SET EXPRESSION DIFFERENCE ACROSS VARIOUS PAIRINGS") +
   theme(
     legend.position = "none",
@@ -146,7 +153,7 @@ plot1 <- ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
     panel.background = element_rect(fill = "white"),
     legend.text = element_blank(),
     plot.title = element_text(hjust = 0.5, size = 19),
-    panel.border = element_rect(fill = "transparent", color = "#9B30FF", linewidth = 2),
+    panel.border = element_rect(fill = "transparent", color = "#8B6508", linewidth = 2),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
@@ -154,10 +161,9 @@ plot1 <- ggplot(violin_graph_long_data, aes(y = Value, x = Variable)) +
     plot.title.position = "plot"
   )
 
-print(plot1)
+plot1
+
 ``` 
-
-
 Interpretation: 
 
 
@@ -165,16 +171,15 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 
 
 ```{r}
-Fried_test_data <- Dif_table %>%
-  gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
-  mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
-  select(Sample, Pairing, Difference)
-
-friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
-print(friedman_result)
+# Fried_test_data <- Dif_table %>%
+#   gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
+#   mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
+#   select(Sample, Pairing, Difference)
+# #
+# friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = Fried_test_data)
+# print(friedman_result)
 ```
-Result: the p-value for the Friedman test shows that there is at least a significant differnece between 2 of the sets.
-Interpretation: So we cannot come to the conclusion that the control sets are all similar (coming from the same distribution).
+Result: The Friedman Test shows that at least one of the pairings demonstrates a significantly different distribution. However, performing pairwise post hoc tests between all pairs of groups may not be practical due to the combinatorial explosion of comparisons
 
 
 C) Construct a contrast analysis to assess each of the pairings against the general trend (excluding the current set)
@@ -204,12 +209,9 @@ for (i in 1:num_datasets) {
 }
 
 Contrast_agg_count_table <- Contrast_table %>% group_by(Significant) %>% dplyr::summarise(count = n())
-kable(Contrast_agg_count_table)
+print(Contrast_agg_count_table)
 ```
-
-Result: The Contrast analysis shows that the expression pattern of the control gene-sets differs significantly compared to the average for 526/547 with a p-value < 0.05 using the paired Wilcoxon Signed Rank Test. 
-
-
+Result: The Contrast analysis shows that the expression pattern of the control gene-sets seem to mostly differ significantly compared to their average with only 25/412 showing an pvalue > 0.05 for the paired Wilcoxon Signed Rank Test. Cannot therefore assume that all the control gene-sets behave in the same general fashion. 
 
 
 D) Create plots of the differences of the average log2 expression across all pairings between the SOI and controls sets in order to visualise the similarities fo the behaviour between the controls and the SOI. 
@@ -230,8 +232,8 @@ plot2 <- ggplot(graph_long_data, aes(y = Value, x = Variable)) +
   geom_boxplot(varwidth = T, alpha  = 0.25, outlier.colour = "red")+
     coord_cartesian(ylim = c(0, 11)) +
   scale_y_continuous(breaks = seq(0, 11, by = 2)) +
-  labs(x = "Set-of-Interest / Control-set Pair ", y = expression("Expression Difference" ~ (log[2])),
-       title = "NON-CANCEROUS: DISTRIBUTION OF THE SET-OF-INTEREST TO \n CONTROL-SET EXPRESSION DIFFERENCE ACROSS ALL PAIRINGS") +
+  labs(x = "Set-of-Interest / Control-set Pair ", y = expression("Δ Expression" ~ (log[2])),
+       title = "CANCEROUS: DISTRIBUTION OF THE SET-OF-INTEREST TO \n CONTROL-SET EXPRESSION DIFFERENCE ACROSS ALL PAIRINGS") +
   theme(
     plot.title = element_text(hjust = 0.5, size = 19),
     plot.title.position = "plot",
@@ -241,18 +243,17 @@ plot2 <- ggplot(graph_long_data, aes(y = Value, x = Variable)) +
     axis.ticks.x = element_blank(),
     legend.text = element_blank(),
     legend.position = "none",
-    panel.border = element_rect(fill = "transparent", color = "#9B30FF", linewidth = 2),
+    panel.border = element_rect(fill = "transparent", color = "#8B6508", linewidth = 2),
     panel.grid.major.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_line(color = "black", linewidth = 0.1, linetype = 2),
-    panel.background = element_rect(fill = alpha("white", 0.1))
+    panel.background = element_rect(fill = "white")
 )
 
-print(plot2)
+plot2
 ``` 
-Interpretation: The trend of the SOI to Control set expression difference for each of the pairings shows a fairly consistent range between 6 and 10 on a log2 scale. Demonstrating the general over-expression of the SOI compared to the rest of the genome.
-
+Interpretation: Despite that fact that the Friedman Test and the Contrast Analysis resulted in significant results (indicating a significant difference in expression difference amongst the control gene-set to SOI pairings), the plot above clearly demonstrates that the expression difference pattern between every control gene-set and the Set-of-Interest is bound in a consistent range centered between log2(2) and log2(3). And that the difference between the general expression of both sets is consistantly positive, demonstrating increased expression within the SOI compared to all control gene-sets.
 
 
 E) Calculate the significance of the difference between the mean expression of the control-sets and the Set-of-Interest using a two-sided Paired Permutation Test for each control/SOI pair followed by a correction for multiple testing. 
@@ -279,13 +280,12 @@ for (i in 1:num_datasets) {
 # Correct the P-value due to multiple testing by using the BH method.
 
 full_paired <- do.call(rbind, paired_tests_list) %>% arrange(desc(Pvalue))
-kable(head(full_paired))
+print(head(full_paired))
 
 ```
-Result:
+Result: The results show a p-value of 0 for all pairings.
 
-Interpretation: 
-
+Interpretation: the p-value generated by the two-sided paired permutation test demonstrates a significant difference between the means of the SOI and the Control_set for each of the control_sets. Indicating that the general expression of the genes of interest is reliably and significantly different than the general expression from the rest of the genome. 
 
 
 F) Demonstrate difference by showing the individual expression distributions of the SOI
@@ -355,13 +355,14 @@ specific_p_values <- sapply(specific_comparisons_ordered, function(comp) {
 })
 ```
 
+
 ```{r}
 RNA_dif <- ggplot(long_data, aes( y = Value, x = Variable)) +
   geom_boxplot(outlier.colour = 2, fill = "#778899") +
   stat_boxplot(geom = "errorbar") +
   coord_cartesian(ylim = c(-8, 8)) +
   theme_minimal() +
-  labs(title = "NON-CANCEROUS: DISTRIBUTION OF THE MEAN EXPRESSION \n IN THE SET-OF-INTEREST VS VARIOUS CONTROL-SETS",
+  labs(title = "CANCEROUS: DISTRIBUTION OF THE MEAN EXPRESSION \n IN THE SET-OF-INTEREST VS VARIOUS CONTROL-SETS",
        y = expression("Expression" ~ (log[2])),) +
   scale_x_discrete(labels = c("Control Set 118","Control Set 14","Control Set 179","Control Set 195","Control Set 306", "Set of Interest")) +
   theme(
@@ -377,7 +378,7 @@ RNA_dif <- ggplot(long_data, aes( y = Value, x = Variable)) +
         panel.grid.major.y = element_line(color = "black", linewidth = 0.25, linetype = 2),
         panel.grid.minor.y = element_line(color = "black", linewidth = 0.25, linetype = 2),
         panel.border = element_rect(fill = "transparent",
-                                    color = "#9B30FF",
+                                    color = "#8B6508",
                                     linewidth = 2)) +
   geom_signif(comparisons = specific_comparisons_ordered,
                annotations = specific_p_values,
@@ -390,7 +391,15 @@ RNA_dif <- ggplot(long_data, aes( y = Value, x = Variable)) +
 print(RNA_dif)
 
 ```
-Interpretation:
+Interpretation: the p-value and plots demonstrate that the expression pattern of the control gene-sets are significantly different from that of the SOI.
+
+Impact on analyses: future test can now use a single control gene-set to test against as it has been shown that the controls do not differ significantly from one another and all share a similar difference with the SOI.
+
+
+
+
+
+
 
 
 QUESTION 2
@@ -399,7 +408,7 @@ Data using only a single control gene-set with more rows
 ```{r}
 main_ctrl_num <- controls[2]
 
-file_name <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Normal_CTRL_Sets/TCGA_Normal_mRNA_TPM_CTRL_Set", main_ctrl_num, ".csv", sep = "")
+file_name <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df", main_ctrl_num, ".csv", sep = "")
 ctrl <- read.csv(file_name)
 
 ctrl_sum1 <- calculate_summary(ctrl)
@@ -421,12 +430,13 @@ A) Create a barplot of the samples vs their mean differences in the mean log2 RN
 
 ```{r}
 
+
 RNA_TSS <- ggplot(duo_table2, aes(x = factor(SAMPID), y = mean_dif)) + 
-  geom_col(alpha = 0.72, fill = "#9B30FF") +
+  geom_col(alpha = 0.72, fill = "#8B6508") +
   theme_minimal() +
-  labs(y = expression("Expression Difference" ~ (log[2])),
+  labs(y = expression("Expression Δ" ~ (log[2])),
        x = "Samples",
-       title = "NON-CANCEROUS: EXPRESSION DIFFERENCE ACROSS SAMPLES BY TUMOUR SOURCE TYPE") +
+       title = "CANCEROUS: EXPRESSION DIFFERENCE ACROSS SAMPLES BY TUMOUR SOURCE TYPE") +
   theme(
     axis.text.x = element_blank(),
     axis.title.y = element_text(size = 17), 
@@ -446,8 +456,8 @@ RNA_TSS <- ggplot(duo_table2, aes(x = factor(SAMPID), y = mean_dif)) +
 
 print(RNA_TSS)
 ``` 
-
 Interpretation: The positive ∆ expression between the SOI and the control gene-set is maintained across all cancer types
+
 
 
 B) Apply a two-sided paired permutation test between the SOI and the control gene-set while grouping by cancer type in the form of Tissue Type and calculate the mean difference of each group
@@ -488,12 +498,13 @@ for (i in 1:length(unique_Study)) {
 Results: All of the cancer types are shown to have a significant difference between the general Expression of the SOI and the control gene-set
 
 
-D) Create barplot of each Tissue Type group, based on mean Expression difference.
+
+C) Create barplot of each Tissue Type group, based on mean Expression difference.
 
 ```{r}
 
 ggplot(Results_table, aes(x = Study, y = mean_dif)) +
-  geom_bar(stat = "identity", fill = "#9B30FF") +
+  geom_bar(stat = "identity", fill = "gray47") +
   theme_minimal() +
   labs(title = "Average Expression Difference in Set-of-Interest vs control gene-set", 
        y = "Mean Log2 Expression Difference")+
@@ -514,5 +525,10 @@ ggplot(Results_table, aes(x = Study, y = mean_dif)) +
                                     linewidth = 2)) 
 
 ``` 
-
 Interpretation: Indicates that the Expression pattern of positive ∆ mean Expression between the SOI and the control gene-set is present across all cancer types and that there are some differences in these levels. 
+
+
+
+
+
+

@@ -2,6 +2,7 @@
 title: "RNA Healthy set Analysis PI"
 output: html_document
 date: "2024-01-26"
+Note: this is the healthy based analysis using only the GTEx data. 
 ---
 
 ```{r setup, include=FALSE}

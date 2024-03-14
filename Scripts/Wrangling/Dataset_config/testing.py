@@ -7,21 +7,30 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
-# GTEx_meta_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_Subject_meta.csv")
-GTEx_tpm_df = pd.read_csv('../../../Data/RNA_Data/GTEx_RNA/GTEx_RNA_TPM/GTEx_RNA_TPM.csv', nrows = 500 )
-# GTEx_Annotations_df = pd.read_csv("../../../Data/RNA_Data/GTEx_RNA/GTEx_Annotations.csv")
-
-TPM_Samp_df = pd.read_csv("../../../Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM.csv", nrows = 400)
-# TCGA_Sample_type = pd.read_csv("../../../Data/Other/TCGA_meta/sampleType.tsv", sep = '\t')
 
 
-n=1
-while True:
-	Normal_set = pd.read_csv(f'../../../Data/RNA_Data/TCGA_TPM/TCGA_Normal_CTRL_Sets/TCGA_Normal_mRNA_TPM_CTRL_Set{n}.csv')
-	n +=1
-	print(Normal_set.shape)
-Control_set = pd.read_csv('../../../Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df1.csv')
+
+with open('/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count', 'r') as file:
+	raw_data = file.readlines()
+
+# print(raw_data)
 
 
 
 
+# print(raw_data[0])
+# print(raw_data[1])
+print(raw_data[2])
+
+
+
+
+# Process raw data to separate sample headers 
+# and reformat the data into a usable structure.
+
+columns = raw_data[0].strip('\n').split('\t')
+print(columns)
+# values = raw_data[1:]
+# reformated_values = [item.strip('\n').split('\t') for item in values]
+
+# GTEx_tpm_df.iloc[:, 2:] = np.log2(raw_GTEx_tpm_df.iloc[:, 2:].replace(0, 0.001).apply(pd.to_numeric, errors='coerce'))
