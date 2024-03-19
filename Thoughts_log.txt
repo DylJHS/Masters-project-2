@@ -1,0 +1,1017 @@
+
+04/01/24
+
+Thinking about editing the SoI-to-Control-set Wilcoxon Signed Rank test so as to become directional
+I may not be able to use the wilcoxon paired test between the SoI and the control sets due the distribution of the difference between the two not being symmetrical around the median. This is because the skewness of both are the opposite of each other. 
+Thinking about initialising a permutation test instead of the Wilcoxon test between the two sets for each control set
+Can't use DESeq2 for the paired analysis unless i switch datasets, as it only takes raw RNA-seq counts as input
+
+Creating a pre-analysis file for the exploratory analysis the set of interest
+started to set up the Contrast analysis to test the SoI-to-Control_set pairings individually
+ Should forget the contrast test given that it might just add complexity to the analysis as opposed to clarifying. Also the result that showed that each of the control sets does deviate significantly from the general trend. Not what I wanted but was confirmed by Adi that this is most likely to be expected given that I am dealing with cancer cells
+Finished the Contrast Analysis, the result showed significant difference among the Set pairings (not what i wanted). But can move on. 
+
+
+05/01/24
+
+Starting to create the permutation paired test in the RNA_Analysis script
+Reading up on the Fisher-Pitman permutation test
+Considered adding a test for equality of variance following the permutation test, test aren't meant to handle paired data (ex: Levene's). So Choosing to display the variance among the pairings instead as is shown by the violin plots (similarity of widths) in Q1.A
+ Making the test one-sided in order to reinforce the interpretation of the analysis
+Finished the one-sided paired permutation test between the SoI and Control Set for each Set
+Edited the RNA_Analysis to use the same control sets that are used in the charts to maintain a sense of consistency across the analysis
+
+
+06/01/24
+
+
+ going to start implementing the changes to the RNA_Analysis to the CNV Analysis
+ Changes that will need to be made to the graphs in the script include:
+- Converting the names of the samples/pairings on the x axes
+- Finding the best colour palettes for the differences by tumour type
+- Adding significant p-value indicators to the plots
+- Making sure the plots are as understandable as possible
+
+Editing the RNA_Analysis Q2.C to apply a one-sided paired permutation test between the SoI and the control sets when grouping by TSS
+And therefore also removing the paired t.test that was in the Analysis previously
+
+
+07/01/24
+
+- Need to finish the RNA_Analysis up to the point that i can and then convert it for use with the CNV data as well
+
+- Reading up on the multiple correction methods that might be best suited for the paired tests. 
+- The type of test is caught between the BH method (large # of tests) & the BY method (as can't truly address the correlation between the tests, or if any are present)
+- Likely to go with the BH method unless proven that there are dependencies between the tests
+- Should consider switching from one-sided tests to two-sided as the assumption that the SoI showed as general higher expression than other genes was made after seeing the data. 
+- Two-sided tests are a bit more conservative
+- My initial hypothesis is that these genes show a differential expression pattern as opposed to solely a higher one
+- So switching the tests to two-sided
+- Changing the test in Q1.D so that it is not only two-sided but also corrected for using the BH method
+- Edited the script in RNA_Analysis Part II in order to upload the entire dataset for the selected control set instead of using filtering the concatenated one
+- The use of the full (only selected ~2000 rows of the 11000) allows for better analyses using more of the data
+- Need to explore the data some more to check the number of samples for each cancer type and other such analyses that will help determine the types of tests that i can perform
+- Should do the above using the Pre_Analysis script 
+- All the paired tests grouping by cancer types come back as significant with a pvalue of 0 for all. This means that plotting them as i had in the previous version won't produce a highly discernible graph as all the points will appear on the same line
+- I will use a barplot instead to show the average differential expression by cancer type (TSS) 
+- Will also produce the same graph as before on 2 axes but using the diff expression vs the dif copy number once the copy number analysis is achieved
+- Broke down the graph in Q2.A into facets based on the TSS group as opposed ot using colour palettes as there are not sufficient colours to cover each type
+- Split the RNA_Analysis into 2 separate files for Part I and  Part II
+- Created a barplot of the average differences in SoI vs Control Set for each TSS
+ 
+
+08/01/24
+
+- Editing the Notes file for the Project part I
+- Added the interpretation to the mean TSS expression barplot (Q2.D)
+
+- Edited the RNA_Analysis script to replace the 'Differential' terms with 'Difference'
+- Considering changing the metric from Difference when assessing the differences in expression levels to Fold Change (ratio). This might be easier for interpretation given familiarity and removes the factor of the unit seeing as it is solely a relative (comparative) metric, which makes sense for the analyses at hand
+
+- Reading the documentation on the CNV data generated using the GISTIC2.0 method
+- Data is represented using log2 ratios
+- Positive values indicate a gain in copy number. For instance, a log2 ratio of 1 would suggest a doubling (2^1 = 2) of the copy number in the test sample compared to the reference.
+- Negative values indicate a loss in copy number. For example, a log2 ratio of -1 would suggest a halving (2^-1 = 0.5) of the copy number.
+
+
+09/01/24
+
+- Created the CNV pre-analysis Rmd script
+- Analysis of the distribution of the CNV data
+
+- Looking at the distribution of the CNV log2 ratios both the SoI and the Control Sets
+- Looking at the distribution of the difference in the CNV values between the sets
+- Leaving the RNA units untouched and using the difference in the comparison might be more valuable than assessing the ratio (FC) since I am assessing the sets of different genes and therefore the baseline expression in a ratio wouldn't make much sense
+- Think about using tests of variance to show the spread of the data in each of the groupings that get applied
+- Creating a Notes for the Part I of the analyses on the CNV data
+
+
+10/01/24
+
+- Configuring the CNV Analysis past Question 2
+- Editing the graphs in both CNV and RNA analysis
+
+- Finish updating the CNV analysis
+- update the graphs in the RNA analysis (significance bars)
+
+- Write down the remarks/questions for Stefan (PPI database pull down cutoff, Permutation tests, negative binomial in the RNA-seq data, differential analysis on different genes)
+
+
+
+11/01/24
+
+- Update the graphs in the RNA analysis
+- try to implement some form of PCA 
+- Or combine the graphs from the 2 analyses in some way
+- Based on the meaning of the interaction score, it might be prudent to set a higher interaction cutoff
+- meet with Theo. Advised to renormalise the data 
+- should it be normalised per set (SoI & control) or across both (i.e. using the values across both sets as the normalisation parameter)
+- Writing the rundown of the presentation
+- In order to figure out how to re-normalise the data, figure out how it was normalised in the first place. 
+- Was it across rows (samples) or columns (genes) or something different 
+
+
+12/01/24
+
+- Writing the Rundown for the presentation
+- Writing the script for the presentation
+
+
+13/01/24
+
+- Writing the script for the presentation
+- Constructing the Slides for the presentation
+- Created a Notes file for the Main Literature References that will be used in my report(s)/presentations
+
+
+
+14/01/24
+
+- Using Whimsical for presentation pipeline diagram
+
+- Whimsical is a scam
+
+
+15/01/24
+
+- Finished the presentation 
+- Presented to the Lens & Janssen group
+
+
+16/01/24
+
+- My Anh's PhD Defence
+- Reading up on the different methods for RNASeq normalisation (within&between samples & datasets)
+
+
+17/01/24
+
+- find out if re-normalisation is truly worth it
+
+- Thinking of not normalising for the inter-set comparison
+- But normalising for the intra-set analyses
+
+
+18/01/24
+
+- Starting the process of figuring out how to renormalise the set-of-interest subset
+
+
+- Starting on the next Part of the Project (part II)
+- Need to cut down the data to the set of interest only while renormalising the data
+
+
+- In terms of the re-normalisation of the subset of genes it may no longer be a good idea. The process of normalising the data would average out some of the characteristics of the genes in the sample which may not be the best in terms of interpretation due to the fact that my hypothesis presumes that the genes in this set are distinct from the rest of the genome. Therefore even an average gene expression in this set could be indicative of something on a wider scale. Also the set is over-expressed when compared to the rest of the genome so lower expressed genes would not appear more like the rest of the genome but would show up as distinct on the lower side. 
+
+
+- Talk with Stefan
+- The iteration testing for the expression data was 'Overkill'
+- Only showed what was expected in the most difficult way possible
+- The genes of interest are likely just on the higher end of the overall expression histogram
+- Using a normal control would prove more evident as that would show that there is a difference in the expected expression (normal vs cancerous)
+- Moving forward suggested to:
+- Correlate the genes within the subset to determine if there are genes that are covariates of one-another
+- These correlated genes can then be grouped based on a z-score based signature 
+- Signature can then be used for further analyses
+
+
+- Talk did not go well, under the impression that my project is far too simple and convoluted than it should be
+- Need to Organise the workflow better
+- plan and determine which analyses to implement and why each one of them is beneficial and what they provide individual (i.e. what their purpose is)
+- You are only using PanCan data so need to give extra thought to the meaning of the analyses that you are performing 
+- Getting a healthy control set would be beneficial to the project as it would provide some basis for the normal functioning of the data that you are looking at
+
+- Was also mentioned that STRING is likely not the best way to go about expanding the list of genes
+- Would be more accurate to expand based on specific experimental data from select researchers
+
+- Was slightly condescending
+- Think more about finding other resources to assist you or give you suggestions
+
+- Started writing the Gene_Subset_Analyis.Rmd which will contain the analyses for the correlations and the gene signature creation
+
+
+19/01/24
+
+- Continuing the Correlation analysis
+
+- found a potential dataset for healthy data from different tissue types from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE120795
+- Saved as 'GSE120795_norm_counts_TPM_GRCh38.p13_NCBI.tsv' in the Raw_Data folder
+- Copied and saved as 'Healthy_Data' in the RNA_Data folder 
+- Data in only composed of RNAseq data 
+- The values are normalised using TPM
+- Also added the dataset for the values in their raw count form 
+- Saved as 'GSE120795_raw_counts_GRCh38.p13_NCBI.tsv.gz' in the Raw_Data folder
+- Copied and saved as 'Healthy_Data_raw_counts' in the RNA_Data folder 
+
+- Reading up on GREAT at 'http://great.stanford.edu/public/html/splash.php' 
+- This tool may not be relevant concerning the work that i am doing as it focuses on the cis regulatory regions of the input regions
+- Returns the annotation terms that re significantly associated with the input regions/genes and their cis elements
+- My focus is on the gene/regions themselves already knowing the function of most of the genes
+
+- Recall that Stefan also mentioned a means of clustering such as k-means
+
+- Correlated the RNA data using a Pearson correlation score (not measuring the distances but the similarity between the genes)
+- Creating a heatmap for the correlation matrix
+- Using Bioconductor's 'ComplexHeatmap' package
+- 307*307 genes makes for a large matrix
+- would like to turn it into a triangle plot seeing as the plot is symmetrical across the diagonal half the plot is redundant
+
+- Would like to follow up the correlation matrix and test using a PCA to identify the clusters with more precision, create the signature genes and use those signatures as variables instead of the original list of genes which is quite long
+
+- Created the same Correlation analysis file but for the CNV instead of the RNA data
+- This seems like it might be the better approach as it comes from the CIN trait (CNV) back to the genetic trait as opposed to grouping by the RNA expression level and then trying to identify specific sets of genes for each 
+- This way i am starting from the characteristic that I am interested in, CIN, and grouping at this level in order to identify traits that might be shared by different genes 
+- Starting off with the CNV and then adding other CIN metrics to this in order to gain insight
+
+- Need to find a way to break apart the different groupings in the clustermap 
+- This will hopefully give me the individual genes that make up each of the groups
+
+
+20/01/24
+
+
+- Trying to find ways to extract the relevant clusters from the clusterplot
+
+- Transforming the correlation map into a distance map
+
+- Slightly confused about how the process will work so here is the rundown of how i see it:
+- Create CNV signatures. These signatures are created based on the correlation between the CNVs that are observed in different genes within the data. The genes that are closely related based on the distance matrix (ex: 1 - Pearson's coef) are grouped together using a method such as k-means. 
+- Each group makes up a CNV signature. 
+
+
+21/01/24
+
+- Might be useful to consider different clustering methods
+- K-means clustering based on the Pearson correlation, but also others such as Mutual Information / Entropy
+- Reading up on the methods for correlating RNA and feature extraction
+- Thinking that using a Mutual information as the basis for the signatures could be beneficial due to the non-linearity of some of the relation
+
+
+22/01/24
+
+- Reading up more on the Mutual Information approach and the use of Spline functions to estimate RNA distributions
+- Reading up on other features that could be added to the CIN set 
+- Such as the HRD (Homologous Recombination Deficiency), hrd-loh, ai1 & lst1 Scores which are available on the XenaBrowser 
+
+- Going to start with using Pearson's correlation as the basis of the RNA & CNV signatures
+- Will then move on to using Mutual Information or another method
+- And will increase the features for the CIN variables 
+
+- Changing the distance measure for the CNV to euclidean is likely better
+- This is because when dealing with Copy Number there is more than just directional changes that matter
+
+- Created one distance matrix based on the Pearson and another based on the Euclidean distance
+- finding a way to select the optimal number of groups using the k-means method
+- Using the Silhouette method
+- The Silhouette method does not show the best divisions between the groups when using k-means with the Pearson distance as well as the Euclidean distance
+- The Silhouette score for both shows maximal at 2 clusters 
+- Creating 2 broad CNV signatures does not seem effective for the purpose of extracting features from the variable
+- Will likely have to implement a different clustering method (MI, Entropy ...) sooner than expected
+
+
+23/01/24
+
+- Emailing Reza about the updates to the Project and the Interim presentation
+
+
+24/01/24
+
+- Might be a good idea to remove genes that have NA values across any type of cancer for both the expression and the CNA data
+
+ 
+- Might be thinking about this wrong
+- Should i only be using the expression data of the genes of interest
+- and then the CIN data (CNV and such) for the rest of the entire genome
+- Instead of CIN data for only the genes of interest as well
+- This is because i expect that a change in the regulation of the genes of interest is responsible for CIN in the LAD domains
+- These LAD domains contain chromatin that is not related ot the sequences for the genes of interest
+- I need to associate the expression patterns of the genes of interest to CIN signs (SV, Micronuclei, CNV) throughout the nucleus or specifically at LAD regions
+- Can find specific sequences of cLADs to look at the issue at LAD specific regions
+- Or gather as much CIN data about the samples as possible
+
+- Can continue with the Pearson/euclidean/MI distance clustering 
+- But base it only on the expression data not on the CNV data
+- to get the expression patterns/signatures
+
+- I want to relate the expression changes to changes in CIN data
+- Need to perform clustering grouping such as i've been doing with the CNVs but using the entire genome data as opposed to solely the SoI
+- Using this data that is genome wide and the patterns/signatures generated from this 
+- Would like to relate it back to expression patterns in the Set of Interest (using either signatures/groupings or individual genes)
+
+- Can do the above by creating two sets of signatures
+- One that is/are expression signatures based solely on the expression patterns of the set of interest 
+- Another that is/are CIN signatures that are based on the CIN data from the genome as a whole 
+- Can also try to limit the CIN data to cLAD specific regions
+ 
+- redownloaded the PanCan data as it somehow disappeared from the Raw_Data folder
+- The data that was redownloaded includes RNA & CNV across multiple forms (SNP6, before and after germline removal, raw & norm counts...) 
+- The data also includes the other data that refers to different datatypes (HDR signatures, survival info, phenotypes...) 
+
+ 
+- Need to reformat the CNV data for the full genome data. Not sure if i should only use the after germline removal or the before as well. Will default to the post-removal
+
+
+25/01/24
+
+- Meeting with Aniek & Adi
+- Need to integrate the Healthy RNAseq into the Analysis
+- Forgot to mention about the Interim report that also needs to be written for the presentation
+
+- Following up on the Healthy dataset by the Russian Academy of Sciences
+- Looking through the list of cited by articles, looks to be cited by various papers
+- Reliability of the data is a bit better given the citations
+- Also found the citation to another dataset within the GTExPortal website
+- This set may be better due to extensive number of samples and tissue sources 
+
+- The GTEx Dataset (V8) has over 17000 samples 
+- From 948 Donors
+- Covering 54 Tissue types
+- The healthy status of the donor is determined by the Death hardy Scale (DTHHRDY) which ranges from 0-4
+- Only the 0th, 1st, 2nd, 3rd cases should satisfy your analysis
+- The TPM RNA data that was downloaded was normalised for within sample variation (transcript length & seq depth)
+- None of the data was normalised for a within Dataset normalisation
+- Need to do that first applying either Quantile or TMM normalisation methods
+
+- Back to reformatting the CNV data to incorporate the full genome data as opposed to only the set of interest
+
+- Attended Marieke Oudelaar's seminar at Hubrecht 
+- Went for the 3C and other chromatin conformation capturing techniques
+
+- Met Lucia Barbadilla while I was there, she was speaking with Adi
+- Would like to meet her again to get her input on some of the analyses
+
+- Reza messaged me back
+- Wants to have the presentation on the 16th of Feb 
+- At VU
+- Can do zoom for Aniek or Adi if cannot attend
+- Need to send slides ahead of time
+- NEED TO WRITE THE INTERIM REPORT
+- presentation at around 2pm
+
+ 
+26/01/24
+
+- finish transforming the dataset with the CNVs for the full set
+- The transformation is taking a long time due to the size of the dataset
+
+- Handling the GTEx Healthy Set creation and preprocessing at the same time due to the time constraints imposed by the size of the datasets
+
+- Created the csv file for the full CNV datatset
+- Creating the csv file for the full GTEx dataset
+
+- Downloaded and using the annotation file to identify samples (subjects) that need to be removed from the dataset
+ 
+- Using Dask to clean/preprocess the GTEx dataset
+- Using the values from the DTHHRDY variable in the meta data to remove the unhealthy samples from the full GTEx RNA dataset
+- Values of 1-3 (exclude 0 and 4) are kept and considered healthy
+
+- Using the Samples that come from the sources other than diseased (cancer...) cases
+- Using the ventilator (0) cases as well as there is no indication that these subjects had a disease such as cancer prior to death
+- In total this adds up to 842 distinct subjects
+- End up with around 10,000 samples for healthy set
+
+
+ 27/01/24
+
+- Continuing with the GTEx Healthy Samples Dataframe creation
+
+- Saved the Healthy RNA GTEx samples in multiple files in the GTEx_RNA_Healthy folder in the RNA_Data folder
+- Still need to normalise the samples for within dataset effects (TMM or quantile) 
+- 
+- TMM is the likely option 
+- This method would work due to the fact that the Samples are assumed to be from healthy individuals and not differentially expressed
+- Created the usable CSV file for the count data as the DESeq2 only uses count data and not pre-normalised
+- Once the data file for the count GTEx RNA data is created, will go through the preprocessing to remove the unwanted (unhealthy) samples
+- Using GPT to translate the python processing script to R seeing as there is no DESeq2 python package
+
+- Might be a good idea to translate the other scripts that were written in python over to R for improved consistency and overall readability
+
+
+
+
+28/01/24
+
+- Editing the GTEx csv file so that it does not contain an index when read into R script
+- For comparing the healthy samples to the cancerous ones likely to need to apply a DGE analysis
+- Will need to use the raw counts for this 
+- Will also need to use DESeq2 library
+- Should not normalise the counts for this
+- Need to make sure that the genes are the same across datasets (i.e. remove the genes that are not common across datasets)
+- Need to merge the datasets based on the common genes
+- Need to ensure that the gene names are standardised across sets
+
+- First want to put the healthy dataset through the same analysis that was done with TCGA dataset
+- This will enable me to determine whether the genes of interest are differentially expressed in a healthy sample as well
+- A DGE alone would only allow me to determine whether the genes are differentially expressed/regulated between cancer and healthy
+- It would not allow me to determine if the difference between the control sets and SOI is also observed in healthy samples or not
+- Need to do a TMM normalisation of the GTEx data for this part
+- Actually keeping the values as TPM may be best for this part as the samples are not assumed to be differentially expressed and they are all from the same library therefore even though there are batch effects this is of no concern given that the interest is between genes
+- Will be concerned with this later on though when comparing between samples and cancer types
+- May have to remove the samples with RIN < 6 as they are considered unsuitable for RNA analyses
+- Therefore downloaded the dataset which contains this meta data
+- This will also be useful for the DGE and intra-set comparisons for batch effect normalisation
+ 
+- Something to add to the tests that I have done in Part I of the project is that I was calculating the average expression values using the logs which means that I was calculating the geometric averages which are less prone to skewness by highly or lowly expressed genes
+ 
+- I also need to figure out the GTEx sample labels based on the tissue type that they represent
+- I need to reduce the genes in the GTEx dataset to the same ones that are in the TCGA dataset 
+
+
+
+29/01/24
+- Configuring the datasets for the TGEx Data
+- Cleaning the Data
+- removing the unusable samples
+- Creating the GETx Set of Interest
+- Creating the GTEx control sets that match up as well as possible with the TCGA control sets
+
+ 
+- Need to run the script so that i have the files for use
+- Will convert the script that is able to create the metrics datasets (comparing the SoI to the Controls based on the mean/median) to an R script so that the whole Part I Analysis can be run in the same script 
+ 
+
+30/01/24
+
+- Running the GTEx RNA DF configs again for the control sets that were not created
+
+- Important to note that the RNA files that have been used so far from the GTEx are TPM normalised and therefore not suitable for inter-sample comparisons
+- Finished creating the control sets for the GTEx RNA data
+- The meta data variables that will likely be of use are:
+- SAMPID: the ID for the sample
+- The batch variables (SMNABTCH, SMNABTCHT, SMNABTCHD, SMGEBTCH, SMGEBTCHD, SMGEBTCHT, SMCEBNTER) that will used when correcting for batch effects
+- SMTS/SMTSD: Th Tissue type that the sample comes from
+ 
+Aniek Lecture:
+- CIN is defined by the amount of instability in throughout the genome 
+- This instability can be indicated by abnormal amount of variation in the genome as well
+- Could be interesting to look at the variation patterns instead of static patterns for the signatures in the project
+- Signatures could be based on Aneuploidy, Single Strand Breaks, DSBs, Micronuclei presence ... 
+- Would be nice to be able to find a signature based on the SVs that occur in the samples maybe using the average or the count (need to find the seq data for each of the samples) (Luan's Phd book)
+- Using log2(tpm+0.001) as the unit for the Part I of the GTEx analysis to avoid -inf values 
+- This is also the unit that is used for the TCGA TPM RNA data
+- Need to change the data that is used for the original RNA analysis to suit the analysis that is used now
+- This means using the TPM data for the initial part
+- Followed by the batch effect one later on
+
+- Still configuring the Part I analysis for the GTEx RNA set
+
+
+31/01/24
+
+
+- Running the GTEx through the same tests as the TCGA set, shows that the difference between the set of interest and the controls may be present in healthy samples as well
+- Will need to assess the degree of the difference after confirming that there is in fact a difference there
+- Comparing the effect size of the differences between the conditions will likely also be of use
+
+
+01/02/24
+
+- Finishing running the script for the GTEx part I Analysis
+
+
+- Running the Part I analysis on the GTEx data shows that there is a significant difference between the set of interest and the other control sets
+- Need to evaluate if this difference between the differences is significant as well
+
+
+- This can be done by comparing the differences between one of the statistically significant pairings of the GTEx data and one of the statistically significant pairings of the TCGA data
+
+- Finished Q1 of part I of the GTEx RNA analysis
+- In order to run Q2 (looking at the expression (SOI-control) set difference I must first normalise the data to factor in library size at the least and perhaps other batch effects as well
+- Will have to repeat this process for the same part of the analysis with the TCGA data as well 
+- Actually if the TCGA data is corrected for batch effects then this process does not require a renormalisation
+
+
+02/02/24
+
+- Reading about the different normalisation methods for the RNAseq data
+- Reading the TMM paper and the reasons why this normalisation method is needed
+- It improves on the usual scaling based solely on the number of reads (library size) but fail to account for gene composition 
+- Meaning some genes may be more expressed than others in a specific lane (library) which will then skew the comparison with samples from other lanes (libraries)
+- The above is caused by the limited sequencing ability that is provided by RNAseq 
+- There is a certain amount of RNA reads available to be hybridised and elongated and therefore the most prevalent mRNA from the most highly expressed genes will be read
+- And thereby obfuscating the rest of the transcriptome especially for comparative analyses
+
+- This means when normalising the data, make sure to do it before subsetting the data
+- Check whether or not the Tumour Purity is in the metadata for the TCGA data
+ 
+
+03/02/24
+
+- Reading up on the PRPS normalisation method that is meant to remove library size variation as well as plate effects from RNA data
+
+- will need to apply a PCA to my raw data in order to identify potential causes of variation 
+ 
+
+04/02/24
+
+- Will likely not be able to apply successive normalisation factors (TPM, TMM, & Batch) to the same sample for cross genes and across sample comparisons
+
+- May need to stop looking at the difference in expression once i switch over to the second question in the analysis
+- I am making across sample comparisons and therefore cannot continue to use the TPM measure and should cease to make inter-gene comparisons
+- I will just use the TMM method for the second question of the analyses as it kind of takes into account gene length, coverage detph and gene composition
+- Might be useful to use PRPS later on though, so keep in mind
+
+- Will be keeping the TPM counts for Q1&Q2 of the part I
+- I am not making comparative calculations (fold changes ...) between the different sample types (tissues, health)  
+- I am making the comparative calculations between the gene sets within the same samples grouped by type
+ 
+- Therefore need to use TPM data for the first part (I) of the TCGA analysis as well as opposed to the data that has been transformed to account for batch effects
+
+- Downloaded the TPM values from the Xena browser 
+
+- Reconfigured the Github changing the remote repo name
+
+- Transforming the TPM dataset into a csv dataset
+- Need to reformat the IDs to the Gene names using the annotation file
+- Couple issues with the current pipeline and changing from the Batch corrected TCGA data to the TPM
+- The data uses the ENS codes instead of the genes
+- but the STRING query requests the gene names not the ENS code
+- Will have too adapt the code so that it can select either or both
+- Right now will just manually configure the Dataframe configuration script to handle the TPM dataset
+
+- The TPM file contains 40000 more identifying genes than the original batch normalised file
+- This makes the processing quite slow
+
+
+
+05/02/24
+
+- Configuring the Dataframe Configuration script to be able to handle the TPM TCGA dataset
+- Need to reconfigure the metadata files for the TCGA samples
+- The codes for the samples incorporate more than just tissue but also other factors that could be important to filter on
+- Such as Primary tumours vs other types
+- Need to remove the Control Analyte sample from the TCGA TPM Dataset
+
+
+
+06/02/24
+
+- Need to reconfigure the initial python script that queries the STRING db and generates the control sets in order to handle TPM TCGA data instead of purely the Batch corrected data
+- Added the extra genes to this script so that it contains the full list oof genes that show up in the selected list of proteins fo interest except for the ones that have no evidence of chromatin binding
+- Need to find a way of speeding up the control set creation
+- Could remove genes from the global pool of control genes after they have appeared a set number of times in control sets
+
+- Make sure to keep the Github repo up to date
+
+- For the GTEx control set generation need to set a threshold for the number of 'filler genes' that can be in a control set if all the genes in the corresponding TCGA set are not available
+
+- For the GTEx data make sure to remove the samples that are marked to be excluded from the eQTL Analysis as they would allow for a more reliable analysis
+- Figure out how many unique samples are analysed after removal of invalid samples 
+- For duplicate samples (same indiv & tissue) select the sample with the highest RIN score
+
+
+05/02/24
+
+- Configuring the Dataframe Configuration script to be able to handle the TPM TCGA dataset
+- Need to reconfigure the metadata files for the TCGA samples
+- The codes for the samples incorporate more than just tissue but also other factors that could be important to filter on
+- Such as Primary tumours vs other types
+- Need to remove the Control Analyte sample from the TCGA TPM Dataset
+
+- Need to reconfigure the initial python script that queries the STRING db and generates the control sets in order to handle TPM TCGA data instead of purely the Batch corrected data
+- Added the extra genes to this script so that it contains the full list oof genes that show up in the selected list of proteins fo interest except for the ones that have no evidence of chromatin binding
+- Need to find a way of speeding up the control set creation
+- Could remove genes from the global pool of control genes after they have appeared a set number of times in control sets
+
+- Make sure to keep the Github repo up to date
+
+- For the GTEx control set generation need to set a threshold for the number of 'filler genes' that can be in a control set if all the genes in teh corresponding TCGA set are not available
+
+- For the GTEx data make sure to remove the samples that are marked to be excluded from the eQTL Analysis as they would allow for a more reliable analysis
+- Figure out how many unique samples are analysed after removal of invalid samples 
+- For duplicate samples (same indiv & tissue) select the sample with the highest RIN score
+ 
+
+07/02/24
+
+- Translating the initial GTEx dataframe creation script to R from python
+-
+
+- Running the df creation in R is very slow
+- if implemented it will need to be run on the HPC
+- So doing the initial df building and cleaning in Python might be a benefit
+- Trying again with the Fread() package though which should improve performance
+
+ 
+- Both TCGA and the GTEx datasets use the ENSMEBL ID as a columns so can use this to relate the two datasets
+- Best to keep the DF creation section in a python script for now
+
+- Start from the beginning with the TCGA TPM set and then move on to the GTEx
+
+
+08/02/24
+
+- Configuring the combined df configuration script in python
+
+- recreated most of the dataframes and sets to be used in the analyses
+- Having trouble creating a shared control df for both the cancer and the non-cancerous sets
+- Ideally these would contain the same genes across the GTEx and the TCGA sets so that the control sets that are created later on can be compared with more reliability
+
+- Meeting with Adi and Aniek
+
+- Emailed with Reza, need to send him the presentation slides on Monday
+ 
+
+09/02/24
+
+- Configuring the combined GTEx and TCGA df creation script
+- Working on the Shared Control DF section
+- look at the ID-Gene pairs to create the small datasets via iteration
+- converting the numerical RNA expression values to float and rounding to the 10,000th (4th) decimal spot
+
+- going to base the smaller control set creation mechanism off of the TCGA data as opposed to the GTEx data which is just there as an added control
+- Using the TCGA Genes create a small control set of the same length as the gene column in TCGA SOI df with only the genes and the ids
+- The genes are selected randomly from the TCGA Full Control dataset
+- once the small tcga control df is created, create the corresponding one with the matching GTEx genes or ids
+- for each row in the TCGA subset the GTEx subset row has to match with either the id, gene or both
+- once the GTEx subset is completed, check this subset for any duplicates based on the gene-id pair
+- if duplicates are found remove the x duplicate rows from the GTEx and the original row from the TCGA set
+- find a replacement for the n number of genes that were removed from the TCGA set and start over with the process for a df of size n making sure not to select genes that already appeared in the subset
+- continue with the process until the GTEx subset contains no duplicate genes
+
+
+
+11/02/24
+
+- Finished the Dataset configuration script in python 
+- Created the control sets for both the GTEx and the TCGA sets 
+
+
+
+12/02/24
+
+- Editing the GTEx_Analysis script so that it can run with the newly created TPM SOI and control sets
+
+- Edited the list of potential proteins of interest in the DF creation script to include the ones that are not identifiably LAD specific (BAF, TERB, MAJIN)
+- Rerunning the DF creation script with the updated list for the STRING query
+- Got a total of 547 control sets for this run as opposed to the ~587 I got on the previous run
+- Still editing the script so that it is compliant with the different number of control sets
+
+
+13/02/24
+
+- Finished the GTEx RNA Analysis R script for the first part of the analysis
+- Finished creating and saving the plot for the GTEx RNA Analysis in R 
+
+- In terms of the next part of the RNA analysis: 
+- 1: DGEA for the genes in the SOI for the cancer to non-cancerous condition for each cancer type
+- 2: Any gene that does not reach a certain threshold, set in terms of the p-val and effect size/log fold change in at least one of the pairwise comparisons is dropped from the set
+- Important to note that the DGEA is performed between tissue specific cohorts of the GTEx and TCGA RNA data
+- 3: Use of correlation distance matrix (Pearson or Spearman) 
+- 4: cluster the genes together creating specific groupings or signatures
+- 4: for each sample calculate the mean of each signature
+- 5: standardise the signatures by applying a z-scaling method
+- 6: Assign the signature  Z-scores to each of the samples 
+
+- In terms of the CIN based analysis: 
+- 1: for the CNV data, remove genes (or chromosome regions if based on seq) that show no variation across all samples 
+- 2: Repeat for the signature data (HDR, ai1, hrd-loh, lst1) 
+- 3: For each of 
+ 
+
+15/02/24
+
+- Cons of current signature methodologies is the need for intense computational needs with regards to whole genome wide sequencing in order to pick up on SNPs, SSBs, DSBs, Indels and other genomic artifacts that occur at the nucleotide level
+- Cons of my methodology is that it relies on such signatures having already been created for the analysis 
+- Not an issue if the needed signatures can be generated rapidly without the need for intense computations
+
+
+- Might be helpful to look at ovarian cancer in particular
+- Writing the interim report based on the Notes taken during the steps of the analysis on the TPM RNA datasets
+- Leaving out the CNV analysis as it is part of the 2nd part of the analysis
+
+- Fixed the TCGA TPM Analysis all the way to the end of the script so that it can use the data all the way through
+ 
+
+16/02/24
+
+- Finished the first part of the Report
+- Edited for the interim presentation 'Interim Presentation'
+- Gave the presentation to Reza
+- Went well
+- Points given: 
+   - use the healthy data from the in order to get better reliability from the data
+   - using the TCGA healthy data also gives better indication of the effect between the SOI and the non-cancerous controls
+   - Edit the presentation and the reports to use the term 'LAD/Heterochromatin coding' for proteins and genes instead of just 'LAD/Heterochromatin' which gives the impression that I am referring to the actual genes at those positions as it's confusing
+   - Think about using a density-based clustering method as it may be better for interaction based similarities than distance
+   - Also could be interesting to add GSEA to get an idea of the functional landscape of the proteins being identified
+
+
+ 
+
+16/02/24
+
+- Finished the first part of the Report
+- Edited for the interim presentation 'Interim Presentation'
+- Gave the presentation to Reza
+- Went well
+- Points given: 
+   - use the healthy data from the in order to get better reliability from the data
+   - using the TCGA healthy data also gives better indication of the effect between the SOI and the non-cancerous controls
+   - Edit the presentation and the reports to use the term 'LAD/Heterochromatin coding' for proteins and genes instead of just 'LAD/Heterochromatin' which gives the impression that I am refering to the actual genes at those positions (low transcription)
+   - Think about using a density-based clustering method as it may be better for interaction based similarities than distance
+
+
+
+19/02/24
+
+- Going over the TCGA healthy data to see if i can integrate it into the analysis 
+- Will only integrate it if it shows better reliability than the GTEx data
+- If the healthy data comes from the same samples than this is a greater advantage over the GTEx as it removes inter-sample (indiv) variation
+- But will likely have to remove the metastatic cases if I go with the TCGA non-cancerous data as they may be compromised in terms of their transcriptome
+- or just analyse the metastatic cases separately 
+- Also check on the tissues types for the non-cancerous data as if they do not supply sufficient tissue type samples the dat may not be able to be analysed in the best manner
+
+- Adi wants to check the STRING output for reliability of the genes being given
+- when applying an interaction score of 900 (higher was too high)
+- Got 74 genes
+- Comprised of the following: 
+'H3C13', 'H1-4', 'H3C12', 'H3C14', 'PCGF2', 'LEMD3', 'SUV39H1', 'E2F6', 'IFFO1', 'MECP2', 'H3C11', 'LMNB2', 'H3C7', 'L3MBTL1', 'TERB2', 'CBX3', 'H3C1', 'TOR1AIP1', 'CBX5', 'LEMD2', 'EMD', 'H3C4', 'SUN1', 'PAX6', 'RING1', 'H3C8', 'BCLAF1', 'MAPRE1', 'SMARCA4', 'SLC25A3', 'SUN2', 'TRIM28', 'PCGF6', 'CACNB4', 'H3C2', 'BANF2', 'BMI1', 'SYNE1', 'TERF1', 'TMPO', 'SETDB1', 'H3-3A', 'H3C6', 'BANF1', 'BAF', 'H3-3B', 'H3C10', 'CHMP7', 'LMO7', 'H3-4', 'SGO1', 'CBX1', 'CTNNB1', 'PRR14', 'LBR', 'H3C15', 'COMMD3-BMI1', 'MAJIN', 'TM7SF2', 'LMNB1', 'TERB1', 'SYNE2', 'XRCC4', 'L3MBTL2', 'KPNB1', 'KDM1A', 'MAN1', 'H3C3', 'H3-2', 'SMAD2', 'LMNA', 'EHMT2', 'H3-5', 'SMAD1'
+- Should check these at a later time
+ 
+- got the full list of non-cancer data from the TCGA file
+- The file (TPM) contains 677 participants with both a 'Primary Solid Tumour' and a 'Solid Tissue Normal'
+- The files do not contain info about the origin of the Normal tissue but the samples still have the TSS code
+- So can presume that the Tissue type is related to the Study.Name 
+- 
+- The Study.Name will give the name of the cancer type of interest in the sample
+ 
+
+20/02/24
+
+- Adapting the initial analysis script to handle the controls from the TCGA instead of the controls from GTEx
+- first need to reconfigure the control set initialisation step in python
+
+- Concerning the Solid Tissue Normal definition, it usually corresponds to matching non-malignant type of the same tissue that is being analysed in the study
+
+- Creating a dataset with all the genes and all the samples
+
+- Will need to edit the TCGA_GTEx_DF_CONFIG.py to include a step that creates a full df with all the genes and all the samples and saves the dataset
+ 
+
+21/02/24
+
+- Configured a script that is able to create the normal control sets for the analysis of the TCGA samples
+- Will have to integrate it into the Full DF configuration script once it is fully running 
+
+- Put the Normal TCGA samples through the same analysis as the cancer samples
+- Did not show a significant change from the result that was performed with the cancer samples
+- Will be able to change the analysis somewhat now though as i have both cancer data and non-cancer data from the same individual 
+- I can perform paired comparisons between the conditions on the full SOI before doing it for the individual genes with DGEA
+ 
+- Edited the notes for the project part I to take into account the paired normal samples 
+
+22/02/24
+
+- Going over the initial output from string using the 900 interaction score cutoff
+ 
+- Might be interesting to run through the analysis solely using the genes with an interaction score cutoff of 0.900
+- Also thinking about booking a final date in August
+
+- Going to use 950 as the cutoff for the confidence score on the verification analysis instead of 900 as the former will return ~53 genes
+ 
+- Started the script to analyse the SOI difference between the cancerous data and the non-cancerous data
+- Wilcoxon-Signed-Rank test shows that there is a significant difference between the mean of the 2 groups
+ 
+
+23/02/24
+
+- Following up on the Wilcoxon-signed-Rank test (2 sample paired wilcoxon test) between the SOI across the 2 conditions w/ the same test but across the multiple controls
+- Will need to correct for FDR 
+
+ 
+- Reminder that the reason for the implementation of the paired permutation test was due the the assumption of symmetry by the wilcoxon signed rank test
+- This assumption however, only needs to be met under the null hypo
+- In my case meaning: 
+   - We assume that the difference between the same gene-sets (e.g SOI) in different conditions (tumour vs normal) would follow a symmetrical distribution 
+- In this case the distribution does fit the assumption
+- Shown by both the boxplot and the skewness value between 0 and 0.5 on an infinite scale
+ 
+
+24/02/24
+
+- Continuing with the analysis of the TCGA normal vs cancerous aggregate data
+- implemented facetted paired plot to visualise and compare the difference in the mean expression of the SOI as well as 5 other control sets across the conditions
+- This still needs some edits
+- including changing the numbering at the end of the column names, ex: from 'geom_mean_nrm1' to geom_mean-nrm_1' 
+- This way when creating the set groups for faceting in the plot different sets don't get grouped together (ex: 55 and 5)
+- Also need to finish the assessment of the SOI significance vs those of all other controls
+- Want to do this by comparing the significance value from the paired wilcoxon test from the SOI to all others
+- Assess the % of the others that are also:
+   1) significant
+   2) of a similar level (based on the **** signs)
+   3) of equal or better significance 
+- Want to build up distribution of the significances for paired wilcoxon tests 
+- highlight ours, and maybe highlight a subset of the rest using the descriptors above (1-3)
+
+
+
+27/02/24
+
+- Continuing with the analysis of the non-cancerous vs the cancerous data 
+- Plotting the volcano plot of the log2FC across the various sets including the SOI
+- the log2FC is calculated using the mean values (mean of the individual log2 values of each gene in the set, taking that of the cancerous set - non-cancerous set) 
+
+
+28/02/24
+- Continuing with the analysis of the non-cancerous vs the cancerous conditions in the sets
+- the Volcano plot is done 
+- The Comparative table for the summary of the number of significant sets is done
+- Editing the script with annotations for comprehension 
+- Maybe add a cloud around the points in the volcano plot to show the variance or std for each set
+
+29/02/24
+
+- Need to rerun the script and edit it to take into account the stds for each of the sets
+- Add a cloud around each point in the volcano plot 
+- The cloud will represent the average (mean) std of the difference between conditions for paired samples for each set
+ 
+- Also need to start with the actual DGEA
+- Think about removing the Cancerous types with few samples 
+- I think those with less than around 30 samples might be a good number 
+- Or can do a power analysis of the number to get an idea of the correct number
+
+- Finished the volcano plot with the added grey background points for the std of the differences
+- Converted the log FC from using the difference of the mean Log2 of each condition to using the mean of the differences of the individual log2 values across each pair
+
+ 
+- combining all the part I analyses into a single Rmd file
+
+
+01/03/24
+
+- Combined the 3 separate analysis scripts into a single Rmd file
+- the 3 were the: 
+   - TCGA cancer analysis, TCGA_TPM_Analysis_I
+   - TCGA normal analysis, TCGA_TPM_mRNA_NORMAL_ANALYSIS
+   - TCGA Cancer/Normal analysis, TCGA_TUMOUR-NORMAL_ANALYSIS
+
+- Need to incorporate a tissue-specific analysis of the in the Cancer/Normal analysis
+
+- Convert all two-sided tests to one-sided based on the SOI and the cancer type
+- Cancer should be 'greater' when assessed against normal type
+- SOI should also be 'greater' when assessed against the other sets of the same type
+
+
+- Finished annotating the script for the first part of the analysis (intra-conditional)
+
+ 
+
+04/03/23
+
+- Need to finish annotating the full script for the combined analysis
+
+- also need to include a way to visualise and measure the general upregulation in the conditions base don the tissue type
+- To do this i will need to merge the all combos df with the meta data in order to get the tissue types for each participant
+- Parse the data by each type and applying a significance test between the geom means of both groups (paired test)
+- Get the significance and the mean log2FC of the differences between the conditions for each of the tissue types
+
+
+
+05/03/24
+
+- Continuing with the tissue-speicfic analysis of the interconditional part of the full script
+
+- Plotting the volcano plots in terms of the specific tissue types 
+- The calculations of the p-values for these plots are only done correcting for the control sets used for each cancer type 
+- So using a BH correction assuming the number of repeated test is equal to the number of control datasets and not the number of control datasets for each cancer type
+- The plot have not been tuing out as expected
+- Very few of the SOIs come up as significant or display as much difference compared to the controls as was expected based on the same plot without splitting up the data into distinct cancer groups
+- In the later plot the SOI is isolated but highly significant and with a different log2FC when compared to all controls
+
+- Editing the script so that every significance test is done using a two-sided test instead of one-sided
+- This lines up with the methodology as I am hypothesising that the SOI shows a DIFFERENT expression pattern in cancer vs normal instead of increased or decreased expression
+
+- Don't use adjusted p values in volcano plots
+
+
+06/03/24
+
+- Creating the individual volcano plots based on the tissue types
+- Creating the corresponding dfs as well
+ 
+- Finished creating the volcano plots for the tissue types 
+- Both the separate plots for the individual tissue types
+- And for the combined plot which combines all of the plots from the above into a single one
+- Changed the tissue type name from the full tumour type to the Tumour type abbreviation to save on space in the figs
+
+-  Meeting with Adi and Stefan tomorrow need to come up with questions for him
+- Will focus on the computational signature building aspect of the project as opposed to the coding
+
+
+- Need to write up the results and interpretation for the inter-conditional part of the analysis
+- Section F and below
+- 
+ 
+
+07/03/24
+
+- Prepping for the meeting with Stefan
+- Reading up on the CIN based datatypes 
+- Including: loh, telomeric allelic imbalance, large scale state transition and HRD scores
+
+- Arianna presentation notes:
+- Might be nice to look for SMC5/6, Gcn5 and Qjt in the list of proteins/genes of interest from the STRING output
+
+- Marit presentation notes:
+- Might be interesting to check for the following proteins in the STRING output:
+- JMJD1C, SETDB1, SIRT2, KAT5, SUV39H1/2
+
+Meeting with Stefan: 
+- should not use the DGE to remove genes that are not up-regulated
+- should think about removing genes that are down-regulated
+- Build the signatures using a classifier with the RNAseq data as the input variables and the CIN features as the classes
+- Fine tune the model using GLM to reduce the number of genes in each of the signatures to the least number while maintaining a fairly sufficient accuracy
+- Perhaps look at the mutations within the samples to try to parse out the effect of these mutations 
+- Focusing on the main cancer driving mutations
+ 
+- Reading Stefan's Breast Cancer Paper
+- Only used genes up-regulated by GCs (not sure why not also down-regulated)
+- And restricted the gene union to genes that were significantly up-regulated in at least 3 models (could be interesting to apply this but using the tumour types instead)
+- The use of only up-regulated genes was due to them wanting the study the effect that was brought on when GR were stimulated by GCs thereby activating 
+- As is described in the 'Liberzon et al, 2015' paper
+- The Liberzon paper also goes into detail on the lowest and highest number of genes it used for the signature
+- Needing to be between 15 and 200 in order to function correctly 
+- my personal analysis is not looking for the same kind of effect, and can incorporate more than one signature therefore do not need to limit it to genes which are up-regulated
+
+
+
+08/03/24
+
+- Thinking that a DGEA is still useful to see the response of the genes of interest to cancer
+- Will use a ssGSEA on the individual signatures once they are created 
+
+- For the DGEA might be more useful to use the Signed Rank test (wilcoxon) due to the large number of samples and hence increased power and decreased FDR
+- Can either use the TPMs or renormalise the raw counts with TMM or something
+- Still need to read up on the paired DGEA though to confirm
+
+
+11/03/24
+
+- Use limma voom for the DGEA making sure to use the patient as a factor as well
+- Before running, check the data using pca
+- Also would be nice to use Wilocxon Signed Rank test as a comparitive benchmark for the DGE genes given that I am using a large sample set
+
+ 
+
+12/03/24
+
+- Commencing the DGE
+- using the Expected Counts from the Xena Browser
+- have to un-transform the data from log2(x+1)
+
+
+- Using the TMM as the accross sample normalisation factor quantification calculation but would like to use at least another one as well to test against (RLE, HTN...)
+
+
+- Editing the df so that it only contains normal and primary type cancer samples (no metastatic, cell lines ...)
+
+
+- also need to edit the smaple names so that it doens't contain the tissue_type code (01,02,05...)
+- But instead the participant number followed by the tissue category (normal or cancerous: 0 or 1)
+
+ 
+
+13/03/24
+
+- Continueing with the DGEA of the individual genes in from the TCGA
+- Removing the samples with library sizes of 0 
+ 
+
+14/03/24
+
+- Continuing with the DGE analysis of the TCGA data
+- Need to model based on the participant and the tissue status
+
+- I've been trying to use the DGE with the entire genome but maybe should only apply it with the SOi
+- This will speed up the analysis but will limit the interpreability by limiting the number of genes in the analysis
+
+- Finished the main part of the DGEA for the SOI 
+- Still need to include a volcano plot to show the main genes that are DE
+- Also need to repeat the test using the cancer type as an interaction effect
+- And will need to repeat the test using the full set of genes instead of just the set of interest
+
+- Changed the name of the tissue_type to tissue_status for the cancer vs normal category
+- The tissue_type is now the TSS or Tissue Source Site (sample's tissue of origin)
+ 
+
+15/03/24
+
+- Continuing with the DGE but adding the tumour type as an additional main effect
+
+- Having issues using the tumour_type as an additional main effect
+- The model is not able to estimate the coefficients for each of the factors (types) 
+- Could group certain tumours together
+- Think i will just perform the DGEA for the individual tumour types instead of using the tumour_type as a main effect
+
+
+18/03/24
+
+- continuing with the DGE but implementing it with full gene list which is quite slow
+- Running on close to 60000 genes as opposed to the ~300 from the SOI
+ 
+- Figured out how to connect to the hpc network
+- Reading up on the documentation for the hpc 
+- Trying to figure out how to use R & Rstudio with the hpc
+Will aks Theo or Tessa on how they do this
+
