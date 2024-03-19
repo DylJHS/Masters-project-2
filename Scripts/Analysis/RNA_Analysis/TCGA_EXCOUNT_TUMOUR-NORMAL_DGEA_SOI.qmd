@@ -2,7 +2,7 @@
 title: "TCGA COUNT TUMOUR - NORMAL DGEA"
 format: html
 editor: visual
-Note: This script is for the anlysis of the Differential Gene expression between the cancerous and non-cancerous TCGA Expected count data.
+Note: This script is for the anlysis of the Differential Gene expression between the cancerous and non-cancerous TCGA Expected count data using the SOI only.
 ---
 
 ```{r setup, include=FALSE}
@@ -24,7 +24,7 @@ library(ggrepel)
 Load the data
 
 ```{r}
-# original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
+original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
 order_data <- original[,order(colnames(original))]
 ```
 
@@ -236,7 +236,7 @@ data2 <- count_data2 %>%
 
 # Map the codes by health status (cancer <= 9 < Normal)
 mapped_data2 <- data2
-new_column_names2 <- colnames(samples_to_use2)
+new_column_names2 <- colnames(mapped_data2)
 new_column_names2 <- ifelse(as.integer(substr(new_column_names2, nchar(new_column_names2) - 1, nchar(new_column_names2))) > 9,
                            paste0(substr(new_column_names2, 1, nchar(new_column_names2) - 2), "N"),
                            paste0(substr(new_column_names2, 1, nchar(new_column_names2) - 2), "C"))
