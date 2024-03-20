@@ -10,7 +10,6 @@ knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internsh
 ```
 
 Load the packages
-
 ```{r}
 library(dplyr)
 library(knitr)
@@ -27,7 +26,7 @@ original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
 order_data <- original[,order(colnames(original))]
 ```
 
-Obtain the Genes from the SOI (GOI)
+Obtain the Genes within the Set of Interest (GOIs)
 ```{r}
 soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
@@ -35,13 +34,13 @@ soi_genes <-soi[,2]
 
 
 CLEANING & PREPROCESSING
-Re-transform the data from the y = 2(x+1) values to the actual counts using x = 2^y^−1.
+Re-transform the data from the y = Log2(x+1) values to the actual counts using x = 2^y^−1.
 ```{r}
 transformed_data <- order_data
 rownames(transformed_data) <- NULL
 
 
-untransform <- function(x) {#Function to convert the log transformed counts back into orginal counts
+untransform <- function(x) {#Function to convert the log transformed counts back into original counts
   return((2^x)-1)
 }
 
@@ -59,7 +58,7 @@ column_names <- c("Samples" ,  paste(participants, condition, sep = "."))
 colnames(count_data) <- column_names
 ```
 
-Edits ids so as to be able to identify the condition
+Edit ids so as to be able to identify the condition
 ```{r}
 # Reset the row names to the Gene names
 data <- count_data %>%
@@ -96,7 +95,7 @@ unique_pairs <- unique(participants)
 # List of participants with healthy/cancer paired samples
 selected_columns <- c()
 
-# Loop through each participants
+# Loop through each participant
 for (pair in unique_pairs) {
   # Find the participants with healthy/cancer sample pairings
   columns_with_pair <- grep(paste0("^", pair, "\\."), colnames(mapped_data_complete))
@@ -136,7 +135,9 @@ participants <- sapply(colnames(mapped_matrix), function(x) str_split(x, "\\.")[
 condition <- sapply(colnames(mapped_matrix), function(x) str_split(x, "\\.")[[1]][2])
 
 participants <- factor(participants)
-condition <- factor(condition, levels=c("C","N"))
+
+# Create the factor for the condition. IMPORTANT: The order will determine how the logFCs are calculated, with the first level indicating the reference (denominator).
+condition <- factor(condition, levels=c("N","C"))
 
 # Remove low count genes, those with a count below 10
 keep<-filterByExpr(d0,group = condition, min.count = 10)
@@ -145,38 +146,37 @@ d0<-d0[keep,,keep.lib.size=FALSE]
 dim(d0)
 ```
 
-Plot the 2 dimensional graph of the main logFC components
+Plot the 2 dimensional graph of the main logFC components.
 ```{r}
 plotMDS(d0, pch = 1, col = ifelse(condition == "C", "red", "blue"))
 
 ```
 
-Create the linear model using the unique participants and the condition as the main effects.
+Create & fit a linear model to the data.
 ```{r}
+# Set the unique participants and the condition as the main effects.
 mm <- model.matrix(~ participants + condition)
 ```
 
-Apply voom() to transfrom the data so that it is suitable for linear modelling.
-```{r}
-y <- voom(d0, mm, plot = T)
-```
 
-Fit the linear model
 ```{r}
+# Apply voom() to transfrom the data so that it is suitable for linear modelling.
+y <- voom(d0, mm, plot = T)
+
+# Fit the linear model
 fit <- lmFit(y, mm)
 
 # smooth the standard errors
 fit2 <- eBayes(fit)
 ```
 
-
-Get the table of all the genes and their fold changes and significances 
+Get the table of all the genes and their fold changes and significance 
 ```{r}
 express_table <- topTable(fit2, coef="conditionN", sort.by = "P", n = Inf)
 ```
 
 
-Plot the volcano of the genes
+Plot the volcano plot highlighting the GOIs
 ```{r}
 
 keyvals <- ifelse(
@@ -190,7 +190,7 @@ keyvals <- ifelse(
   
 usable_volcano <- EnhancedVolcano(express_table,
                 lab = rownames(express_table),
-                x = "logFC",
+                x = "log2FC",
                 y = "P.Value",
                 title = "TCGA Differential Gene Expression",
                 subtitle = "Limma-voom based",

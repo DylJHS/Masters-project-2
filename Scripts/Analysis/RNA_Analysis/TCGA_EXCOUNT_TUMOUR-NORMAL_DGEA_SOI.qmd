@@ -21,19 +21,38 @@ library(EnhancedVolcano)
 library(ggrepel)
 ```
 
-Load the data
+COLLECTION Load the data
 
 ```{r}
+# Original log transformed count data
 original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
 order_data <- original[,order(colnames(original))]
+
+# Set of interest
+soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+
+# Metadata
+tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
+ abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
+ meta <- left_join(tss_meta %>% 
+                     select(c("TSS.Code", "Study.Name")) %>% 
+                     distinct() %>% 
+                     sapply(trimws) %>% 
+                     as.data.frame(),
+                   abbrv_meta %>% 
+                     select(c("Study.Abbreviation", "Study.Name")) %>% 
+                     distinct()%>% 
+                     sapply(trimws) %>% 
+                     as.data.frame(), 
+                   by = "Study.Name")
 ```
 
-Reduce to the SOI
+I. ALL SAMPLES/TISSUE TYPES
+
+CLEANING & PREPROCESSING Filter on the SOI
+
 ```{r}
-
-soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
-
 
 transformed_data <- order_data[order_data$sample %in% soi_genes,]
 rownames(transformed_data) <- NULL
@@ -42,7 +61,7 @@ rownames(transformed_data) <- NULL
 Re-transform the data from the y = 2(x+1) values to the actual counts using x = 2^y^−1.
 
 ```{r}
-untransform <- function(x) {
+untransform <- function(x) {#Function to convert the log transformed counts back into original counts
   return((2^x)-1)
 }
 
@@ -50,7 +69,8 @@ count_data <- transformed_data %>%
   mutate(across(-1, untransform))
 ```
 
-Transform the column names
+Convert the samples (column names) into ids so as to be able to identify the participant and the cancer type.
+
 ```{r}
 ids <- colnames(count_data)[-1]
 participants <- sapply(ids, function(x) str_split(x, "\\.")[[1]][3])
@@ -60,13 +80,14 @@ column_names <- c("Samples" ,  paste(participants, condition, sep = "."))
 colnames(count_data) <- column_names
 ```
 
-Edits to the columns 
+Edit ids so as to be able to identify the condition (Cancer/Normal)
+
 ```{r}
 # Reset the row names to the Gene names
 data <- count_data %>%
   column_to_rownames(var = "Samples") 
 
-# Remove the unwanted tissue types from the samples based on the code
+# Remove the unwanted sample types from the samples based on the code
 codes_to_use <- c("01","02","03","04","05","08","09","10","11","12","14","40")
 samples_to_use <- data %>%  select(ends_with(codes_to_use))
 
@@ -78,42 +99,42 @@ new_column_names <- ifelse(as.integer(substr(new_column_names, nchar(new_column_
                            paste0(substr(new_column_names, 1, nchar(new_column_names) - 2), "C"))
 
 colnames(mapped_data) <- new_column_names
+```
 
+Removal of undesirable ids/samples; those that lack expression counts and those that are not part of a healthy/cancerous pair.
+
+```{r}
 # Remove columns with 0 values throughout
 cols_zeros <- which(apply(mapped_data, 2, function(x) all(x == 0)))
 mapped_data <- mapped_data[, -cols_zeros]
 
-# Remove samples that don't have a pair 
+# Get unique participants
 unique_pairs <- unique(participants)
 
+# List of participants with healthy/cancer paired samples
 selected_columns <- c()
 
-# Loop through each unique pair
+# Loop through each participant
 for (pair in unique_pairs) {
-  # Find the columns with the pair
+  # Find the participants with healthy/cancer sample pairings
   columns_with_pair <- grep(paste0("^", pair, "\\."), colnames(mapped_data))
   if (length(columns_with_pair) > 1) {
+    # Add the found participants to the list
     selected_columns <- c(selected_columns, colnames(mapped_data)[columns_with_pair])
   }
 }
 
-# Select the columns with pairs from the dataframe
+# Filter the data on the list of participants with healthy/cancer paired samples
 subset_mapped <- mapped_data[, selected_columns]
-# subset_mapped <- subset_mapped[,]
-
 ```
 
+DGE MODELLING Define the matrix, create its DGE object & get the normalisation library factors
 
 ```{r}
 # convert df to matrix 
  mapped_matrix <- subset_mapped %>% as.matrix()
 
 d0 <- DGEList(mapped_matrix, group = sapply(colnames(mapped_matrix), function(x) str_split(x, "\\.")[[1]][2]))
-dim(d0)
-
-# Remove low count genes
-keep<-filterByExpr(d0,group = condition)
-d0<-d0[keep,,keep.lib.size=FALSE]
 
 dim(d0)
 
@@ -125,238 +146,101 @@ max_lib_size_dif <- max(d0$samples$lib.size)/min(d0$samples$lib.size)
 rel_lib_size_dif <- median(d0$samples$lib.size)/min(d0$samples$lib.size)
 ```
 
+Create the factors for the data. IMPORTANT: The order of the condition factor will determine how the logFCs are calculated, with the first level representing the reference (denominator).
 
 ```{r}
-
 participants <- sapply(colnames(mapped_matrix), function(x) str_split(x, "\\.")[[1]][1])
 condition <- sapply(colnames(mapped_matrix), function(x) str_split(x, "\\.")[[1]][2])
 
 participants <- factor(participants)
-condition <- factor(condition, levels=c("C","N"))
+condition <- factor(condition, levels=c("N","C"))
+```
 
+Plot the 2 dimensional graph of the main logFC components.
+
+```{r}
 plotMDS(d0, pch = 1, col = ifelse(condition == "C", "red", "blue"))
 ```
 
-Create the model using the condition and the participants as main effects 
+Create & fit a linear model to the data.
+
 ```{r}
+# Set the unique participants and the condition as the main effects.
 mm <- model.matrix(~ participants + condition)
+
+# Apply voom() to transform the data so that it is suitable for linear modelling.
 y <- voom(d0, mm, plot = T)
 
-```
-
-Fit the linear model
-
-```{r}
+# Fit the linear model
 fit <- lmFit(y, mm)
+
+# smooth the standard errors
 fit2 <- eBayes(fit)
 ```
 
+Get the table of all the genes and their fold changes and significance
 
-Get the table of all the genes and their differential statuses 
 ```{r}
-express_table <- topTable(fit2, coef="conditionN", sort.by = "P", n = Inf)
+express_table <- topTable(fit2, coef="conditionC", sort.by = "P", n = Inf)
 ```
 
+Plot the volcano plot
 
-Plot the volcano of the genes
 ```{r}
 usable_volcano <- EnhancedVolcano(express_table,
                 lab = rownames(express_table),
                 x = "logFC",
                 y = "P.Value",
-                # selectLab = c('soi'),
-                # pointSize = c(ifelse(usable_tissues$Set == "soi", 4, 1)),
-                # drawConnectors = TRUE,
-                # widthConnectors = 0.2,
-                # xlim = c(-0.95,0.95),
+                title = "TCGA Differential Gene Expression",
+                subtitle = "Set-of-Interest genes only",
+                pointSize = 3,
+                drawConnectors = TRUE,
+                widthConnectors = 0.2,
+                colAlpha = 0.65,
+                xlim = c(-4,4),
                 # ylim = c(0,10),
-                # pCutoff = 0.05,
+                pCutoff = 0.01,
                 FCcutoff = 1)
 usable_volcano
-
 ```
 
+II. PARSED BY TISSUE/CANCER TYPE
 
-
-
-
-
-PART II
-
-
-Redo the above but using all genes in the DGE 
-
+Edit ids so as to be able to identify the condition (Cancer/Normal) as well as the Tissue Type (ex: Breast, Lung ...)
+based on the tumour type and its corresponding control group
 ```{r}
-
-count_data2 <- transformed_data %>%
+new_count <- transformed_data %>%
   mutate(across(-1, untransform))
-```
 
-Transform the column names
-```{r}
-ids <- colnames(count_data2)[-1]
 participants <- sapply(ids, function(x) str_split(x, "\\.")[[1]][3])
 condition <- sapply(ids, function(x) str_split(x, "\\.")[[1]][4])
-tumour_type <- sapply(ids, function(x) str_split(x, "\\.")[[1]][2])
+tissue_type <- sapply(ids, function(x) str_split(x, "\\.")[[1]][2])
 
-column_names2 <- c("Samples" ,  paste(tumour_type, participants, condition,  sep = "."))
-colnames(count_data2) <- column_names2
-```
+new_ids <- c("Samples" ,  paste(tissue_type, participants, condition, sep = "."))
+colnames(new_count) <- new_ids
 
-
-Load in the meta data datasets
-```{r}
-tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
-abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
-
-
-meta <- left_join(tss_meta %>% 
-                    select(c("TSS.Code", "Study.Name")) %>% 
-                    distinct() %>% 
-                    sapply(trimws) %>% 
-                    as.data.frame(),
-                  abbrv_meta %>% 
-                    select(c("Study.Abbreviation", "Study.Name")) %>% 
-                    distinct()%>% 
-                    sapply(trimws) %>% 
-                    as.data.frame(), 
-                  by = "Study.Name")
-
-
-```
-
-
-
-Edits to the columns 
-```{r}
 # Reset the row names to the Gene names
-data2 <- count_data2 %>%
+new_data <- new_count %>%
   column_to_rownames(var = "Samples") 
 
+new_samples_to_use <- new_data %>%  select(ends_with(codes_to_use))
+
+# Reset the new dataframe
+typed_data <- new_samples_to_use
+
+# Get the current column names
+columns <- colnames(typed_data)
 
 # Map the codes by health status (cancer <= 9 < Normal)
-mapped_data2 <- data2
-new_column_names2 <- colnames(mapped_data2)
-new_column_names2 <- ifelse(as.integer(substr(new_column_names2, nchar(new_column_names2) - 1, nchar(new_column_names2))) > 9,
-                           paste0(substr(new_column_names2, 1, nchar(new_column_names2) - 2), "N"),
-                           paste0(substr(new_column_names2, 1, nchar(new_column_names2) - 2), "C"))
+newer_column_names <- ifelse(as.integer(substr(columns, nchar(columns) - 1, nchar(columns))) > 9,
+                           paste0(substr(columns, 1, nchar(columns) - 2), "N"),
+                           paste0(substr(columns, 1, nchar(columns) - 2), "C"))
+```
 
-prefixes <- substr(new_column_names2,1,2)
+Assign the new ids to the respective columns in the DF
+```{r}
+prefixes <- substr(newer_column_names,1,2)
 abbrvs <- meta$Study.Abbreviation[match(prefixes,meta$TSS.Code)]
-column_names_prefixes <- paste0(abbrvs, substr(new_column_names2, 3, nchar(new_column_names2)))
-
-colnames(mapped_data2) <- column_names_prefixes
-
-
-# Remove columns with 0 values throughout
-cols_zeros <- which(apply(mapped_data2, 2, function(x) all(x == 0)))
-mapped_data2 <- mapped_data2[, -cols_zeros]
-
-
-# Remove samples that don't have a pair
-unique_pairs <- unique(participants)
-
-selected_columns <- c()
-
-
-# Loop through each unique pair
-for (pair in unique_pairs) {
-  # Find the columns with the pair
-  columns_with_pair <- grep(paste0("\\.", pair, "\\."), colnames(mapped_data2))
-  if (length(columns_with_pair) > 1) {
-    selected_columns <- c(selected_columns, colnames(mapped_data2)[columns_with_pair])
-  }
-}
-
-
-# Select the columns with pairs from the dataframe
-subset_mapped2 <- mapped_data2[, selected_columns]
+column_names_prefixes <- paste0(abbrvs, substr(newer_column_names, 3, nchar(newer_column_names)))
+colnames(typed_data) <- column_names_prefixes
 ```
-
-
-```{r}
-# Remove the tumour types with less than 
-test <- colnames(subset_mapped2) %>% sapply( function(x) str_split(x, "\\.")[[1]][1])
-
-
-```
-
-
-```{r}
-# convert df to matrix 
- mapped_matrix2 <- subset_mapped2 %>% as.matrix()
-
-d1 <- DGEList(mapped_matrix2, group = sapply(colnames(mapped_matrix2), function(x) str_split(x, "\\.")[[1]][3]))
-d1
-
-# Calculate the normalisation factor 
-d1 <- calcNormFactors(d1, method = "TMM")
-
-# Assess the extent of the differences library size to determine the correct approach
-max_lib_size_dif <- max(d1$samples$lib.size)/min(d1$samples$lib.size)
-rel_lib_size_dif <- median(d1$samples$lib.size)/min(d1$samples$lib.size)
-```
-
-```{r}
-participants <- sapply(colnames(mapped_matrix2), function(x) str_split(x, "\\.")[[1]][2])
-condition <- sapply(colnames(mapped_matrix2), function(x) str_split(x, "\\.")[[1]][3])
-tumour_type <- sapply(colnames(mapped_matrix2), function(x) str_split(x, "\\.")[[1]][1])
-
-participants <- factor(participants)
-condition <- factor(condition, levels=c("C","N"))
-tumour_type <- factor(tumour_type)
-```
-
-
-Plot the multidimensional plot visually identifying the tumour type
-
-```{r}
-plotMDS(d1, pch = 1, col = as.numeric(tumour_type))
-```
-
-Plot the multidimensional plot visually identifying the sample's condition
-
-```{r}
-plotMDS(d1, pch = 1, col = ifelse(condition == "C", "red", "blue"))
-```
-
-Create the model using the condition, tumour type and the participants as main effects 
-```{r}
-mm2 <- model.matrix(~ participants + condition + tumour_type)
-y2 <- voom(d1, mm2, plot = T)
-
-```
-
-
-Fit the linear model
-
-```{r}
-fit3 <- lmFit(y2, mm2)
-fit4 <- eBayes(fit3)
-```
-
-
-Get the table of all the genes and their differential statuses 
-```{r}
-express_table2 <- topTable(fit4, coef="conditionN", sort.by = "P", n = Inf)
-```
-
-
-Plot the volcano of the genes
-```{r}
-usable_volcano2 <- EnhancedVolcano(express_table2,
-                lab = rownames(express_table2),
-                x = "logFC",
-                y = "P.Value",
-                # selectLab = c('soi'),
-                # pointSize = c(ifelse(usable_tissues$Set == "soi", 4, 1)),
-                # drawConnectors = TRUE,
-                # widthConnectors = 0.2,
-                # xlim = c(-0.95,0.95),
-                # ylim = c(0,10),
-                # pCutoff = 0.05,
-                FCcutoff = 1)
-usable_volcano2
-
-```
-
