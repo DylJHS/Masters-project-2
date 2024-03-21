@@ -21,11 +21,23 @@ library(EnhancedVolcano)
 library(ggrepel)
 ```
 
+REUSABLE FUNCTIONS
+```{r}
+extract_element <- function(strings, index) {
+  # Split each string by "." and extract the third element
+  element_list <- sapply(strsplit(strings, "\\."), function(x) x[index])
+  return(element_list)
+}
+
+
+```
+
+
 COLLECTION Load the data
 
 ```{r}
 # Original log transformed count data
-original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
+# original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
 order_data <- original[,order(colnames(original))]
 
 # Set of interest
@@ -118,9 +130,10 @@ selected_columns <- c()
 for (pair in unique_pairs) {
   # Find the participants with healthy/cancer sample pairings
   columns_with_pair <- grep(paste0("^", pair, "\\."), colnames(mapped_data))
-  if (length(columns_with_pair) > 1) {
+  matching_columns <- colnames(mapped_data)[columns_with_pair]
+  if (length(matching_columns) > 1 && any(grepl("\\.N$", matching_columns)) && any(grepl("\\.C$",matching_columns))) {
     # Add the found participants to the list
-    selected_columns <- c(selected_columns, colnames(mapped_data)[columns_with_pair])
+    selected_columns <- c(selected_columns, matching_columns)
   }
 }
 
@@ -206,15 +219,15 @@ usable_volcano
 
 II. PARSED BY TISSUE/CANCER TYPE
 
-Edit ids so as to be able to identify the condition (Cancer/Normal) as well as the Tissue Type (ex: Breast, Lung ...)
-based on the tumour type and its corresponding control group
+Edit ids so as to be able to identify the condition (Cancer/Normal) as well as the Tissue Type (ex: Breast, Lung ...) based on the tumour type and its corresponding control group
+
 ```{r}
 new_count <- transformed_data %>%
   mutate(across(-1, untransform))
 
-participants <- sapply(ids, function(x) str_split(x, "\\.")[[1]][3])
-condition <- sapply(ids, function(x) str_split(x, "\\.")[[1]][4])
-tissue_type <- sapply(ids, function(x) str_split(x, "\\.")[[1]][2])
+participants <- extract_element(ids, 3)
+condition <- extract_element(ids, 4)
+tissue_type <- extract_element(ids, 2)
 
 new_ids <- c("Samples" ,  paste(tissue_type, participants, condition, sep = "."))
 colnames(new_count) <- new_ids
@@ -225,7 +238,7 @@ new_data <- new_count %>%
 
 new_samples_to_use <- new_data %>%  select(ends_with(codes_to_use))
 
-# Reset the new dataframe
+# Reset the dataframe
 typed_data <- new_samples_to_use
 
 # Get the current column names
@@ -244,3 +257,61 @@ abbrvs <- meta$Study.Abbreviation[match(prefixes,meta$TSS.Code)]
 column_names_prefixes <- paste0(abbrvs, substr(newer_column_names, 3, nchar(newer_column_names)))
 colnames(typed_data) <- column_names_prefixes
 ```
+
+```{r}
+# Remove columns with 0 values throughout
+cols_zeros <- which(apply(typed_data, 2, function(x) all(x == 0)))
+typed_data <- typed_data[, -cols_zeros]
+
+
+```
+
+
+Loop over the distinct tissue/cancer types and perform the DGE
+```{r}
+distinct_tissue_types <- unique(extract_element(colnames(typed_data), 1))
+
+new_column_selection <- selected_columns %>%  extract_element(., 1)
+edited_column_selection <- paste0(".",new_column_selection,".")
+
+typed_subset <- typed_data %>% select(contains(new_column_selection))
+
+for (type in distinct_tissue_types) {
+
+  type_cols <-grep(paste0("^", type), colnames(typed_subset), value = TRUE)
+  specific_data <- typed_subset %>% select(all_of(type_cols))
+
+  col_number <- ncol(specific_data)
+  if (col_number < 2) {
+    next
+  }
+
+  print(head(specific_data))
+
+  # convert df to matrix
+  specific_matrix <- specific_data %>% as.matrix()
+
+  d5 <- DGEList(specific_matrix, group = extract_element(colnames(specific_matrix), 3))
+
+  # Calculate the normalisation factor
+  d5 <- calcNormFactors(d5, method = "TMM")
+  
+  # Create a factor for the variables
+  participants <- extract_element(colnames(specific_matrix), 2)
+  condition <- extract_element(colnames(specific_matrix), 3)
+  participants <- factor(participants)
+  condition <- factor(condition, levels=c("N","C"))
+
+  plotMDS(d5, pch = 1, col = ifelse(condition == "C", "red", "blue"))
+
+
+}
+
+```
+
+
+
+
+
+
+
