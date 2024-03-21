@@ -960,21 +960,17 @@ Meeting with Stefan:
 - using the Expected Counts from the Xena Browser
 - have to un-transform the data from log2(x+1)
 
-
 - Using the TMM as the accross sample normalisation factor quantification calculation but would like to use at least another one as well to test against (RLE, HTN...)
 
+- Editing the df so that it only contains normal and primary type cancer samples (no metastatic, cell lines ...
 
-- Editing the df so that it only contains normal and primary type cancer samples (no metastatic, cell lines ...)
-
-
-- also need to edit the smaple names so that it doens't contain the tissue_type code (01,02,05...)
+- also need to edit the sample names so that it doens't contain the tissue_type code (01,02,05...)
 - But instead the participant number followed by the tissue category (normal or cancerous: 0 or 1)
-
  
 
 13/03/24
 
-- Continueing with the DGEA of the individual genes in from the TCGA
+- Continuing with the DGEA of the individual genes in from the TCGA
 - Removing the samples with library sizes of 0 
  
 
@@ -983,8 +979,8 @@ Meeting with Stefan:
 - Continuing with the DGE analysis of the TCGA data
 - Need to model based on the participant and the tissue status
 
-- I've been trying to use the DGE with the entire genome but maybe should only apply it with the SOi
-- This will speed up the analysis but will limit the interpreability by limiting the number of genes in the analysis
+- I've been trying to use the DGE with the entire genome but maybe should only apply it with the SOI
+- This will speed up the analysis but will limit the interpretability by limiting the number of genes in the analysis
 
 - Finished the main part of the DGEA for the SOI 
 - Still need to include a volcano plot to show the main genes that are DE
@@ -1013,5 +1009,40 @@ Meeting with Stefan:
 - Figured out how to connect to the hpc network
 - Reading up on the documentation for the hpc 
 - Trying to figure out how to use R & Rstudio with the hpc
-Will aks Theo or Tessa on how they do this
+- Will ask Theo or Tessa on how they do this
+
+
+19/03/24
+
+- Ran the DGEA for all genes overnight 
+- Highlighting the GOIs in the volcano plot 
+- Annotating the script for the analysis above
+
+- When applying DGE important to order the factors (here conditions) accordingly 
+- Need to reorder mine with 'Normal' being specified first seeing as it is the reference and then 'Cancer'
+- levels  = c('Normal', 'Cancer')
+- the order will determine how the log2fc is calculated and therefore if the order is wrong over-expressed/under-expressed genes will be reversed based on the condition
+
+- Cancer/Tissue types to keep are the Breast, Head and neck, Liver hepatocellular and the lung squamous 
+
+
+20/03/24
+
+- Ran the full gene DGE after correcting the up/down-regulation on the axis
+- Issues when running and trying to correct the axis 
+- Need to do again
+
+- Ran DGE for each type of tissue/cancer that has more than one paired sample 
+- The MDS for most types showed a high degree of separation based on the first FC component of around 20%-50%
+- Meaning that for a specific tissue type using the RNAseq data only, a linear model has a good chance of being able to accurately classify cancer vs normal 
+
+
+
+
+
+
+
+
+
+
 
