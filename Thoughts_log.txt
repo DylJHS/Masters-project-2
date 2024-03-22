@@ -1037,12 +1037,18 @@ Meeting with Stefan:
 - Meaning that for a specific tissue type using the RNAseq data only, a linear model has a good chance of being able to accurately classify cancer vs normal 
 
 
+21/03/24
 
+- Try to repeat the use of the cancer/tissue type as a main effect but use the abbrvs instead of the TSS codes which may be introducing noise seeing as there are so many of them. 
+- Looking through the list of genes with the highest expression is showing a variety of genes (CENPA, DNMT3B, and other kinesin/microtubule coding genes)
 
+- Would be interesting to perform the complete analysis once it's done using a mutlitude of parameters 
+- For the STRING interaction score would be nice to use: 0.95, 0.80 and 0.65 for a wider ragne of potential targets
+- would come once the entire pipeline has been implemented though
 
-
-
-
-
-
+- Tried to include the tissue type in the model for the DGE
+- Did not amount to much 
+- With the following Warning: Partial NA coefficients for 327 probe(s)
+> 
+- Need to start implementing the expression based signatures using the complete RNAseq data from the TCGA set
 

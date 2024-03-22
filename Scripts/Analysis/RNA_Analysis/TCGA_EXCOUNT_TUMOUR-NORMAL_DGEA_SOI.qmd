@@ -36,7 +36,7 @@ COLLECTION Load the data
 
 ```{r}
 # Original log transformed count data
-# original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
+original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
 order_data <- original[,order(colnames(original))]
 
 # Set of interest
@@ -152,17 +152,17 @@ DGE MODELLING Define the matrix, create its DGE object & get the normalisation l
  mapped_matrix <- subset_mapped %>% as.matrix()
 
 d0 <- DGEList(mapped_matrix, group = extract_element(colnames(mapped_matrix), 3))
-dim(d0)
+print(paste("The size of the counts dataframe has been reduced from", 
+            dim(count_data)[1], "x", dim(count_data)[2]," to ", 
+            dim(d0)[1], "x", dim(d0)[2]))
 
 # Calculate the normalisation factor 
 d0 <- calcNormFactors(d0, method = "TMM")
 
-# Assess the extent of the differences library size to determine the correct approach
-max_lib_size_dif <- max(d0$samples$lib.size)/min(d0$samples$lib.size)
-rel_lib_size_dif <- median(d0$samples$lib.size)/min(d0$samples$lib.size)
 ```
 
-Create the factors for the data. IMPORTANT: The order of the condition factor will determine how the logFCs are calculated, with the first level representing the reference (denominator).
+
+Create the factors for the data. IMPORTANT: The order of the condition factor will determine how the logFCs are calculated, with the first level representing the reference (denominator) which in this case should be the healthy condition.
 
 ```{r}
 participants <- extract_element(colnames(mapped_matrix), 2)
@@ -178,11 +178,13 @@ Plot the 2 dimensional graph of the main logFC components in terms of the condit
 ```{r}
 plotMDS(d0, pch = 1, col = ifelse(condition == "C", "red", "blue"))
 ```
+Interpretation: The plot shows that the data is moderately able to be separated by condition based on the expression counts
 
 Plot the 2 dimensional graph of the main logFC components in terms of the tissue type
 ```{r}
 plotMDS(d0, pch = 3, col = tissue_type)
 ```
+Interpretation: The plot shows that the data has a quite low ability to be separated by tissue based on the expression counts
 
 Create & fit a linear model to the data.
 
@@ -299,6 +301,8 @@ for (type in distinct_tissue_types) {
 
 }
 ```
+Interpretation: When grouped by tissue type the data is much better able to be separated by condition with the leading logFC dimension accounting for anywhere between 23% and 56% of the variation between the samples of either condition
+
 
 Create the volcano plots for the group of tissues that are of most interest
 ```{r}
