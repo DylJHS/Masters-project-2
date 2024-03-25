@@ -300,8 +300,12 @@ for (type in distinct_tissue_types) {
   assign(paste0(type, "_volcano"), specific_volcano)
 
 }
+
 ```
 Interpretation: When grouped by tissue type the data is much better able to be separated by condition with the leading logFC dimension accounting for anywhere between 23% and 56% of the variation between the samples of either condition
+```{r}
+write.csv(full_expression_table, "DGEA_expression_table.csv", row.names=TRUE)
+```
 
 
 Create the volcano plots for the group of tissues that are of most interest

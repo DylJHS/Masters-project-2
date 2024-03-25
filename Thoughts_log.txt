@@ -1052,3 +1052,19 @@ Meeting with Stefan:
 > 
 - Need to start implementing the expression based signatures using the complete RNAseq data from the TCGA set
 
+ 
+
+22/03/24
+
+- Annotating the DGE script and adding the Results and Interpretation to the script
+ 
+- Reading up on the clustering method SOM (Self Organising Matrix) 
+
+- For the creation of the expression-based signatures
+- Either use the TPM data or Normalise the  count data with normalisation factors based on library size
+- Create the correlation matrix between the values
+- Genes that show a very high correlation (in the same direction and of maybe 0.9 or higher) should be grouped into the same variable 
+- This variable should use the combined names of all the genes that make up this poly-gene separated by a specific cahracter
+- The values that are shown for this poly-gene shoud be based on the mean of the values for each component gene 
+- This should remove some of the genes from the dataset thereby reducing its dimensionality
+- The new matrix that now contains the genes and the polygenes can be used for the hierarchal clsutering using an approriate method
