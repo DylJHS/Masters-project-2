@@ -1068,3 +1068,23 @@ Meeting with Stefan:
 - The values that are shown for this poly-gene shoud be based on the mean of the values for each component gene 
 - This should remove some of the genes from the dataset thereby reducing its dimensionality
 - The new matrix that now contains the genes and the polygenes can be used for the hierarchal clsutering using an approriate method
+ 
+
+25/03/24
+
+- Reading up on the GLMs 
+- Slighly confused about how the individual signatures should be built
+- Should i build the signatures before hand and then try to relate them to the CIN features using a classifier 
+- Or should i keep the expression values in the gene/semi-gene form and relate these to the CIN features using the classifier 
+- Will need to read up on the different ways that Singatures have been created and if GLMs have been used and how GLMs have been used in a similar context
+ 
+- Might be a good idea to go with both approaches 
+- Starting with a metagene approach
+- Clustering genes based on the expression data
+- and then using these clusters for the classification 
+
+- And to go with gene level approach as well
+- Avoiding the clustering 
+- And building the classifier directly on these values
+
+- For the DGEA I need to redo it with the full dataset as performing the normalisation factor calculation on a subset of the data can induce bias into the factors when determining the reference sample and the scaling factors

@@ -21,6 +21,12 @@ library(ggrepel)
 ```
 
 
+PLOT LOCATION FOR DGE PLOTS
+```{r}
+loc <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/DGEA_plots/"
+```
+
+
 REUSABLE FUNCTIONS
 
 ```{r}
@@ -225,10 +231,10 @@ Plot the volcano plot highlighting the GOIs
 
 keyvals1 <- ifelse(
     rownames(express_table) %in% soi_genes, 'red2',
-        'grey63')
+        '#8B8B83')
   keyvals1[is.na(keyvals1)] <- 'black'
   names(keyvals1)[keyvals1 == 'red2'] <- 'Gene of Interest'
-  names(keyvals1)[keyvals1 == 'grey63'] <- 'Other'
+  names(keyvals1)[keyvals1 == '#8B8B83'] <- 'Other'
   
   
 usable_volcano <- EnhancedVolcano(express_table,
@@ -236,23 +242,40 @@ usable_volcano <- EnhancedVolcano(express_table,
                 x = "logFC",
                 y = "P.Value",
                 title = "TCGA Differential Gene Expression",
-                subtitle = "Limma-voom based",
+                subtitle = "Combined Tissue Types",
                 selectLab = soi_genes,
                 colCustom = keyvals1,
                 pointSize = c(ifelse(rownames(express_table) %in% soi_genes, 4, 1)),
+                xlim = c(min(express_table %>%
+                               filter(rownames(express_table) %in% soi_genes) %>%
+                               pull(logFC)),
+                         max(express_table %>%
+                      filter(rownames(express_table) %in% soi_genes) %>%
+                      pull(logFC))),
+                ylim = c(0,
+                         -log10(min(express_table %>%
+                               filter(rownames(express_table) %in% soi_genes) %>%
+                               pull(P.Value)))),
                 drawConnectors = TRUE,
                 widthConnectors = 0.2,
                 colAlpha = 0.65,
-                # xlim = c(-5,5),
                 pCutoff = 0.01,
-                FCcutoff = 1)
+                FCcutoff = 1,
+                labSize = 5,
+                max.overlaps = 25,
+                min.segment.length = 0.1)
 usable_volcano
+
+pdf(paste0(loc,"DGEA_VOLCANO_COMPLETE.pdf"))
+usable_volcano
+dev.off()
 
 ```
 
 II. PARSED BY TISSUE/CANCER TYPE
 
 Loop over the distinct tissue/cancer types and perform the DGE
+
 
 ```{r}
 
@@ -261,9 +284,9 @@ full_expression_table <- data.frame()
 distinct_tissue_types <- unique(extract_element(colnames(subset_mapped), 1))
 
 plotlist <- list()
-for (type in distinct_tissue_types) {
 
-  type_cols <-grep(paste0("^", type), colnames(subset_mapped), value = TRUE)
+for (type in distinct_tissue_types) {
+  type_cols <- grep(paste0("^", type), colnames(subset_mapped), value = TRUE)
   specific_data <- subset_mapped %>% select(all_of(type_cols))
 
   col_number <- ncol(specific_data)
@@ -278,86 +301,97 @@ for (type in distinct_tissue_types) {
 
   # Calculate the normalisation factor
   specific_d <- calcNormFactors(specific_d, method = "TMM")
-  
+
   # Create a factor for the variables
   participants <- extract_element(colnames(specific_matrix), 2)
   condition <- extract_element(colnames(specific_matrix), 3)
   participants <- factor(participants)
   condition <- factor(condition, levels=c("N","C"))
-  
-  
+
   # Remove low count genes, those with a count below 10
-  print(paste("The size of the ",type," dataframe was", 
-            dim(specific_d)[1], "x", dim(specific_d)[2]))
-  keep<-filterByExpr(specific_d,group = condition, min.count = 10)
-  specific_d<-specific_d[keep,,keep.lib.size=FALSE]
-  
-  print(paste("The size of the ",type," dataframe is now", 
-            dim(specific_d)[1], "x", dim(specific_d)[2]))
+  print(paste("The size of the ", type, " dataframe was", dim(specific_d)[1], "x", dim(specific_d)[2]))
+  keep <- filterByExpr(specific_d, group = condition, min.count = 10)
+  specific_d <- specific_d[keep,, keep.lib.size = FALSE]
+  print(paste("The size of the ", type, " dataframe is now", dim(specific_d)[1], "x", dim(specific_d)[2]))
 
   plotMDS(specific_d, pch = 1, col = ifelse(condition == "C", "red", "blue"), top = 25)
-  
+
   # Set the unique participants and the condition as the main effects.
   specific_mm <- model.matrix(~ participants + condition)
-  
+
   # Apply voom() to transform the data so that it is suitable for linear modelling.
-  specific_y <- voom(specific_d, specific_mm, plot = T)
-  
+  specific_y <- voom(specific_d, specific_mm, plot = FALSE)
+
   # Fit the linear model
   specific_fit <- lmFit(specific_y, specific_mm)
-  
+
   # smooth the standard errors
   specific_smoothed <- eBayes(specific_fit)
-  
+
   specific_express_table <- topTable(specific_smoothed, coef="conditionC", sort.by = "P", n = Inf) %>% 
-    select(c("logFC", "AveExpr","P.Value", "adj.P.Val", "B"))
+    select(c("logFC", "AveExpr", "P.Value", "adj.P.Val", "B"))
   specific_express_table$Tissue <- type
-  assign(paste0(type, "_expression_table"), specific_express_table)
-  
+
   # Extract row names
   row_names <- rownames(specific_express_table)
-  
+
   # Add row names as a new column to the data frame and move it to the first position
   specific_express_table <- specific_express_table %>%
     mutate(Genes = row_names) %>%
     select(Genes, everything())
-  
-  
-  
+
   # Add the current DGE table to the full table
   full_expression_table <- rbind(full_expression_table, specific_express_table)
-  
-  
+
   keyvals <- ifelse(
-  specific_express_table$Genes %in% soi_genes, 'red2','grey63')
+    specific_express_table$Genes %in% soi_genes, 'red2', '#8B8B83')
   keyvals[is.na(keyvals)] <- 'black'
   names(keyvals)[keyvals == 'red2'] <- 'Gene of Interest'
-  names(keyvals)[keyvals == 'grey63'] <- 'Other'
+  names(keyvals)[keyvals == '#8B8B83'] <- 'Other'
   
+  
+  xmini <- min(specific_express_table %>%
+                filter(specific_express_table$Genes %in% soi_genes) %>%
+                pull(logFC))
+  
+  xmaxi <- max(specific_express_table %>%
+                filter(specific_express_table$Genes %in% soi_genes) %>%
+                pull(logFC))
+  
+  ymaxi <- -log10(min(specific_express_table %>%
+                filter(specific_express_table$Genes %in% soi_genes) %>%
+                pull(logFC)))
+
   specific_volcano <- EnhancedVolcano(specific_express_table,
-                lab = specific_express_table$Genes,
-                x = "logFC",
-                y = "P.Value",
-                title = "TCGA Differential Gene Expression",
-                subtitle = paste0(type," Samples & Set-of-Interest genes"),
-                selectLab = soi_genes,
-                colCustom = keyvals,
-                pointSize = c(ifelse(specific_express_table$Genes %in% soi_genes, 4, 1)),
-                drawConnectors = TRUE,
-                widthConnectors = 0.2,
-                colAlpha = 0.65,
-                pCutoff = 0.01,
-                FCcutoff = 1)
-  
+                                       lab = specific_express_table$Genes,
+                                       x = "logFC",
+                                       y = "P.Value",
+                                       title = "TCGA Differential Gene Expression",
+                                       subtitle = paste0(type, " Subset"),
+                                       selectLab = soi_genes,
+                                       colCustom = keyvals,
+                                       pointSize = c(ifelse(specific_express_table$Genes %in% soi_genes, 3, 1)),
+                                       xlim = c(xmini-2, xmaxi+2),
+                                       ylim = c(0,ymaxi + 10/ymaxi),
+                                       drawConnectors = TRUE,
+                                       widthConnectors = 0.2,
+                                       colAlpha = 0.65,
+                                       pCutoff = 0.01,
+                                       FCcutoff = 1,
+                                       labSize = 5,
+                                       max.overlaps = 25,
+                                       min.segment.length = 0.1) 
 
-  
+  pdf(paste0(loc, "DGEA_VOLCANO_", type, ".pdf"))
+  print(specific_volcano)  # Print the plot to the PDF
+  dev.off()  # Close the PDF device
 
-
-  assign(paste0(type, "_volcano"), specific_volcano)
-
+  name <- paste0(type, "_volcano")
+  assign(name, specific_volcano)
 }
 
 ```
+
 
 Interpretation: 
 
@@ -374,20 +408,20 @@ usable_tissues <- c("BRCA", "COAD", "HNSC", "KICH", "KIRC", "KIRP","LIHC", "LUAD
 usable_tissues_expression <- full_expression_table %>% filter(Tissue %in% usable_tissues)
 
 keyvals2 <- ifelse(
-  usable_tissues_expression$Genes %in% soi_genes, 'red2','grey63')
+  usable_tissues_expression$Genes %in% soi_genes, 'red2','#8B8B83')
   keyvals2[is.na(keyvals2)] <- 'black'
   names(keyvals2)[keyvals2 == 'red2'] <- 'Gene of Interest'
-  names(keyvals2)[keyvals2 == 'grey63'] <- 'Other'
+  names(keyvals2)[keyvals2 == '#8B8B83'] <- 'Other'
   
 usable_tissues_expression_volcano <- EnhancedVolcano(usable_tissues_expression ,
                 lab = usable_tissues_expression$Genes,
                 x = "logFC",
                 y = "P.Value",
                 title = "TCGA Differential Gene Expression",
-                subtitle = " n>10 type Samples & Set-of-Interest genes",
+                subtitle = " n>10 type Samples",
                 selectLab = soi_genes,
                 colCustom = keyvals2,
-                pointSize = c(ifelse(usable_tissues_expression$Genes %in% soi_genes, 4, 1)),
+                pointSize = c(ifelse(usable_tissues_expression$Genes %in% soi_genes,8, 3.5)),
                 drawConnectors = TRUE,
                 widthConnectors = 0.2,
                 colAlpha = 0.65,
@@ -402,8 +436,17 @@ usable_tissues_expression_volcano <- EnhancedVolcano(usable_tissues_expression ,
                          -log10(min(usable_tissues_expression %>%
                                filter(Genes %in% soi_genes) %>%
                                pull(P.Value)))),
-                FCcutoff = 1) +
-  facet_wrap(~Tissue, scales = "free")
+                FCcutoff = 1,
+                labSize = 8.5,
+                max.overlaps = 25,
+                min.segment.length = 0.1) +
+  facet_wrap(~Tissue, scales = "free") +
+  theme(strip.text = element_text(size = 15))
+
+
+png(paste0(loc, "DGEA_VOLCANO_10TSS.png"), width = 3040, height = 2060)
+print(usable_tissues_expression_volcano)  # Print the plot to the PDF
+dev.off()  # Close the PDF device
 
 
 tissues_of_interest <- c("BRCA", "HNSC", "LIHC", "LUSC")
@@ -411,35 +454,43 @@ tissues_of_interest <- c("BRCA", "HNSC", "LIHC", "LUSC")
 tissues_of_interest_expression <- full_expression_table %>% filter(Tissue %in% tissues_of_interest)
 
 keyvals3 <- ifelse(
-  tissues_of_interest_expression$Genes %in% soi_genes, 'red2','grey63')
+  tissues_of_interest_expression$Genes %in% soi_genes, 'red2','#8B8B83')
   keyvals3[is.na(keyvals3)] <- 'black'
   names(keyvals3)[keyvals3 == 'red2'] <- 'Gene of Interest'
-  names(keyvals3)[keyvals3 == 'grey63'] <- 'Other'
+  names(keyvals3)[keyvals3 == '#8B8B83'] <- 'Other'
 
 tissues_of_interest_expression_volcano <- EnhancedVolcano(tissues_of_interest_expression ,
                 lab = tissues_of_interest_expression$Genes,
                 x = "logFC",
                 y = "P.Value",
                 title = "TCGA Differential Gene Expression",
-                subtitle = " n>10 type Samples & Set-of-Interest genes",
+                subtitle = " n>10 type Samples",
                 selectLab = soi_genes,
                 colCustom = keyvals3,
-                pointSize = c(ifelse(tissues_of_interest_expression$Genes %in% soi_genes, 4, 1)),
+                pointSize = c(ifelse(tissues_of_interest_expression$Genes %in% soi_genes, 8, 3.5)),
                 drawConnectors = TRUE,
-                widthConnectors = 0.2,
+                widthConnectors = 0.25,
                 colAlpha = 0.65,
                 pCutoff = 0.01,
-                xlim = c(min(tissues_of_interest_expression %>%
+                xlim = c(min(usable_tissues_expression %>%
                                filter(Genes %in% soi_genes) %>%
-                               pull(logFC)),
-                         max(tissues_of_interest_expression %>%
+                               pull(logFC))+0.2,
+                         max(usable_tissues_expression %>%
                       filter(Genes %in% soi_genes) %>%
-                      pull(logFC))),
+                      pull(logFC))-0.2),
                 ylim = c(0,
-                         -log10(min(tissues_of_interest_expression %>%
+                         -log10(min(usable_tissues_expression %>%
                                filter(Genes %in% soi_genes) %>%
-                               pull(P.Value)))),
-                FCcutoff = 1) +
-  facet_wrap(~Tissue, scales = "free")
+                               pull(P.Value)))+2),
+                FCcutoff = 1,
+                labSize = 8.5,
+                max.overlaps = 25,
+                min.segment.length = 0.1) +
+  facet_wrap(~Tissue, scales = "free") +
+  theme(strip.text = element_text(size = 15))
+
+png(paste0(loc, "DGEA_VOLCANO_4TSS.png"), width = 3840, height = 2160)
+print(tissues_of_interest_expression_volcano)  # Print the plot to the PDF
+dev.off()  # Close the PDF device
 
 ```
