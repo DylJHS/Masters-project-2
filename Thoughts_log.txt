@@ -1073,10 +1073,10 @@ Meeting with Stefan:
 25/03/24
 
 - Reading up on the GLMs 
-- Slighly confused about how the individual signatures should be built
+- Slightly confused about how the individual signatures should be built
 - Should i build the signatures before hand and then try to relate them to the CIN features using a classifier 
 - Or should i keep the expression values in the gene/semi-gene form and relate these to the CIN features using the classifier 
-- Will need to read up on the different ways that Singatures have been created and if GLMs have been used and how GLMs have been used in a similar context
+- Will need to read up on the different ways that Signatures have been created and if GLMs have been used and how GLMs have been used in a similar context
  
 - Might be a good idea to go with both approaches 
 - Starting with a metagene approach
@@ -1088,3 +1088,55 @@ Meeting with Stefan:
 - And building the classifier directly on these values
 
 - For the DGEA I need to redo it with the full dataset as performing the normalisation factor calculation on a subset of the data can induce bias into the factors when determining the reference sample and the scaling factors
+
+
+26/03/24
+
+- Updating the DGE Analysis Graphs and the automation of their saving to the plots folder
+ 
+- Thinking about the creation of the expressional signatures using the first approach
+- the first approach is first clustering genes by correlation of their expressional profiles
+- Doesn't make sense to cluster based on the absolute value of the correlation 
+- Should only cluster based on the directionality and the magnitude of the correlation
+- Use elbow plot or silhouette plot to determine the adequate number of clusters
+- This clustering method is only used as a means of reducing the covariance that is likely to be seen between many of the genes
+- So the resulting correlation matrix made up using the z scores of the metagenes should optimally show as little covariance as possible 
+- Should use this as the optimisation metric:
+
+Optimisation measure: 
+- Using the correlation matrix of the complete gene expression dataset 
+- Create the distance matrix (Pearson based)
+- Create n= 2 gene-based clusters (based on directionality and magnitude of the correlation values) using hierarchical clustering (specifying n = 2)
+- Group the original RNAseq data on the defined clusters aggregating the RNAseq counts using the mean for each observation (sample)
+- for each cluster calculate the z-score associated with every sample based the mean count that was calculated in the previous step
+- Replace mean value with the z-score for each cluster and observation
+- Calculate the squared correlation coefficient between the two clusters based on the 2 z-scores present for each observation
+- Save the correlation coefficient
+
+- Reinitialise the initial correlation matrix based on the original count data
+- Create n= 3 gene-based clusters (based on directionality and magnitude of the correlation values) using hierarchical clustering (specifying n = 3)
+- Group the original RNAseq data on the defined clusters aggregating the RNAseq counts using the mean for each observation (sample)
+- for each cluster calculate the z-score associated with every sample based the mean count that was calculated in the previous step
+- Replace mean value with the z-score for each cluster and observation
+- Calculate the cluster-based correlation matrix for the 3 clusters based on the 3 z-scores present for each observation
+- Calculate the combined cluster covariance score: sum of each squared pairwise correlation coefficients (cluster1-cluster2 correlation coef squared + cluster1-cluster3 correlation coef squared + cluster3-cluster2 correlation coef squared) divided by the number of possible cluster pairs i.e the possible combinations made up of 2 clusters (in this case 3)
+- Save the combined cluster covariance score associated with 3 clusters
+
+- Reinitialise the initial correlation matrix based on the original count data and repeat the above increasing n by one until n = the number of individual genes in the original dataset
+- Refer back to the cluster covariance scores and implement the number of clusters associated with the lowest cluster covariance score 
+- If more than one method resulted in the same score, implement the one with the fewest clusters
+
+- The method described above might result in a similar to the result that would be obtained using a PCA 
+- But they are likely to be different to some degree and offer different insights
+- Will perform both PCA based dim reductioin and the method described above
+
+
+27/03/24
+
+- Writting the script for the cluster/dim reduction using the correlation method
+ 
+- Might need to do somee more data exploration before initialising the signature script
+- Would to know if the metastatic samples impact the RNAseq values in a significant way a
+- Would help me know if i should include them or not in the analysis 
+- Also need to get a sense of the number of samples in each group which includes both the tissue type (cancer) and the sample type (metastatic, primary ...) 
+- Visualising with MDS based on both of these would also help identify potential patterns
