@@ -40,7 +40,8 @@ extract_element <- function(strings, index) {
 COLLECTION Load the data
 
 ```{r}
-original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_RSEM_Hugo_norm_count.csv")
+# Using the TCGA PanCan RSEM Expected Counts
+original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 order_data <- original[,order(colnames(original))]
 
 # Metadata
