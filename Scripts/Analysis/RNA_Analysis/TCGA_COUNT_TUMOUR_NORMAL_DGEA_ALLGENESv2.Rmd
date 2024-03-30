@@ -19,6 +19,9 @@ library(edgeR)
 library(limma)
 library(EnhancedVolcano)
 library(ggrepel)
+library(data.table)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
 ```
 
 PLOT LOCATION FOR DGE PLOTS
@@ -37,34 +40,43 @@ extract_element <- function(strings, index) {
 }
 ```
 
-COLLECTION Load the data
+
+1. COLLECTION 
+
+1.1. Load the data
 
 ```{r}
 # Using the TCGA PanCan RSEM Expected Counts
 original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 order_data <- original[,order(colnames(original))]
+# order_data <- original[0:5000,0:5000]
 
-# Metadata
+# Cancer/Tissue Metadata
 tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
- abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
- meta <- left_join(tss_meta %>% 
-                     select(c("TSS.Code", "Study.Name")) %>% 
-                     distinct() %>% 
-                     sapply(trimws) %>% 
-                     as.data.frame(),
-                   abbrv_meta %>%
-                     select(c("Study.Abbreviation", "Study.Name")) %>% 
-                     distinct()%>% 
-                     sapply(trimws) %>% 
-                     as.data.frame(), 
-                   by = "Study.Name")
+abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
+meta <- left_join(tss_meta %>%
+                    dplyr::select(c("TSS.Code", "Study.Name")) %>%
+                    distinct() %>%
+                    sapply(trimws) %>%
+                    as.data.frame(),
+                  abbrv_meta %>%
+                     dplyr::select(c("Study.Abbreviation", "Study.Name")) %>%
+                    distinct()%>%
+                    sapply(trimws) %>%
+                    as.data.frame(),
+                  by = "Study.Name")
+
+# Gene Metadata
+gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
 
 # SOI genes
 soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
 ```
 
-CLEANING & PREPROCESSING Re-transform the data from the y = Log2(x+1) values to the actual counts using x = 2^y^−1.
+2. CLEANING & PREPROCESSING 
+
+2.1. Re-transform the data from the y = Log2(x+1) values to the actual counts using x = 2^y^−1.
 
 ```{r}
 transformed_data <- order_data
@@ -79,28 +91,53 @@ count_data <- transformed_data %>%
   mutate_at(vars(-1), untransform)
 ```
 
-Edit the samples (column names) into ids so as to be able to identify the participant and the cancer type
+2.2. Convert the Gene ids into gene names
+```{r}
+counts_data <- right_join(gene_ids %>% 
+                    dplyr::select(c("id", "gene")) %>% 
+                    sapply(trimws) %>% 
+                    as.data.frame(),
+                  count_data,
+                  by = c("id" = "sample")) %>% 
+  dplyr::select(-"id")
+
+counts_data <- counts_data %>%
+  mutate(gene = trimws(gene))
+  
+```
+
+2.3. Edit the samples (column names) into ids so as to be able to identify the participant and the cancer type
 
 ```{r}
-ids <- colnames(count_data)[-1]
+ids <- colnames(counts_data)[-1]
 participants <- extract_element(ids, 3)
 condition <- extract_element(ids, 4)
 tissue_type <- extract_element(ids, 2)
 
-column_names <- c("Samples" ,  paste(tissue_type, participants, condition, sep = "."))
-colnames(count_data) <- column_names
+column_names <- c("Genes" ,  paste(tissue_type, participants, condition, sep = "."))
+colnames(counts_data) <- column_names
 ```
+
+Convert data to a datatable for faster processing during the grouping of the duplicate genes
+```{r}
+
+setDT(counts_data)  # This modifies counts_data in place to a data.table
+grouped <- counts_data[, lapply(.SD, function(x) if (length(x) > 1) median(x, na.rm = TRUE) else x), by = Genes, .SDcols = -"Genes"]
+
+```
+
 
 Edit ids so as to be able to identify the condition
 
 ```{r}
 # Reset the row names to the Gene names
-data <- count_data %>%
-  column_to_rownames(var = "Samples") 
+grouped_data <- as.data.frame(grouped)
+data <- distinct(grouped_data) %>% 
+  column_to_rownames(var = "Genes") 
 
 # Remove the unwanted sample types from the samples based on the code
 codes_to_use <- c("01","02","03","04","05","08","09","10","11","12","14","40")
-samples_to_use <- data %>%  select(ends_with(codes_to_use))
+samples_to_use <- data %>%  dplyr::select(ends_with(codes_to_use))
 
 # Map the codes by health status (cancer <= 9 < Normal)
 mapped_data <- samples_to_use
@@ -157,7 +194,7 @@ DGE MODELLING Define the matrix, create its DGE object & get the normalisation l
 
 d0 <- DGEList(mapped_matrix, group = extract_element(colnames(mapped_matrix), 3))
 print(paste("The size of the counts dataframe has been reduced from", 
-            dim(count_data)[1], "x", dim(count_data)[2]," to ", 
+            dim(counts_data)[1], "x", dim(counts_data)[2]," to ", 
             dim(d0)[1], "x", dim(d0)[2]))
 
 # Calculate the normalisation factor 
@@ -286,7 +323,7 @@ plotlist <- list()
 
 for (type in distinct_tissue_types) {
   type_cols <- grep(paste0("^", type), colnames(subset_mapped), value = TRUE)
-  specific_data <- subset_mapped %>% select(all_of(type_cols))
+  specific_data <- subset_mapped %>% dplyr::select(all_of(type_cols))
 
   col_number <- ncol(specific_data)
   if (col_number < 2) {
@@ -328,7 +365,7 @@ for (type in distinct_tissue_types) {
   specific_smoothed <- eBayes(specific_fit)
 
   specific_express_table <- topTable(specific_smoothed, coef="conditionC", sort.by = "P", n = Inf) %>% 
-    select(c("logFC", "AveExpr", "P.Value", "adj.P.Val", "B"))
+    dplyr::select(c("logFC", "AveExpr", "P.Value", "adj.P.Val", "B"))
   specific_express_table$Tissue <- type
 
   # Extract row names
@@ -337,7 +374,7 @@ for (type in distinct_tissue_types) {
   # Add row names as a new column to the data frame and move it to the first position
   specific_express_table <- specific_express_table %>%
     mutate(Genes = row_names) %>%
-    select(Genes, everything())
+    dplyr::select(Genes, everything())
 
   # Add the current DGE table to the full table
   full_expression_table <- rbind(full_expression_table, specific_express_table)

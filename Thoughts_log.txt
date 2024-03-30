@@ -1140,3 +1140,13 @@ Optimisation measure:
 - Would help me know if i should include them or not in the analysis 
 - Also need to get a sense of the number of samples in each group which includes both the tissue type (cancer) and the sample type (metastatic, primary ...) 
 - Visualising with MDS based on both of these would also help identify potential patterns
+
+
+28/03/24
+
+- Creating the exploration script for the raw counts 
+- Initialised the script for the Signature creation using the hierarchal clustering method
+
+- No need to use the PCA method or can do it but should not be prioritised as the interpretation of the loadings may be meaningless
+-
+- Need to re-run the DGEA for the full genes due to an issue that came up with the untransformation of the data
