@@ -16,6 +16,8 @@ library(dplyr)
 library(plyr)
 library(knitr)
 library(tidyverse)
+library(edgeR)
+library(limma)
 ```
 
 Load other options
@@ -34,7 +36,7 @@ extract_element <- function(strings, index) {
 }
 
 untransform <- function(x) {#Function to convert the log transformed counts back into original counts
-  return(round((2^x)-1))
+  return(ceiling((2^x)-1))
 }
 ```
 
@@ -52,6 +54,9 @@ sampletype <- read.csv("Data/Other/TCGA_meta/sampleType.tsv", sep = "\t", colCla
 
 # Set of Interest
 soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+
+# Gene Metadata
+gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
 
 ```
 
@@ -83,6 +88,21 @@ meta <- left_join(tss_meta %>%
 # Genes of Interest
 goi <-soi[,2]
 ```
+CONVERT THE GENE IDS INTO GENE NAMES
+
+```{r}
+counts_data <- right_join(gene_ids %>% 
+                    dplyr::select(c("id", "gene")) %>% 
+                    sapply(trimws) %>% 
+                    as.data.frame(),
+                  count_data_ordered,
+                  by = c("id" = "sample")) %>% 
+  dplyr::select(-"id")
+
+count_data <- counts_data %>%
+  mutate(gene = trimws(gene))
+  
+```
 
 2. Edit the samples (column names) into ids so as to be able to identify the participant and the sample and cancer type
 
@@ -105,6 +125,14 @@ data <- count_data_ordered %>%
 # Remove the unwanted sample types from the samples based on the code
 codes_to_use <- c("01","02","03","04","05","08","09")
 samples_to_use <- data %>%  dplyr::select(ends_with(codes_to_use))
+```
+
+Convert data to a data.table for faster processing during the grouping of the duplicate genes
+```{r}
+setDT(samples_to_use)  
+
+# Combine duplicate genes together using the median of the expression
+grouped <- samples_to_use[, lapply(.SD, function(x) if (length(x) > 1) ceiling(median(x, na.rm = TRUE)) else x), by = Genes, .SDcols = -"Genes"]
 ```
 
 2.3. Assign the TSS abbreviation to the column name in place of the TSS code
