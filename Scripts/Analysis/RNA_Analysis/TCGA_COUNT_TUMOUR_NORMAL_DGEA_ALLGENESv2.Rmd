@@ -5,11 +5,65 @@ date: "2024-03-18"
 Note: This script is for the anlysis of the Differential Gene expression between the cancerous and non-cancerous TCGA Expected count data using all genes.
 ---
 
+CONTENTS:
+
+1\. SETUP
+
+1.1. ROOT DIRECTORY SETTINGS
+
+1.2. PACKAGES
+
+1.3. LOCATION SETTINGS
+
+1.4. RESUABLE FUNCTIONS
+
+2\. DATA COLLECTION
+
+2.1. LOADING THE DATA
+
+3\. CLEANING AND PRE-PROCESSING
+
+3.1. RE-TRANSFORMATION OF THE COUNT DATA
+
+3.2. GENE ID TO NAME CONVERSION
+
+3.3. SAMPLE TO ID CONVERSION
+
+3.4. GENE & SAMPLE TRIMMING
+
+4\. PROCESSING
+
+4.1. DGE MODELLING
+
+4.2. CREATE THE SAMPLE FACTORS
+
+4.3. TRIM LOW COUNT GENES
+
+4.4. PLOT THE MDS OF THE FACTORS
+
+4.5. CREATE THE LINEAR MODEL
+
+5\. COMPLETE RESULTS
+
+5.1. PRODUCE THE RESULTS TABLE
+
+5.2. CREATE THE VOLCANO PLOT OF THE MAIN RESULTS
+
+6\. TISSUE-SPECIFIC ANALYSIS
+
+6.1. CLEANING, PRE-PROCESSING, PROCESSING AND RESULTS
+
+6.2. VOLCANO PLOTS
+
+1.  SETUP
+
+1.1. SETUP
+
 ```{r setup, include=FALSE}
 knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 ```
 
-Load the packages
+1.2. LOAD THE PACKAGES
 
 ```{r}
 library(dplyr)
@@ -24,13 +78,13 @@ library(AnnotationDbi)
 library(org.Hs.eg.db)
 ```
 
-PLOT LOCATION FOR DGE PLOTS
+1.3. LOCATION FOR DGE PLOTS
 
 ```{r}
 loc <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/DGEA_plots/"
 ```
 
-REUSABLE FUNCTIONS
+1.4. REUSABLE FUNCTIONS
 
 ```{r}
 extract_element <- function(strings, index) {
@@ -40,10 +94,9 @@ extract_element <- function(strings, index) {
 }
 ```
 
+2.  COLLECTION
 
-1. COLLECTION 
-
-1.1. Load the data
+2.1. LOAD THE DATA
 
 ```{r}
 # Using the TCGA PanCan RSEM Expected Counts
@@ -74,9 +127,9 @@ soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
 ```
 
-2. CLEANING & PREPROCESSING 
+3.  CLEANING AND PRE-PROCESSING
 
-2.1. Re-transform the data from the y = Log2(x+1) values to the actual counts using x = 2^y^−1.
+3.1. RE-TRANSFORM THE DATA FROM THE y = Log2(x+1) VALUES TO THE COUNTS USING THE FOLLOWING FORUMLA: x = 2^y^−1.
 
 ```{r}
 transformed_data <- order_data
@@ -91,7 +144,8 @@ count_data <- transformed_data %>%
   mutate_at(vars(-1), untransform)
 ```
 
-2.2. Convert the Gene ids into gene names
+3.2. CONVERT THE GENE IDS INTO GENE NAMES
+
 ```{r}
 counts_data <- right_join(gene_ids %>% 
                     dplyr::select(c("id", "gene")) %>% 
@@ -106,7 +160,7 @@ counts_data <- counts_data %>%
   
 ```
 
-2.3. Edit the samples (column names) into ids so as to be able to identify the participant and the cancer type
+3.3. EDIT THE SAMPLES (COLUMN NAMES) INTO IDS SO AS TO BE ABLE TO IDENTIFY THE PARTICIPANT, CONDITION AND CANCER TYPE
 
 ```{r}
 ids <- colnames(counts_data)[-1]
@@ -116,20 +170,13 @@ tissue_type <- extract_element(ids, 2)
 
 column_names <- c("Genes" ,  paste(tissue_type, participants, condition, sep = "."))
 colnames(counts_data) <- column_names
-```
 
-Convert data to a datatable for faster processing during the grouping of the duplicate genes
-```{r}
+# Convert data to a datatable for faster processing during the grouping of the duplicate genes
 
 setDT(counts_data)  # This modifies counts_data in place to a data.table
 grouped <- counts_data[, lapply(.SD, function(x) if (length(x) > 1) median(x, na.rm = TRUE) else x), by = Genes, .SDcols = -"Genes"]
 
-```
-
-
-Edit ids so as to be able to identify the condition
-
-```{r}
+# Edit ids so as to be able to identify the condition
 # Reset the row names to the Gene names
 grouped_data <- as.data.frame(grouped)
 data <- distinct(grouped_data) %>% 
@@ -152,7 +199,7 @@ column_names_prefixes <- paste0(abbrvs, substr(new_column_names, 3, nchar(new_co
 colnames(mapped_data) <- column_names_prefixes
 ```
 
-Removal of undesirable ids/samples; those that lack expression counts and those that are not part of a healthy/cancerous pair.
+3.4. REMOVAL OF THE UNDESIRABLE GENE & SAMPLES: GENES THAT LACK EXPRESSION COUNTS AND SAMPLES THAT ARE NOT PART OF A HEALTHY/CANCEROUS PAIR.
 
 ```{r}
 # Remove samples (cols) with 0 values throughout
@@ -186,7 +233,9 @@ subset_mapped <- mapped_data_complete[, selected_columns]
 
 ```
 
-DGE MODELLING Define the matrix, create its DGE object & get the normalisation library factors
+4.  PROCESSING
+
+4.1. DGE MODELLING: DEFINE THE MATRIX, CREATE ITS DGE OBJECT AND GET THE NORMALISATION FACTORS
 
 ```{r}
 # convert df to matrix 
@@ -201,7 +250,9 @@ print(paste("The size of the counts dataframe has been reduced from",
 d0 <- calcNormFactors(d0, method = "TMM")
 ```
 
-Create the factors for the data. IMPORTANT: The order of the condition factor will determine how the logFCs are calculated, with the first level representing the reference (denominator) which in this case should be the healthy condition.
+4.2. CREATE THE SAMPLE FACTORS
+
+IMPORTANT: The order of the condition factor will determine how the logFCs are calculated, with the first level representing the reference (denominator) which in this case should be the healthy condition.
 
 ```{r}
 participants <- extract_element(colnames(mapped_matrix), 2)
@@ -213,7 +264,7 @@ tissue_type <- factor(tissue_type)
 condition <- factor(condition, levels=c("N","C"))
 ```
 
-Trim low count genes
+4.3. TRIM LOW COUNT GENES
 
 ```{r}
 # Remove low count genes, those with a count below 10
@@ -223,6 +274,8 @@ d0<-d0[keep,,keep.lib.size=FALSE]
 print(paste("The size of the dataframe is now", 
             dim(d0)[1], "x", dim(d0)[2]))
 ```
+
+4.4. PLOT THE MDS OF THE FACTORS
 
 Plot the 2 dimensional graph of the main logFC components in terms of the condition
 
@@ -236,7 +289,7 @@ Plot the 2 dimensional graph of the main logFC components in terms of the tissue
 plotMDS(d0, pch = 3, col = tissue_type)
 ```
 
-Create & fit a linear model to the data.
+4.5. CREATE THE LINEAR MODEL
 
 ```{r}
 # Set the unique participants and the condition as the main effects.
@@ -254,6 +307,10 @@ fit <- lmFit(y, mm)
 fit2 <- eBayes(fit)
 ```
 
+5.  COMPLETE RESULTS
+
+5.1. PRODUCE THE RESULTS TABLE
+
 Get the table of all the genes and their fold changes and significance
 
 ```{r}
@@ -262,13 +319,15 @@ express_table <- topTable(fit2, coef="conditionC", sort.by = "P", n = Inf)
 write.csv(express_table, "DGEA_ALLGENES_ALLTISSUES_expression_table.csv", row.names=TRUE)
 ```
 
+5.2. CREATE THE VOLCANO PLOT OF THE MAIN RESULTS
+
 Plot the volcano plot highlighting the GOIs
 
 ```{r}
 
 keyvals1 <- ifelse(
     rownames(express_table) %in% soi_genes, 'red2',
-        '#8B8B83')
+        '#8B8B83') 
   keyvals1[is.na(keyvals1)] <- 'black'
   names(keyvals1)[keyvals1 == 'red2'] <- 'Gene of Interest'
   names(keyvals1)[keyvals1 == '#8B8B83'] <- 'Other'
@@ -309,7 +368,9 @@ dev.off()
 
 ```
 
-II. PARSED BY TISSUE/CANCER TYPE
+6.  TISSUE-SPECIFIC ANALYSIS
+
+6.1. CLEANING, PRE-PROCESSING, PROCESSING AND RESULTS OF THE TISSUE SPECIFIC ANALYSIS
 
 Loop over the distinct tissue/cancer types and perform the DGE
 
@@ -433,6 +494,8 @@ Interpretation:
 ```{r}
 write.csv(full_expression_table, "DGEA_ALLGENES_BYTISSUE_XPRSS_TBL.csv", row.names=TRUE)
 ```
+
+6.2 VOLCANO PLOTS
 
 Create the volcano plots for the group of tissues that are of most interest
 

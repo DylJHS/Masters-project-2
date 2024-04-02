@@ -1128,17 +1128,17 @@ Optimisation measure:
 
 - The method described above might result in a similar to the result that would be obtained using a PCA 
 - But they are likely to be different to some degree and offer different insights
-- Will perform both PCA based dim reductioin and the method described above
+- Will perform both PCA based dim reduction and the method described above
 
 
 27/03/24
 
-- Writting the script for the cluster/dim reduction using the correlation method
+- Writing the script for the cluster/dim reduction using the correlation method
  
-- Might need to do somee more data exploration before initialising the signature script
+- Might need to do some more data exploration before initialising the signature script
 - Would to know if the metastatic samples impact the RNAseq values in a significant way a
-- Would help me know if i should include them or not in the analysis 
-- Also need to get a sense of the number of samples in each group which includes both the tissue type (cancer) and the sample type (metastatic, primary ...) 
+- Would help me to know if i should include them or not in the analysis 
+- Also need to get a sense of the number of samples in each group which includes both the tissue type (cancer type) and the sample type (metastatic, primary ...) 
 - Visualising with MDS based on both of these would also help identify potential patterns
 
 
@@ -1148,5 +1148,18 @@ Optimisation measure:
 - Initialised the script for the Signature creation using the hierarchal clustering method
 
 - No need to use the PCA method or can do it but should not be prioritised as the interpretation of the loadings may be meaningless
--
-- Need to re-run the DGEA for the full genes due to an issue that came up with the untransformation of the data
+- Need to re-run the DGEA for the full genes due to an issue that came up with the un-transformation of the data
+
+
+29/03/24
+
+- Used the wrong count data for the DGEA used normalised count data
+- Need to repeat the Analysis using the Expected Counts from Xena
+ 
+- For the clustering analysis will need to normalise the counts for library size and then log2 transform them before applying the clustering scaling 
+ 
+- The Script needs to be updated somewhat due to:
+    - The Genes being in the form of ENSMBL ids and not the gene names
+(The above may require the use of the same id to name translation across the STRING as well as DGEA scripts for consistency and reliability)
+- The dataset showing duplicate genes which need to be coerced using the median
+(The above is taking a lot longer than expected, might need to use the HPC to deal with it later on)
