@@ -18,6 +18,7 @@ library(knitr)
 library(tidyverse)
 library(edgeR)
 library(limma)
+library(data.table)
 ```
 
 Load other options
@@ -45,7 +46,7 @@ Load the datasets
 ```{r}
 
 # RNAseq count data
-# count_data <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 
 # Metadata
 tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
@@ -61,14 +62,14 @@ gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.tx
 ```
 
 ```{r}
-transformed_data <- count_data
+transformed_data <- original
 rownames(transformed_data) <- NULL
 
 real_count_data <- transformed_data %>%
   mutate_at(vars(-1), untransform)
 ```
 
-Organise the data
+Format the data
 
 ```{r}
 count_data_ordered <- real_count_data[,order(colnames(real_count_data))]
@@ -108,7 +109,7 @@ count_data <- counts_data %>%
 
 2.1. extract the different elements from the sample names
 ```{r}
-ids <- colnames(count_data_ordered)[-1]
+ids <- colnames(count_data)[-1]
 participants <- extract_element(ids, 3)
 condition <- extract_element(ids, 4)
 tissue_type <- extract_element(ids, 2)
@@ -117,9 +118,20 @@ tissue_type <- extract_element(ids, 2)
 2.2. Reform the column names using the extracted elements and reset the index as the Genes
 ```{r}
 column_names <- c("Genes" ,  paste(tissue_type, participants, condition, sep = "."))
-colnames(count_data_ordered) <- column_names
+colnames(count_data) <- column_names
+```
 
-data <- count_data_ordered %>%
+Convert data to a data.table for faster processing during the grouping of the duplicate genes
+```{r}
+setDT(count_data)  
+
+# Combine duplicate genes together using the median of the expression
+grouped <- count_data[, lapply(.SD, function(x) if (length(x) > 1) ceiling(median(x, na.rm = TRUE)) else x), by = Genes, .SDcols = -"Genes"]
+```
+
+
+```{r}
+data <- grouped %>%
   column_to_rownames(var = "Genes")
 
 # Remove the unwanted sample types from the samples based on the code
@@ -127,13 +139,6 @@ codes_to_use <- c("01","02","03","04","05","08","09")
 samples_to_use <- data %>%  dplyr::select(ends_with(codes_to_use))
 ```
 
-Convert data to a data.table for faster processing during the grouping of the duplicate genes
-```{r}
-setDT(samples_to_use)  
-
-# Combine duplicate genes together using the median of the expression
-grouped <- samples_to_use[, lapply(.SD, function(x) if (length(x) > 1) ceiling(median(x, na.rm = TRUE)) else x), by = Genes, .SDcols = -"Genes"]
-```
 
 2.3. Assign the TSS abbreviation to the column name in place of the TSS code
 ```{r}
@@ -154,7 +159,7 @@ colnames(samples_to_use) <- column_names_suffxes
 ```
 
 
-3.1. Create the tissue & sample-based subset 
+3.1. Create the tissue & sample interactions 
 ```{r}
 
 sampled_data <- as.data.frame(colnames(samples_to_use)) %>% 
@@ -171,3 +176,59 @@ less_than10 <- sampled_data %>%
   filter(sampled_data$freq < 10) 
 ```
 
+
+4.1. DGE MODELLING: DEFINE THE MATRIX, GET THE NORMALISATION FACTORS AND SCALE THE DATA 
+
+```{r}
+# convert df to matrix 
+mapped_matrix <- samples_to_use %>% as.matrix()
+```
+
+
+```{r}
+# Calculate the normalisation factor 
+d0 <- calcNormFactors(mapped_matrix, method = "TMM")
+```
+
+Scale Gene counts
+```{r}
+#Divide the samples by their corresponding normalisation factors
+scaled_data <- sweep(samples_to_use,2,d0,FUN="/")
+scaled_data <- ceiling(scaled_data) #round up
+```
+
+```{r}
+# remove 0 genes and samples
+unzero_d <- scaled_data[rowSums(scaled_data[])>0,]
+cols_zeros <- which(apply(unzero_d, 2, function(x) all(x == 0)))
+if (length(cols_zeros) > 0) {
+  reduced_scaled <- unzero_d[, -cols_zeros]
+} else {
+  reduced_scaled <- unzero_d
+}
+```
+
+
+5. MDS
+
+```{r}
+#transpose the data 
+t_scaled_data <- t(reduced_scaled)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+participants <- extract_element(colnames(scaled_data), 2)
+tissue_type <- extract_element(colnames(scaled_data), 1)
+sample_type <- extract_element(colnames(scaled_data), 3)
+
+participants <- factor(participants)
+tissue_type <- factor(tissue_type)
+sample_type <- factor(sample_type)

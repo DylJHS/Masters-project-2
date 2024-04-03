@@ -1163,3 +1163,18 @@ Optimisation measure:
 (The above may require the use of the same id to name translation across the STRING as well as DGEA scripts for consistency and reliability)
 - The dataset showing duplicate genes which need to be coerced using the median
 (The above is taking a lot longer than expected, might need to use the HPC to deal with it later on)
+
+
+02/04/24
+
+
+- Continuing with the data exploration that will help with the clustering
+
+- Created the table of contents and the section titles for the DGEA script
+- Still need to include the interpretation sections
+
+- Editted the Untransform() function in the DGEA and explore script 
+- The function had the right formula but was returning a decimal whereas counts should be integers
+
+- Trying to apply MDS (PCoA) to the full cancer data (after removal of the normal data) this is to get a sense of the effect of the different variables such as the sample type and the tissue type and the combine tissue-sample type
+- Also helps determine the number of samples needed for the correct clustering
