@@ -76,12 +76,12 @@ count_data_ordered <- real_count_data[,order(colnames(real_count_data))]
 
 # Combine the metadata
 meta <- left_join(tss_meta %>% 
-                     select(c("TSS.Code", "Study.Name")) %>% 
+                     dplyr::select(c("TSS.Code", "Study.Name")) %>% 
                      distinct() %>% 
                      sapply(trimws) %>% 
                      as.data.frame(),
                    abbrv_meta %>%
-                     select(c("Study.Abbreviation", "Study.Name")) %>% 
+                     dplyr::select(c("Study.Abbreviation", "Study.Name")) %>% 
                      distinct()%>% 
                      sapply(trimws) %>% 
                      as.data.frame(), 
@@ -89,6 +89,7 @@ meta <- left_join(tss_meta %>%
 # Genes of Interest
 goi <-soi[,2]
 ```
+
 CONVERT THE GENE IDS INTO GENE NAMES
 
 ```{r}
@@ -105,9 +106,10 @@ count_data <- counts_data %>%
   
 ```
 
-2. Edit the samples (column names) into ids so as to be able to identify the participant and the sample and cancer type
+2.  Edit the samples (column names) into ids so as to be able to identify the participant and the sample and cancer type
 
 2.1. extract the different elements from the sample names
+
 ```{r}
 ids <- colnames(count_data)[-1]
 participants <- extract_element(ids, 3)
@@ -116,19 +118,20 @@ tissue_type <- extract_element(ids, 2)
 ```
 
 2.2. Reform the column names using the extracted elements and reset the index as the Genes
+
 ```{r}
 column_names <- c("Genes" ,  paste(tissue_type, participants, condition, sep = "."))
 colnames(count_data) <- column_names
 ```
 
 Convert data to a data.table for faster processing during the grouping of the duplicate genes
+
 ```{r}
 setDT(count_data)  
 
 # Combine duplicate genes together using the median of the expression
 grouped <- count_data[, lapply(.SD, function(x) if (length(x) > 1) ceiling(median(x, na.rm = TRUE)) else x), by = Genes, .SDcols = -"Genes"]
 ```
-
 
 ```{r}
 data <- grouped %>%
@@ -139,8 +142,8 @@ codes_to_use <- c("01","02","03","04","05","08","09")
 samples_to_use <- data %>%  dplyr::select(ends_with(codes_to_use))
 ```
 
-
 2.3. Assign the TSS abbreviation to the column name in place of the TSS code
+
 ```{r}
 column_names <- colnames(samples_to_use)
 prefixes <- substr(column_names,1,2)
@@ -150,6 +153,7 @@ colnames(samples_to_use) <- column_names_prefixes
 ```
 
 2.4. Assign the sample type abbreviation to the column name in place of the sample type code
+
 ```{r}
 new_column_names <- colnames(samples_to_use)
 suffixes <- substr(new_column_names, nchar(new_column_names) - 1, nchar(new_column_names))
@@ -158,32 +162,31 @@ column_names_suffxes <- paste0(substr(new_column_names, 1, nchar(new_column_name
 colnames(samples_to_use) <- column_names_suffxes
 ```
 
+3.1. Create the tissue & sample interactions
 
-3.1. Create the tissue & sample interactions 
 ```{r}
 
 sampled_data <- as.data.frame(colnames(samples_to_use)) %>% 
   group_by(TSS := extract_element(colnames(samples_to_use), 1),
            ST := extract_element(colnames(samples_to_use), 3)) %>% 
-  select(TSS, ST ) %>% 
+  dplyr::select(TSS, ST ) %>% 
   count()
   
 ```
 
-3.2. Find the groups that have less than 10 samples 
+3.2. Find the groups that have less than 10 samples
+
 ```{r}
 less_than10 <- sampled_data %>% 
   filter(sampled_data$freq < 10) 
 ```
 
-
-4.1. DGE MODELLING: DEFINE THE MATRIX, GET THE NORMALISATION FACTORS AND SCALE THE DATA 
+4.1. DGE MODELLING: DEFINE THE MATRIX, GET THE NORMALISATION FACTORS AND SCALE THE DATA
 
 ```{r}
 # convert df to matrix 
 mapped_matrix <- samples_to_use %>% as.matrix()
 ```
-
 
 ```{r}
 # Calculate the normalisation factor 
@@ -191,6 +194,7 @@ d0 <- calcNormFactors(mapped_matrix, method = "TMM")
 ```
 
 Scale Gene counts
+
 ```{r}
 #Divide the samples by their corresponding normalisation factors
 scaled_data <- sweep(samples_to_use,2,d0,FUN="/")
@@ -208,8 +212,7 @@ if (length(cols_zeros) > 0) {
 }
 ```
 
-
-5. MDS
+5.  MDS
 
 ```{r}
 #transpose the data 
@@ -221,14 +224,14 @@ t_scaled_data <- t(reduced_scaled)
 
 
 
-
-
-
 ```{r}
-participants <- extract_element(colnames(scaled_data), 2)
-tissue_type <- extract_element(colnames(scaled_data), 1)
+participants <- extract_element(colnames(scaled_data), 2) 
+tissue_type <- extract_element(colnames(scaled_data), 1) 
 sample_type <- extract_element(colnames(scaled_data), 3)
 
-participants <- factor(participants)
-tissue_type <- factor(tissue_type)
+participants <- factor(participants) 
+tissue_type <- factor(tissue_type) 
 sample_type <- factor(sample_type)
+```
+
+
