@@ -1042,16 +1042,15 @@ Meeting with Stefan:
 - Try to repeat the use of the cancer/tissue type as a main effect but use the abbrvs instead of the TSS codes which may be introducing noise seeing as there are so many of them. 
 - Looking through the list of genes with the highest expression is showing a variety of genes (CENPA, DNMT3B, and other kinesin/microtubule coding genes)
 
-- Would be interesting to perform the complete analysis once it's done using a mutlitude of parameters 
-- For the STRING interaction score would be nice to use: 0.95, 0.80 and 0.65 for a wider ragne of potential targets
+- Would be interesting to perform the complete analysis once it's done using a multitude of parameters 
+- For the STRING interaction score would be nice to use: 0.95, 0.80 and 0.65 for a wider range of potential targets
 - would come once the entire pipeline has been implemented though
 
 - Tried to include the tissue type in the model for the DGE
 - Did not amount to much 
 - With the following Warning: Partial NA coefficients for 327 probe(s)
-> 
-- Need to start implementing the expression based signatures using the complete RNAseq data from the TCGA set
 
+- Need to start implementing the expression based signatures using the complete RNAseq data from the TCGA set
  
 
 22/03/24
@@ -1178,3 +1177,52 @@ Optimisation measure:
 
 - Trying to apply MDS (PCoA) to the full cancer data (after removal of the normal data) this is to get a sense of the effect of the different variables such as the sample type and the tissue type and the combine tissue-sample type
 - Also helps determine the number of samples needed for the correct clustering
+
+
+03/04/24
+
+- Configuring the Exploration script to run the MDS on the full cancer data 
+- Want to be able to analyse the datapoints in terms of the Sample Type - Tissue Type interaction 
+ 
+- Configured the exploraiton script to use the scaling factors obtained from the calcnormalisation() function
+- Used sweep() to divide every row (gene) for each column (sample) in the matrix by the same normalisation factor
+- Yielding the library-scaled gene counts
+
+- need to apply the dist() function in such a way for the distances to be calculated between the samples and not the genes 
+- Need to transpose the df first before applying the dist() function 
+- After that i can use MDS on the data and plot in function of the Sample-Tissue type intercation
+
+
+04/04/24
+
+- Lab meeting: Marieke and Lucie presentation update
+- Overexpression of HP1 in flies seems to imbue them with a certain amount of starvation stress resistance but that only appears for pre-treated flies (fed with RU up to a certain point and then RU is removed from the food source
+
+- One-on-One meeting with Aniek and Adi: 
+- Set up a meeting with Marit based on her project on het proteins and how they might be regulated or altered in cancer or specific cancer types
+- Cross reference with the genes that are DE in my set and what she has
+ 
+- Setting up R on the HPC
+- Created my folder in the hpc/shared/prekovic folder
+- Downloaded the R version to use
+- Uploaded my data to the data/Janssen/chromatin_cancer/dhaynessimmons folder in the current_data subfolder
+- Data transfer was interupted, need to check which data was added 
+
+- Need to rewrite the Exploration script into an R script to be able to run with the hpc
+ 
+
+05/04/24
+
+- Checking the data that was uploaded to the umc folder 
+ 
+- the data for the exploration analysis has been loaded onto both my folder within the umc's data/Janssen/chromatin_cancer folder and the hpc/shared/prekovic folder
+
+-in order to run the r scripts on the hpc, need to:
+    - Write the script in R making sure to specify the input and the output (graphs, csv files ...)
+    - load the data and the script into my folder in the hpc/shared/prekovic folder 
+    - Create the R environment in my hpc folder
+    - Install the packages that I need for the scripts
+    - Activate the environment 
+    - write the shell script with the sbatch options embedded at the top of the script
+    - run the sbatch using Slurm commands
+
