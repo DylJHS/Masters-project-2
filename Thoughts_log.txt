@@ -1226,3 +1226,22 @@ Optimisation measure:
     - write the shell script with the sbatch options embedded at the top of the script
     - run the sbatch using Slurm commands
 
+
+
+06/04/24
+
+- Initialising the r_environment in teh hpc/shared/prekovic/dhaynessimmons
+- Installing the commonly used packages in the same folder for use 
+
+
+- Configured VSCode to run on the hpc 
+- Configured the .sh script for the counts_xplr analysis
+- the script is not able to run for something to do with the script itself
+- Will remove the marks at the start and end of the script indicating where the R scrip begins and ends to see if that works
+- The simple script was able to run so think the solution above should work
+
+In order to run the scripts for r: 
+- Need to write the R script
+- Need to write the Shell (.sh) script with the #SBATCH options that suit the script 
+- Need to activate the r_env (not sure if i need ot leave this in the .sh script as well or if runnign it alone before the Shell would work)
+- Submit the batch with sbatch specifying the Shell script 
