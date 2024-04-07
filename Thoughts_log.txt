@@ -1245,3 +1245,16 @@ In order to run the scripts for r:
 - Need to write the Shell (.sh) script with the #SBATCH options that suit the script 
 - Need to activate the r_env (not sure if i need ot leave this in the .sh script as well or if runnign it alone before the Shell would work)
 - Submit the batch with sbatch specifying the Shell script 
+
+
+07/04/24
+
+- Running the script in the hpc seems to be working 
+- Have not figured out the correct duration/mem usage to get it through the entire script yet
+- Using 2:20:00 as the duration and 60GB MEM to see if this works
+ 
+- Rant he most of the script, just waiting on the dist() matrix
+- 
+- As well as the mds 
+- Not sure what form this will take
+- Might need to use a smaller df as a test if the script is not run tonight
