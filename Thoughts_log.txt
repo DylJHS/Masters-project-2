@@ -1258,3 +1258,7 @@ In order to run the scripts for r:
 - As well as the mds 
 - Not sure what form this will take
 - Might need to use a smaller df as a test if the script is not run tonight
+ 
+- I think i forgot to reduce the expression set to only include the genes of interest even in the xplratory analysis
+- Will need to include this in the analysis which will help reduce the dimensionality of the data by a lot and will increase the performance of the anlyses
+- Might not need the hpc in order to build the distance matrix given that the set will be reduced to around 300 genes from the previous 60000

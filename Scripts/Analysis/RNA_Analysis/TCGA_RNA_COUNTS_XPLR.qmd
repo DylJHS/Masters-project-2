@@ -19,6 +19,7 @@ library(tidyverse)
 library(edgeR)
 library(limma)
 library(data.table)
+library(ggpubr)
 ```
 
 Load other options
@@ -47,6 +48,7 @@ Load the datasets
 
 # RNAseq count data
 original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+test <- original[0:5000,0:5000]
 
 # Metadata
 tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
@@ -56,10 +58,13 @@ sampletype <- read.csv("Data/Other/TCGA_meta/sampleType.tsv", sep = "\t", colCla
 # Gene Metadata
 gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
 
+# SOI genes
+soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+soi_genes <-soi[,2]
 ```
 
 ```{r}
-transformed_data <- original
+transformed_data <- test
 rownames(transformed_data) <- NULL
 
 real_count_data <- transformed_data %>%
@@ -158,25 +163,6 @@ column_names_suffxes <- paste0(substr(new_column_names, 1, nchar(new_column_name
 colnames(samples_to_use) <- column_names_suffxes
 ```
 
-3.1. Create the tissue & sample interactions
-
-```{r}
-
-sampled_data <- as.data.frame(colnames(samples_to_use)) %>% 
-  group_by(TSS := extract_element(colnames(samples_to_use), 1),
-           ST := extract_element(colnames(samples_to_use), 3)) %>% 
-  dplyr::select(TSS, ST ) %>% 
-  count()
-  
-```
-
-3.2. Find the groups that have less than 10 samples
-
-```{r}
-less_than10 <- sampled_data %>% 
-  filter(sampled_data$freq < 10) 
-```
-
 4.1. DGE MODELLING: DEFINE THE MATRIX, GET THE NORMALISATION FACTORS AND SCALE THE DATA
 
 ```{r}
@@ -197,40 +183,64 @@ scaled_data <- sweep(samples_to_use,2,d0,FUN="/")
 scaled_data <- ceiling(scaled_data) #round up
 ```
 
+Trim zero Samples
 ```{r}
 # remove 0 genes and samples
 unzero_d <- scaled_data[rowSums(scaled_data[])>0,]
+```
+
+Filter out the zero value genes and the non-SOI genes
+```{r}
 cols_zeros <- which(apply(unzero_d, 2, function(x) all(x == 0)))
 if (length(cols_zeros) > 0) {
   reduced_scaled <- unzero_d[, -cols_zeros]
 } else {
   reduced_scaled <- unzero_d
 }
+
+filtered_scaled <- reduced_scaled[rownames(reduced_scaled) %in% soi_genes, ]
 ```
 
 5.  MDS
 
 ```{r}
 #transpose the data 
-t_scaled_data <- t(reduced_scaled)
+t_scaled_data <- t(filtered_scaled)
 ```
 
 
 ```{r}
-mds <- t_scaled_data %>%
-  dist() %>%          
-  cmdscale()
+dist_matrix <- t_scaled_data %>%
+  dist() 
+```
+
+```{r}
+mds <- cmdscale(dist_matrix)
+```
+
+```{r}
+mds_df <- as.data.frame(mds) %>% 
+  mutate(cancer_type = extract_element(rownames(.), 1),
+         sample_type = extract_element(rownames(t_scaled_data), 3))
 ```
 
 
 ```{r}
-participants <- extract_element(colnames(scaled_data), 2) 
-tissue_type <- extract_element(colnames(scaled_data), 1) 
-sample_type <- extract_element(colnames(scaled_data), 3)
+ggscatter(mds_df, x = "V1", y = "V2", 
+          color = "sample_type",
+          size = 1,
+          repel = TRUE)
 
-participants <- factor(participants) 
-tissue_type <- factor(tissue_type) 
-sample_type <- factor(sample_type)
+```
+
+```{r}
+# participants <- extract_element(colnames(scaled_data), 2) 
+# tissue_type <- extract_element(colnames(scaled_data), 1) 
+# sample_type <- extract_element(colnames(scaled_data), 3)
+# 
+# participants <- factor(participants) 
+# tissue_type <- factor(tissue_type) 
+# sample_type <- factor(sample_type)
 ```
 
 
