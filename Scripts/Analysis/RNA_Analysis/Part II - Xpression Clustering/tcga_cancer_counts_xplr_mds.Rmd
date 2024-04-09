@@ -32,7 +32,7 @@ extract_element <- function(strings, index) {
 
 ```{r}
 # Load the transposed data.
-t_data <- read.csv("Data/RNA_Data/TCGA_Norm/Transposed_scaled_&_reduced_df.csv")
+# t_data <- read.csv("Data/RNA_Data/TCGA_Norm/Transposed_scaled_&_reduced_df.csv")
 test <- t_data[0:5000, 0:5000]
 print(dim(t_data))
 

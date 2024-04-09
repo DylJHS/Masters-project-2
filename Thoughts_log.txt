@@ -24,7 +24,6 @@ Edited the RNA_Analysis to use the same control sets that are used in the charts
 
 06/01/24
 
-
  going to start implementing the changes to the RNA_Analysis to the CNV Analysis
  Changes that will need to be made to the graphs in the script include:
 - Converting the names of the samples/pairings on the x axes
@@ -97,7 +96,6 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Write down the remarks/questions for Stefan (PPI database pull down cutoff, Permutation tests, negative binomial in the RNA-seq data, differential analysis on different genes)
 
 
-
 11/01/24
 
 - Update the graphs in the RNA analysis
@@ -122,7 +120,6 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Writing the script for the presentation
 - Constructing the Slides for the presentation
 - Created a Notes file for the Main Literature References that will be used in my report(s)/presentations
-
 
 
 14/01/24
@@ -156,13 +153,10 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 - Starting the process of figuring out how to renormalise the set-of-interest subset
 
-
 - Starting on the next Part of the Project (part II)
 - Need to cut down the data to the set of interest only while renormalising the data
 
-
 - In terms of the re-normalisation of the subset of genes it may no longer be a good idea. The process of normalising the data would average out some of the characteristics of the genes in the sample which may not be the best in terms of interpretation due to the fact that my hypothesis presumes that the genes in this set are distinct from the rest of the genome. Therefore even an average gene expression in this set could be indicative of something on a wider scale. Also the set is over-expressed when compared to the rest of the genome so lower expressed genes would not appear more like the rest of the genome but would show up as distinct on the lower side. 
-
 
 - Talk with Stefan
 - The iteration testing for the expression data was 'Overkill'
@@ -229,7 +223,6 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 20/01/24
 
-
 - Trying to find ways to extract the relevant clusters from the clusterplot
 
 - Transforming the correlation map into a distance map
@@ -278,7 +271,6 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 - Might be a good idea to remove genes that have NA values across any type of cancer for both the expression and the CNA data
 
- 
 - Might be thinking about this wrong
 - Should i only be using the expression data of the genes of interest
 - and then the CIN data (CNV and such) for the rest of the entire genome
@@ -307,7 +299,6 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - The data that was redownloaded includes RNA & CNV across multiple forms (SNP6, before and after germline removal, raw & norm counts...) 
 - The data also includes the other data that refers to different datatypes (HDR signatures, survival info, phenotypes...) 
 
- 
 - Need to reformat the CNV data for the full genome data. Not sure if i should only use the after germline removal or the before as well. Will default to the post-removal
 
 
@@ -377,7 +368,7 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 
 - Saved the Healthy RNA GTEx samples in multiple files in the GTEx_RNA_Healthy folder in the RNA_Data folder
 - Still need to normalise the samples for within dataset effects (TMM or quantile) 
-- 
+
 - TMM is the likely option 
 - This method would work due to the fact that the Samples are assumed to be from healthy individuals and not differentially expressed
 - Created the usable CSV file for the count data as the DESeq2 only uses count data and not pre-normalised
@@ -385,8 +376,6 @@ And therefore also removing the paired t.test that was in the Analysis previousl
 - Using GPT to translate the python processing script to R seeing as there is no DESeq2 python package
 
 - Might be a good idea to translate the other scripts that were written in python over to R for improved consistency and overall readability
-
-
 
 
 28/01/24
@@ -415,7 +404,6 @@ And therefore also removing the paired t.test that was in the Analysis previousl
  
 - I also need to figure out the GTEx sample labels based on the tissue type that they represent
 - I need to reduce the genes in the GTEx dataset to the same ones that are in the TCGA dataset 
-
 
 
 29/01/24
@@ -458,7 +446,6 @@ Aniek Lecture:
 
 31/01/24
 
-
 - Running the GTEx through the same tests as the TCGA set, shows that the difference between the set of interest and the controls may be present in healthy samples as well
 - Will need to assess the degree of the difference after confirming that there is in fact a difference there
 - Comparing the effect size of the differences between the conditions will likely also be of use
@@ -468,10 +455,8 @@ Aniek Lecture:
 
 - Finishing running the script for the GTEx part I Analysis
 
-
 - Running the Part I analysis on the GTEx data shows that there is a significant difference between the set of interest and the other control sets
 - Need to evaluate if this difference between the differences is significant as well
-
 
 - This can be done by comparing the differences between one of the statistically significant pairings of the GTEx data and one of the statistically significant pairings of the TCGA data
 
@@ -533,7 +518,6 @@ Aniek Lecture:
 - This makes the processing quite slow
 
 
-
 05/02/24
 
 - Configuring the Dataframe Configuration script to be able to handle the TPM TCGA dataset
@@ -541,7 +525,6 @@ Aniek Lecture:
 - The codes for the samples incorporate more than just tissue but also other factors that could be important to filter on
 - Such as Primary tumours vs other types
 - Need to remove the Control Analyte sample from the TCGA TPM Dataset
-
 
 
 06/02/24
@@ -585,7 +568,6 @@ Aniek Lecture:
 07/02/24
 
 - Translating the initial GTEx dataframe creation script to R from python
--
 
 - Running the df creation in R is very slow
 - if implemented it will need to be run on the HPC
@@ -630,12 +612,10 @@ Aniek Lecture:
 - continue with the process until the GTEx subset contains no duplicate genes
 
 
-
 11/02/24
 
 - Finished the Dataset configuration script in python 
 - Created the control sets for both the GTEx and the TCGA sets 
-
 
 
 12/02/24
@@ -822,7 +802,7 @@ Aniek Lecture:
 
 29/02/24
 
-- Need to rerun the script and edit it to take into account the stds for each of the sets
+- Need to rerun the script and edit it to take into account the std for each of the sets
 - Add a cloud around each point in the volcano plot 
 - The cloud will represent the average (mean) std of the difference between conditions for paired samples for each set
  
@@ -1158,21 +1138,19 @@ Optimisation measure:
 - For the clustering analysis will need to normalise the counts for library size and then log2 transform them before applying the clustering scaling 
  
 - The Script needs to be updated somewhat due to:
-    - The Genes being in the form of ENSMBL ids and not the gene names
-(The above may require the use of the same id to name translation across the STRING as well as DGEA scripts for consistency and reliability)
-- The dataset showing duplicate genes which need to be coerced using the median
+	- The Genes being in the form of ENSMBL ids and not the gene names (may require the use of the same id to name translation across the STRING as well as DGEA scripts for consistency and reliability)
+	- The dataset showing duplicate genes which need to be coerced using the median
 (The above is taking a lot longer than expected, might need to use the HPC to deal with it later on)
 
 
 02/04/24
-
 
 - Continuing with the data exploration that will help with the clustering
 
 - Created the table of contents and the section titles for the DGEA script
 - Still need to include the interpretation sections
 
-- Editted the Untransform() function in the DGEA and explore script 
+- Edited the untransform() function in the DGEA and explore script 
 - The function had the right formula but was returning a decimal whereas counts should be integers
 
 - Trying to apply MDS (PCoA) to the full cancer data (after removal of the normal data) this is to get a sense of the effect of the different variables such as the sample type and the tissue type and the combine tissue-sample type
@@ -1184,19 +1162,19 @@ Optimisation measure:
 - Configuring the Exploration script to run the MDS on the full cancer data 
 - Want to be able to analyse the datapoints in terms of the Sample Type - Tissue Type interaction 
  
-- Configured the exploraiton script to use the scaling factors obtained from the calcnormalisation() function
+- Configured the exploration script to use the scaling factors obtained from the calcnormalisation() function
 - Used sweep() to divide every row (gene) for each column (sample) in the matrix by the same normalisation factor
 - Yielding the library-scaled gene counts
 
 - need to apply the dist() function in such a way for the distances to be calculated between the samples and not the genes 
 - Need to transpose the df first before applying the dist() function 
-- After that i can use MDS on the data and plot in function of the Sample-Tissue type intercation
+- After that i can use MDS on the data and plot in function of the Sample-Tissue type interaction
 
 
 04/04/24
 
 - Lab meeting: Marieke and Lucie presentation update
-- Overexpression of HP1 in flies seems to imbue them with a certain amount of starvation stress resistance but that only appears for pre-treated flies (fed with RU up to a certain point and then RU is removed from the food source
+- Over-expression of HP1 in flies seems to imbue them with a certain amount of starvation stress resistance but that only appears for pre-treated flies (fed with RU up to a certain point and then RU is removed from the food source
 
 - One-on-One meeting with Aniek and Adi: 
 - Set up a meeting with Marit based on her project on het proteins and how they might be regulated or altered in cancer or specific cancer types
@@ -1206,7 +1184,7 @@ Optimisation measure:
 - Created my folder in the hpc/shared/prekovic folder
 - Downloaded the R version to use
 - Uploaded my data to the data/Janssen/chromatin_cancer/dhaynessimmons folder in the current_data subfolder
-- Data transfer was interupted, need to check which data was added 
+- Data transfer was interrupted, need to check which data was added 
 
 - Need to rewrite the Exploration script into an R script to be able to run with the hpc
  
@@ -1227,12 +1205,10 @@ Optimisation measure:
     - run the sbatch using Slurm commands
 
 
-
 06/04/24
 
-- Initialising the r_environment in teh hpc/shared/prekovic/dhaynessimmons
+- Initialising the r_environment in the hpc/shared/prekovic/dhaynessimmons
 - Installing the commonly used packages in the same folder for use 
-
 
 - Configured VSCode to run on the hpc 
 - Configured the .sh script for the counts_xplr analysis
@@ -1243,22 +1219,33 @@ Optimisation measure:
 In order to run the scripts for r: 
 - Need to write the R script
 - Need to write the Shell (.sh) script with the #SBATCH options that suit the script 
-- Need to activate the r_env (not sure if i need ot leave this in the .sh script as well or if runnign it alone before the Shell would work)
+- Need to activate the r_env (not sure if i need to leave this in the .sh script as well or if running it alone before the Shell would work)
 - Submit the batch with sbatch specifying the Shell script 
 
 
 07/04/24
 
 - Running the script in the hpc seems to be working 
-- Have not figured out the correct duration/mem usage to get it through the entire script yet
+- Have not figured out the correct duration/memory usage to get it through the entire script yet
 - Using 2:20:00 as the duration and 60GB MEM to see if this works
  
 - Rant he most of the script, just waiting on the dist() matrix
 - 
-- As well as the mds 
+- As well as the MDS 
 - Not sure what form this will take
 - Might need to use a smaller df as a test if the script is not run tonight
  
-- I think i forgot to reduce the expression set to only include the genes of interest even in the xplratory analysis
-- Will need to include this in the analysis which will help reduce the dimensionality of the data by a lot and will increase the performance of the anlyses
+- I think i forgot to reduce the expression set to only include the genes of interest even in the exploratory analysis
+- Will need to include this in the analysis which will help reduce the dimensionality of the data by a lot and will increase the performance of the analyses
 - Might not need the hpc in order to build the distance matrix given that the set will be reduced to around 300 genes from the previous 60000
+
+
+08/04/24
+
+- Downloaded the complete transposed df from the hpc
+- For the Counts_xplr script editing so that the reduction in the genes to the genes of interest only happens once the normalisation factors have been calculated as need to base these off of as many genes as possible
+
+- MDS worked on the test set after the filtering down to the GOIs
+- Editing the script for R and hpc integration
+
+- Remember that the MDS is being run using a distance matrix because running it using only the expression matrix with edgeR assumes that it is being run for a DGE which in this case it is not
