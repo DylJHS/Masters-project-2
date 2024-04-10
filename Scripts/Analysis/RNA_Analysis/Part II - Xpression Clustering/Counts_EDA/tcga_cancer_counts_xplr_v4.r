@@ -8,6 +8,7 @@ library(tidyverse)
 library(edgeR)
 library(limma)
 library(data.table)
+library(ggpubr)
 
 print("Loaded packages \n")
 
@@ -29,7 +30,7 @@ untransform <- function(x) {
 
 # RNAseq count data
 original <- read.csv("tcga_gene_expected_count.csv")
-# test <- original[0:10000,0:15]
+test <- original[0:10000,0:15]
 
 # Metadata
 tss_meta <- read.csv("../../../data/meta/tissueSourceSite.tsv", sep = "\t")
@@ -50,7 +51,7 @@ soi_genes <-soi[,2]
 print("Loaded datasets \n")
 
 
-transformed_data <- original
+transformed_data <- test
 rownames(transformed_data) <- NULL
 
 real_count_data <- transformed_data %>%
@@ -71,7 +72,7 @@ meta <- dplyr::left_join(tss_meta %>%
                            distinct()%>% 
                            sapply(trimws) %>% 
                            as.data.frame(), 
-                         by = "Stud                 y.Name")
+                         by = "Study.Name")
 
 # CONVERT THE GENE IDS INTO GENE NAMES
 
@@ -196,16 +197,16 @@ mds_df <- as.data.frame(mds) %>%
 write.csv(mds_df, "sample_mds.csv", row.names = TRUE)
 
 # Create the plots of the MDS.
-sample_mds <- ggscatter(mds_df, x = "V1", y = "V2", 
-          color = "sample_type", # Colour based on the sample type
-          size = 1,
-          repel = TRUE)
+sample_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2",
+  color = "sample_type", # Colour based on the sample type
+  size = 1,
+  repel = TRUE
+)
 
-cancer_mds <- ggscatter(mds_df, x = "V1", y = "V2", 
-          color = "cancer_type", # Colour based on the cancer type
-          size = 1,
-          repel = TRUE)+
-  theme(legend.position = "none")
+cancer_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2", 
+  color = "cancer_type", # Colour based on the cancer type
+  size = 1,
+  repel = TRUE) + theme(legend.position = "none")
 
 # Save the plots.
 ggsave("sample_mds_plot.png",   
