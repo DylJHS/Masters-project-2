@@ -83,7 +83,7 @@ column_names <- c("Genes" ,  paste(tissue_type, participants, condition, sep = "
 colnames(count_data_ordered) <- column_names
 ```
 
-2.) UN-TRANSFORM THE LOG COUNTS (y = Log2(x+1)) TO THE ORIGINAL COUNTS (x = 2y−1)
+2.) UN-TRANSFORM THE LOG VALUES (y = Log2(x+1)) TO THE ORIGINAL TPM VALUES (x = 2y−1)
 
 ```{r}
 transformed_data <- count_data_ordered
@@ -98,4 +98,4 @@ original_counts <- transformed_data %>%
   mutate_at(vars(-1), untransform)
 ```
 
-Remove tissue types samples whose number is below a certain threshold Calculate the untransformed counts 4) Convert the df to a matrix 5) Calculate the normalisation factors 6) Render the normalised count df 7) Create the expression-based correlation matrix
+

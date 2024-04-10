@@ -2,7 +2,7 @@
 title: "TCGA_RNA_COUNTS_XPLR"
 format: html
 editor: visual
-Notes: This is a script that is intended to do some exploration of the samples in teh count based TCGA PanCan dataset.
+Notes: This script is intended to do some exploration of the samples in teh count based TCGA PanCan dataset.
 ---
 
 ```{r setup, include=FALSE}

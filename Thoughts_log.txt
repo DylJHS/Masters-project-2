@@ -1249,3 +1249,33 @@ In order to run the scripts for r:
 - Editing the script for R and hpc integration
 
 - Remember that the MDS is being run using a distance matrix because running it using only the expression matrix with edgeR assumes that it is being run for a DGE which in this case it is not
+ 
+
+09/04/24
+
+- Got the mds plots back
+- Coloured by sample type as well as tissue/cancer type
+- They are not very indicative as the majority of the points seem to be concentrated around the 0 on the V1 
+- Think this is due to the fact that i need to normalise the data in addition to the library size factorisation that was already performed
+
+- Look into Nextflow and read into it
+- Likely to be very useful in terms of the implementation of the analysis from start to finish
+
+- made a mistake when i said that i needed to normalise the data in addition to the library size scaling
+- Just need to log transform the scaled data 
+- Will log transform the gene counts after they are scaled
+ 
+- The issue with the hierarchical clustering method that i came up with is that the optimal number of genes in each cluster may not always be the same
+- I think the main hierarchical clustering algorithm may be able to solve this using the distance between clusters as the breaking point for determining the number of clusters instead of the number of features (genes) in each cluster
+- Likely to use Ward's method of calculating the distance between clusters
+
+- Clustering the genes into groups before the classification is a moo point if there are very few highly correlated genes in the first place
+- Want to assess the correlation between the genes and then see
+
+- Got the full exploration script returned by the hpc
+- There do not seem to be outliers in the data in terms of the tissue/cancer type or the sample type
+- There are two outliers in the MDS plots 'sample_mds_plot.png' and 'cancer_mds_plot.png' but they are not unique in terms of their sample or tissue (cancer) types
+
+- For the clustering based on genes need to use the TPM data as making comparisons/groupings between genes and scaling based on library size would have a very small impact on this comparison
+
+- Forgot to analyse the count data in terms of the interaction effect (sample type - tissue type interaction) in the mds plot

@@ -209,7 +209,7 @@ cancer_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2",
   size = 1,
   repel = TRUE) + theme(legend.position = "none")
 
-synergy_mds <- ggscatter(mds_df, x = "V1", y = "V2", 
+synergy_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2", 
           color = "synergy_type", # Colour based on the synergy between the cancer and sample type
           size = 1,
           repel = TRUE)+
