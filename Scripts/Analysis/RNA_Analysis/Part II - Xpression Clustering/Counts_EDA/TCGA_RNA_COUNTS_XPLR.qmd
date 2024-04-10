@@ -174,7 +174,6 @@ if (length(cols_zeros) > 0) {
 }
 ```
 
-
 ```{r}
 # convert df to matrix 
 mapped_matrix <- as.matrix(reduced)
@@ -188,7 +187,6 @@ scaled_data <- base::sweep(samples_to_use, 2, d0, "/") # scalling the genes (2 =
 scaled_data <- ceiling(scaled_data) # Round up
 ```
 
-
 ```{r}
 # Filter out non SOI genes
 filtered_scalled <- scaled_data[rownames(scaled_data) %in% soi_genes, ]
@@ -198,19 +196,16 @@ print(dim(filtered_scalled))
 log_data <- apply(filtered_scalled, MARGIN = c(1,2), FUN = function(x) log(x + 1))
 ```
 
-
 ```{r}
 # 5.  MDS
 # Transpose the data 
 t_scaled_log_data <- t(log_data)
 ```
 
-
 ```{r}
 sample_dist_matrix <- dist(t_scaled_log_data)
 sample_dist_df <- as.data.frame(as.matrix(sample_dist_matrix))
 ```
-
 
 ```{r}
 # Produce the MDS object.
@@ -219,9 +214,9 @@ mds <- cmdscale(sample_dist_matrix)
 # Convert the MDS object to a dataframe with additional features
 mds_df <- as.data.frame(mds) %>% 
   dplyr::mutate(cancer_type = extract_element(rownames(t_scaled_log_data), 1),
-         sample_type = extract_element(rownames(t_scaled_log_data), 3))
+         sample_type = extract_element(rownames(t_scaled_log_data), 3),
+         synergy_type = paste(cancer_type, sample_type, sep = "-"))
 ```
-
 
 ```{r}
 # Create the plots of the MDS.
@@ -235,21 +230,25 @@ cancer_mds <- ggscatter(mds_df, x = "V1", y = "V2",
           size = 1,
           repel = TRUE)+
   theme(legend.position = "none")
-```
 
+synergy_mds <- ggscatter(mds_df, x = "V1", y = "V2", 
+          color = "synergy_type", # Colour based on the cancer type
+          size = 1,
+          repel = TRUE)+
+  theme(legend.position = "none")
+```
 
 ```{r}
-# Save the plots.
-ggsave("sample_mds_plot.png",   
-       plot = sample_mds,       
-       width = 8,              
-       height = 6,             
-       dpi = 300) 
-
-ggsave("cancer_mds_plot.png",   
-       plot = cancer_mds,       
-       width = 8,              
-       height = 6,             
-       dpi = 300)
+# # Save the plots.
+# ggsave("sample_mds_plot.png",   
+#        plot = sample_mds,       
+#        width = 8,              
+#        height = 6,             
+#        dpi = 300) 
+# 
+# ggsave("cancer_mds_plot.png",   
+#        plot = cancer_mds,       
+#        width = 8,              
+#        height = 6,             
+#        dpi = 300)
 ```
-

@@ -191,7 +191,8 @@ mds <- cmdscale(sample_dist_matrix)
 # Convert the MDS object to a dataframe with additional features
 mds_df <- as.data.frame(mds) %>% 
   dplyr::mutate(cancer_type = extract_element(rownames(t_scaled_log_data), 1),
-         sample_type = extract_element(rownames(t_scaled_log_data), 3))
+         sample_type = extract_element(rownames(t_scaled_log_data), 3),
+         synergy_type = paste(cancer_type, sample_type, sep = "-"))
 
 
 write.csv(mds_df, "sample_mds.csv", row.names = TRUE)
@@ -208,6 +209,12 @@ cancer_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2",
   size = 1,
   repel = TRUE) + theme(legend.position = "none")
 
+synergy_mds <- ggscatter(mds_df, x = "V1", y = "V2", 
+          color = "synergy_type", # Colour based on the synergy between the cancer and sample type
+          size = 1,
+          repel = TRUE)+
+  theme(legend.position = "none")
+
 # Save the plots.
 ggsave("sample_mds_plot.png",   
        plot = sample_mds,       
@@ -217,6 +224,12 @@ ggsave("sample_mds_plot.png",
 
 ggsave("cancer_mds_plot.png",   
        plot = cancer_mds,       
+       width = 8,              
+       height = 6,             
+       dpi = 300) 
+
+ggsave("synergy_mds_plot.png",   
+       plot = synergy_mds,       
        width = 8,              
        height = 6,             
        dpi = 300) 
