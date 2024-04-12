@@ -43,31 +43,29 @@ untransform <- function(x) {
 ```{r}
 # 5.  MDS
 # Load Transposed transformed data 
-t_scaled_log_data <- read.csv("../../../Data/RNA_Data/TCGA_Norm/mds/Transposed_scaled_&_reduced_df.csv", row.names = 1)
-
-print("t_scaled_log_data")
-print(head(t_scaled_log_data[, 0:5]))
+t_scaled_log_data <- read.csv("Data/RNA_Data/TCGA_Norm/mds/Transposed_scaled_&_reduced_df.csv", row.names = 1)
 
 sample_dist_matrix <- dist(t_scaled_log_data)
 sample_dist_df <- as.data.frame(as.matrix(sample_dist_matrix))
+```
 
-print("sample_dist_matrix")
-print(head(sample_dist_df[, 0:5]))
 
-write.csv(sample_dist_df, "sample_dist_matrix.csv", row.names = TRUE)
-
+```{r}
 # Produce the MDS object.
 mds <- cmdscale(sample_dist_matrix)
+```
 
+
+```{r}
 # Convert the MDS object to a dataframe with additional features
 mds_df <- as.data.frame(mds) %>% 
   dplyr::mutate(cancer_type = extract_element(rownames(t_scaled_log_data), 1),
          sample_type = extract_element(rownames(t_scaled_log_data), 3),
          synergy_type = paste(cancer_type, sample_type, sep = "-"))
+```
 
 
-write.csv(mds_df, "sample_mds.csv", row.names = TRUE)
-
+```{r}
 # Create the plots of the MDS.
 sample_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2",
   color = "sample_type", # Colour based on the sample type
@@ -81,12 +79,17 @@ cancer_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2",
   repel = TRUE) + theme(legend.position = "none")
 
 synergy_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2", 
-          color = "synergy_type", # Colour based on the synergy between the cancer and sample type
+          color = "cancer_type", # Colour based on the synergy between the cancer and sample type
+          shape = "sample_type",
           size = 1,
           repel = TRUE)+
-  theme(legend.position = "none")
+  theme(legend.position = "bottom")+
+  coord_cartesian(xlim = c(-35, 20),
+                  ylim = c(-25,25))
+```
 
 
+```{r}
 # Save the plots.
 ggsave("sample_mds_plot.png",   
        plot = sample_mds,       

@@ -1279,3 +1279,38 @@ In order to run the scripts for r:
 - For the clustering based on genes need to use the TPM data as making comparisons/groupings between genes and scaling based on library size would have a very small impact on this comparison
 
 - Forgot to analyse the count data in terms of the interaction effect (sample type - tissue type interaction) in the mds plot
+ 
+
+10/04/24
+
+- For the clustering will first render the correlation matrix
+- Don't think i need to untransform the data beforehand
+- 
+ 
+
+11/04/24
+
+- Buiding the correlation matrix for the Genes of interest
+
+- Keeping the log transformation seems like a better choice as it allows for better linearity in the Pearson correlation which is essential
+
+- Continuing the clustering script
+- Format the df for use as a corr & distance matrix
+- Created the correlation matrix
+- A few clusters that have a potential to be formed
+- But conflicting clusters for the groups of genes
+- Need to use the algorithm to determine which clusters should be formed over others
+
+- The algorithm that i came up with will not work using the summation of the correlation coefficients
+- Equally negative and positive values will cancel each other out but having negative values is better than an equally positive value
+- The above requirement also excludes the use of solely the square and the absolute
+
+- Created the distance matrix
+- clusters are still apparent
+- clustering of the distance matrix using hierachical clustering 
+- The average method of calculating the distance between clusters is used in the hclust() function
+
+- Extracted the dendrogram
+- Played around with the denextend function
+- Cutting the tree at different points, seeing the clusters formed ...
+

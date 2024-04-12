@@ -2,7 +2,7 @@
 title: "TCGA_RNA_COUNTS_XPLR"
 format: html
 editor: visual
-Notes: This script is intended to do some exploration of the samples in teh count based TCGA PanCan dataset.
+Notes: This script is intended to do some exploration of the samples in the count based TCGA PanCan dataset.
 ---
 
 ```{r setup, include=FALSE}
@@ -47,7 +47,7 @@ Load the datasets
 ```{r}
 
 # RNAseq count data
-# original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 test <- original[0:10000,0:10]
 
 # Metadata
@@ -59,7 +59,7 @@ sampletype <- read.csv("Data/Other/TCGA_meta/sampleType.tsv", sep = "\t", colCla
 gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
 
 # SOI genes
-# soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
 ```
 
