@@ -162,7 +162,7 @@ plot(color_branches(distance.tree, h=node_heights[cutheight]),leaflab="none", co
 # Set the breakpoint where the change in color will occur 
 newBreaks <- c(seq(-1, 0.00, length.out = 100), seq(0.01, 1, length.out = 100))
 
-for (height in seq(1,length(node_heights)-1,30)){
+for (height in seq(1,length(node_heights)-1,10)){
   # Select the cut height 
   cutheight = node_heights[height]
   
@@ -195,12 +195,19 @@ for (height in seq(1,length(node_heights)-1,30)){
     t() %>% 
     cor(., method = "pearson")
   
+  # Calculate the coefficient score
+  
+  
   # Plot the resulting tree
   plot(color_branches(distance.tree, h=cutheight),leaflab="none", col = paletteer_c("grDevices::Terrain 2", length(unique(clusters))), main = " Hierarchical clustering (average method)")
   abline(h = cutheight, col = "red", lwd = 0.75)
   mtext(paste0("Cut Height of ",round(cutheight, 2),", yeilding ", n_clusters, " clusters"), side = 3, line = 0.5, cex = 0.8, adj = 0.5)
 
   clust_heatmap <- pheatmap(clustered_corr, breaks = newBreaks ,color = myColors)
+  ggsave(paste0("clsutered_heatmap", height, ".pdf"),   
+       plot = clust_heatmap,
+       width = 30,
+       height = 25)
 }
 ```
 
