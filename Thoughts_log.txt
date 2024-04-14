@@ -1314,3 +1314,29 @@ In order to run the scripts for r:
 - Played around with the denextend function
 - Cutting the tree at different points, seeing the clusters formed ...
 
+ 
+
+12/04/24
+
+- Reconfigured the optimisation algorithm for the selection of the number of clusters
+- Summation of the square of the gene correlation coefficients multiplied by 1 for negative values and 2 for positive values 
+- Algorithm will search for the lowest possible value from the above
+
+- Configuring the script that loops over the differnet node heights from the clustered dendrogram
+- For each height: 
+   - Creates the new clusters
+   - Gets the genes that are in each cluster
+   - merges teh original gene expression data with the gene cluster info
+   - Groups the resulting df by cluster, averaging the log expression values
+   - Recalculates the correlation coefficients using the clusters and individual genes
+   - Calculates and saves the resulting coefficient score  
+
+ 
+- Might need to make a addition to the clustering optimisation algo
+- Currently trying to maximise the non-correlation between genes/clusters 
+- Might need to find a way of maintaining or maximising the correlation within clusters as well
+- Effectively turning the algo into a Correlation Clustering algo
+
+- Also need to consider the fact that the more clusters i have, the lower the summation is likely to be
+- Should consider adding in a term to take this into account
+- Usign the average of the total summation in terms of the number of pairwise compairsons 
