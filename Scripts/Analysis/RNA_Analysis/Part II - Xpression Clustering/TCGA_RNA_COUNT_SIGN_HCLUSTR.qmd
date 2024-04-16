@@ -31,6 +31,13 @@ extract_element <- function(strings, index) {
   element_list <- sapply(strsplit(strings, "\\."), function(x) x[index])
   return(element_list)
 }
+
+  inter_coef <- function(x) {
+    # Inter-cluster coefficient calculation
+    x_squared <- x^2
+    non_neg <- x >= 0
+    2 * x_squared * non_neg + 1 * x_squared * (!non_neg)
+    }
 ```
 
 ### 1. COLLECT DATASETS
@@ -44,7 +51,8 @@ abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
 
 # Set of Interest TPM data
 full_soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
-soi <- soi[-1]
+soi <- full_soi[-1]
+test_set <- soi[0:50,0:40]
 ```
 
 1.2 ORGANISE THE DATAFRAMES
@@ -70,19 +78,27 @@ meta <- left_join(tss_meta %>%
 
 2.1 EDIT THE SAMPLE NAMES (COLUMN NAMES) INTO IDS SO AS TO BE ABLE TO IDENTIFY THE PARTICIPANT AND THE CANCER TYPE
 ```{r}
-ids <- colnames(soi)[-1]
+ids <- colnames(test_set)[-1]
 participants <- extract_element(ids, 3)
 condition <- extract_element(ids, 4)
 tissue_type <- extract_element(ids, 2)
 
 column_names <- c("Gene" ,  paste(tissue_type, participants, condition, sep = "."))
-colnames(soi) <- column_names
+colnames(test_set) <- column_names
 ```
 
-2.2 FORMAT THE DF
+
+2,4 REMOVE THE UNVIABLE SAMPLES FROM THE DATA
+```{r}
+# Remove the unwanted sample types from the samples based on the code
+codes_to_use <- c("01","02","03","04","05","08","09")
+viable_soi <- test_set %>%  dplyr::select("Gene" | ends_with(codes_to_use))
+```
+
+2.3 FORMAT THE DF
 ```{r}
 # Summarise the duplicate genes by their mean
-log_data <- soi %>% 
+log_data <- viable_soi %>% 
   group_by(Gene) %>%
   summarise(across(everything(), ~mean(., na.rm = TRUE)))
 
@@ -99,16 +115,14 @@ final_df <- log_data %>%
 3.1 CORRELATION MATRIX CREATION
 ```{r}
 # Calculate the correlation matrix 
-corr_matrix <- rcorr(final_df) # correlation matrix
-matrix_coefs <- corr_matrix$r # correlation coef matrix
-matrix_sigif <- corr_matrix$P # correlation coef p_value matrix
+corr_matrix <- cor(final_df) # correlation matrix
 
 # Set the breakpoint where the change in color will occur 
 myBreaks <- c(seq(-1, 0.00, length.out = 100), seq(0.01, 1, length.out = 100))
 myColors <- colorRampPalette(c("blue1", "white","red4"))(length(myBreaks) - 1)
 
 # Create and save the resulting heatmap
-cor_heatmap <- pheatmap(matrix_coefs, color = myColors, breaks = myBreaks)
+cor_heatmap <- pheatmap(corr_matrix, color = myColors, breaks = myBreaks, border_color = NA)
 ggsave("heatmap.pdf",   
        plot = cor_heatmap,
        width = 30,
@@ -118,11 +132,11 @@ ggsave("heatmap.pdf",
 3.2 DISTANCE MATRIX CREATION
 ```{r}
 # Create the distance matrix
-dist_matrix <- as.dist(1 - cor(final_df)) # dissimilarity matrix
-dist_df <- as.data.frame(1 - cor(final_df)) # dissimilarity df
+dist_matrix <- as.dist(1 - corr_matrix) # dissimilarity matrix
+dist_df <- as.data.frame(as.matrix(dist_matrix)) # dissimilarity df
 
 # Create the resulting distance heatmap
-dist_heatmap <- pheatmap(dist_matrix)
+dist_heatmap <- pheatmap(dist_matrix, border_color = NA)
 ```
 
 3.3 DENDROGRAM GENERATION
@@ -131,9 +145,6 @@ dist_heatmap <- pheatmap(dist_matrix)
 # extract the dendrogram from the matrix 
 distance.tree <- hclust(dist_matrix, method="average") %>%
   as.dendrogram()
-
-nleaves(distance.tree) # number of genes
-nnodes(distance.tree) # number of total merges
 
 # Get the different heights that show up in the tree
 # and sort them
@@ -145,46 +156,41 @@ node_heights <- distance.tree %>%
 # Plot the tree
 distance.tree %>% dendextend::set("labels_cex", 0.4) %>% plot()
 ```
-3.4 FIXED CLUSTERING EXAMPLE 
+
+3.4 HEIGHT BASED CLUSTERING OPTIMISATION
 ```{r}
-# Select a specific height at which to cut and therefore
-# cluster the genes
-cutheight = 320
-
-# Get the resulting clusters
-clusters <- cutree(distance.tree, h = node_heights[cutheight])
-
-# Plot the resulting tree
-plot(color_branches(distance.tree, h=node_heights[cutheight]), 
-     leaflab="none", 
-     col = paletteer_c("grDevices::Terrain 2", length(unique(clusters)))
-     )
-```
-3.5 HEIGHT BASED CLUSTERING OPTIMISATION
-```{r}
-
 # Set the breakpoints for the corr matrix where the change in color will occur 
 newBreaks <- c(seq(-1, 0.00, length.out = 100), seq(0.01, 1, length.out = 100))
 
-# Initialize the df that will contain the coef Score, Node height, Number of groups formed
+# Initialise the df that will contain the coef Score, Node height, Number of groups formed
 cluster_groups_df <- data.frame(Iteration = integer(),
-                                Coef.Score = numeric(),
+                                Inter.Score = numeric(),
+                                Intra.Score = numeric(),
+                                Total.Score = numeric(),
                                 Node.Height = numeric(),
                                 Cluster.Number = integer())
 
-for (height in seq(1,length(node_heights)-1,5)){
+# Initialise the scores 
+initial_intra <- length(colnames(final_df))
+initial_inter <- sum(inter_coef(corr_matrix))
+tot_score <- initial_intra - initial_inter
+```
+
+
+```{r}
+for (height in seq(2,length(node_heights)-2)){
   # Select the cut height 
   cutheight = node_heights[height]
   
   # Get the resulting clusters
   clusters <- cutree(distance.tree, h = cutheight)
-  
-  # Get the number of clusters
-  n_clusters <- length(unique(clusters))
-  
+
   # Get the genetic makeup of each cluster
   cluster_df <- as.data.frame(clusters)%>%
   rownames_to_column("Gene")
+  
+  # Get the number of groups
+  n_groups <- length(unique(clusters))
 
   # Redefine the expression data in terms of the clusters
   clustered_xprss <- left_join(log_data,
@@ -195,72 +201,102 @@ for (height in seq(1,length(node_heights)-1,5)){
                              ), # number of genes in the cluster
            Cluster.Name = ifelse(n_genes == 1, Gene, 
                                  paste0("Clust.",clusters))) %>% 
-    group_by(Cluster.Name) %>%
-    summarise(across(-Gene, ~ mean(., na.rm = TRUE))) %>% 
     select(-c("clusters","n_genes"))
   
-  # Create the corresponding correlation matrix
-  clustered_corr <- clustered_xprss %>% 
-    column_to_rownames("Cluster.Name") %>% 
-    t() %>% 
-    cor(., method = "pearson")
-    
+  clustered_xprss_grouped <- clustered_xprss %>% 
+    group_by(Cluster.Name) %>%
+    summarise(across(-Gene, ~ mean(., na.rm = TRUE))) 
   
-  # Calculate the coefficient score
-  tot_sum <- 0 # Initialize sum
+  # Calculate the Intra-CCS
+  # Find the clusters with more than a single gene occupant
+  filled_clusters <- clustered_xprss_grouped %>% 
+    filter(str_detect(Cluster.Name, "^Clust.")) %>% 
+    pull(Cluster.Name) 
   
-  # Loop through each value and apply the given logic
-  coef_sum <- function(x) {
-    x_squared <- x^2
-    non_neg <- x >= 0
-    2 * x_squared * non_neg + 1 * x_squared * (!non_neg)
-    }
+  # Filter over these individual clusters creating the cluster specific corr matrices and collecting the average coefficient of each 
+  intra_cluster_averages = c()
+  for (clust in filled_clusters){
+    intra_cluster_averages <- c(intra_cluster_averages,
+                                clustered_xprss %>% 
+                                  filter(Cluster.Name == clust) %>% 
+                                  select(-Cluster.Name) %>% 
+                                  column_to_rownames("Gene") %>% 
+                                  t() %>% 
+                                  cor() %>% 
+                                  mean()
+                                )
+  }
   
-  square_coef_score <- coef_sum(clustered_corr)
-  
-  tot_coef_score <- sum(square_coef_score)
-  
-  avg_coef <- tot_coef_score / length(clustered_corr)
-  print(avg_coef)
-  
-  cluster_groups_df <- rbind(
-    cluster_groups_df, 
-    data.frame(Iteration = height,
-               Coef.Score = avg_coef,
-               Node.Height = cutheight,
-               Cluster.Number = n_clusters
-               )
-    )
-  
-  # Plot the resulting tree
-  plot(color_branches(distance.tree, h=cutheight),
-       leaflab="none", 
-       col = paletteer_c("grDevices::Terrain 2", 
-                         length(unique(clusters))), 
-       main = " Hierarchical clustering (average method)"
-       )
-  abline(h = cutheight, col = "red", lwd = 0.75)
-  mtext(paste0("Cut Height of ",round(cutheight, 2),
-               ", yeilding ", 
-               n_clusters, 
-               " clusters"
-               ), 
-        side = 3, 
-        line = 0.5, 
-        cex = 0.8, 
-        adj = 0.5
-        )
+  # Sum the correlation coefficient averages
+  Intra_CCS = sum(intra_cluster_averages)
 
-  clust_heatmap <- pheatmap(clustered_corr, 
-                            breaks = newBreaks ,
-                            color = myColors,
-                            border_color = NA)
+    
+  # The number of unclustered genes 
+  n_unclust_genes <- n_groups - length(filled_clusts)
   
-  # # Save the heatmaps
-  # ggsave(paste0("clsutered_heatmap", height, ".png"),
-  #      plot = clust_heatmap,
-  #      width = 30,
-  #      height = 25)
+  
+  # Calculate the  Inter-CCS
+  
+  
+  
+  
+  # # Create the corresponding correlation matrix
+  # clustered_corr <- clustered_xprss %>% 
+  #   column_to_rownames("Cluster.Name") %>% 
+  #   t() %>% 
+  #   cor(., method = "pearson")
+  #   
+  # 
+  # # Calculate the coefficient score
+  # tot_sum <- 0 # Initialize sum
+  # 
+  # 
+  # 
+  # square_coef_score <- inter_coef(clustered_corr)
+  # 
+  # tot_coef_score <- sum(square_coef_score)
+  # 
+  # avg_coef <- tot_coef_score / length(clustered_corr)
+  # print(avg_coef)
+  # 
+  # cluster_groups_df <- rbind(
+  #   cluster_groups_df, 
+  #   data.frame(Iteration = height,
+  #              Coef.Score = avg_coef,
+  #              Node.Height = cutheight,
+  #              Cluster.Number = n_clusters
+  #              )
+  #   )
+  # 
+  # # Plot the resulting tree
+  # plot(color_branches(distance.tree, h=cutheight),
+  #      leaflab="none", 
+  #      col = paletteer_c("grDevices::Terrain 2", 
+  #                        length(unique(clusters))), 
+  #      main = " Hierarchical clustering (average method)"
+  #      )
+  # abline(h = cutheight, col = "red", lwd = 0.75)
+  # mtext(paste0("Cut Height of ",round(cutheight, 2),
+  #              ", yeilding ", 
+  #              n_clusters, 
+  #              " clusters"
+  #              ), 
+  #       side = 3, 
+  #       line = 0.5, 
+  #       cex = 0.8, 
+  #       adj = 0.5
+  #       )
+  # 
+  # clust_heatmap <- pheatmap(clustered_corr, 
+  #                           breaks = newBreaks ,
+  #                           color = myColors,
+  #                           border_color = NA)
+  # 
+  # # # Save the heatmaps
+  # # ggsave(paste0("Plots/clsutered_heatmap", height, ".png"),
+  # #      plot = clust_heatmap,
+  # #      width = 30,
+  # #      height = 25)
 }
 ```
 

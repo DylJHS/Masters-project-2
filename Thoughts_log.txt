@@ -1290,12 +1290,12 @@ In order to run the scripts for r:
 
 11/04/24
 
-- Buiding the correlation matrix for the Genes of interest
+- Building the correlation matrix for the Genes of interest
 
 - Keeping the log transformation seems like a better choice as it allows for better linearity in the Pearson correlation which is essential
 
 - Continuing the clustering script
-- Format the df for use as a corr & distance matrix
+- Format the df for use as a correlation & distance matrix
 - Created the correlation matrix
 - A few clusters that have a potential to be formed
 - But conflicting clusters for the groups of genes
@@ -1307,7 +1307,7 @@ In order to run the scripts for r:
 
 - Created the distance matrix
 - clusters are still apparent
-- clustering of the distance matrix using hierachical clustering 
+- clustering of the distance matrix using hierarchical clustering 
 - The average method of calculating the distance between clusters is used in the hclust() function
 
 - Extracted the dendrogram
@@ -1322,21 +1322,64 @@ In order to run the scripts for r:
 - Summation of the square of the gene correlation coefficients multiplied by 1 for negative values and 2 for positive values 
 - Algorithm will search for the lowest possible value from the above
 
-- Configuring the script that loops over the differnet node heights from the clustered dendrogram
+- Configuring the script that loops over the different node heights from the clustered dendrogram
 - For each height: 
    - Creates the new clusters
    - Gets the genes that are in each cluster
-   - merges teh original gene expression data with the gene cluster info
+   - merges the original gene expression data with the gene cluster info
    - Groups the resulting df by cluster, averaging the log expression values
    - Recalculates the correlation coefficients using the clusters and individual genes
    - Calculates and saves the resulting coefficient score  
 
  
-- Might need to make a addition to the clustering optimisation algo
+- Might need to make a addition to the clustering optimisation algorithm
 - Currently trying to maximise the non-correlation between genes/clusters 
 - Might need to find a way of maintaining or maximising the correlation within clusters as well
-- Effectively turning the algo into a Correlation Clustering algo
+- Effectively turning the algorithm into a Correlation Clustering algorithm
 
 - Also need to consider the fact that the more clusters i have, the lower the summation is likely to be
 - Should consider adding in a term to take this into account
-- Usign the average of the total summation in terms of the number of pairwise compairsons 
+- Using the average of the total summation in terms of the number of pairwise comparisons 
+
+
+14/04/24
+
+- Forgot to remove the unusable samples from the full SOI TPM df
+- Need to remove the samples and tissue/cancer types that do not need to be present in the analysis
+ 
+- Would also like to repeat the cluster algorithm but using the number of clusters as the iterative parameter instead of the node height
+- k instead of h 
+- If the optimal cluster is the same or not between the two methods
+
+ 
+
+15/04/24
+
+- Edits to the clustering script to remove the samples that should not be included in the analysis based on their sample type
+
+- Need to redefine the correlation clustering algorithm
+- Maximise the sum of the intra-cluster correlation while minimising the sum of the inter-cluster correlation
+- So the maximisation of the sum of the inter-cluster correlation minus the sum of the inter-cluster correlation
+
+- Entire correlation clustering score, takes on 3 parts
+- The Inter-cluster correlation score, Inter-CCS(to be minimised)
+- The Intra-cluster correlation score, Intra-CCS (to be maximised)
+- The Total-cluster correlation score, Total-CCS(to be maximised): Intra-CCS - Inter-CCS 
+
+- For the Intra-CCS:
+- The calculation is just the sum of the pairwise correlation coefficients of all the genes within the cluster
+- Initial value = Set at 1 x The number of genes (each gene is its own cluster and therefore has an inner correlation of 1)
+- Iterate over each node height, h or cluster, k
+- For each iteration create the new clusters
+- For each cluster:
+	- create the expression-based correlation matrices using only the genes in the cluster 
+	- calculate the average coefficient of the correlation matrix and save it
+- Intra-CCS = Sum the average correlation coefficients 
+
+
+
+At each step in the iteration:
+- Consider the new cluster that was formed
+- From the sum of the inter-cluster correlation, remove the correlation scores of genes/clusters that were removed (involved in the newest cluster)
+- Add to the inter-cluster correlation, the correlation coefs generated as a result of the new cluster 
+- For the intra-cluster correlations, for any cluster that has been affected, calculate the correlation coefs between the new gene(s) and the previous ones and add these coefs to the sum of the coefs that had been previously calculated
