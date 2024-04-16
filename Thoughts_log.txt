@@ -1374,12 +1374,29 @@ In order to run the scripts for r:
 - For each cluster:
 	- create the expression-based correlation matrices using only the genes in the cluster 
 	- calculate the average coefficient of the correlation matrix and save it
-- Intra-CCS = Sum the average correlation coefficients 
-
-
+- Intra-CCS = Sum the averages 
 
 At each step in the iteration:
 - Consider the new cluster that was formed
 - From the sum of the inter-cluster correlation, remove the correlation scores of genes/clusters that were removed (involved in the newest cluster)
 - Add to the inter-cluster correlation, the correlation coefs generated as a result of the new cluster 
 - For the intra-cluster correlations, for any cluster that has been affected, calculate the correlation coefs between the new gene(s) and the previous ones and add these coefs to the sum of the coefs that had been previously calculated
+ 
+
+16/04/24
+
+- Correlation clustering implementation continuation 
+
+- Coded the Intra-CCS
+- Need to code the Inter-CCS and the Total-CCS
+
+- Redefining the clustering optimisation algo
+
+- Coded in the Intra CCS Score
+- Need to do the Inter-CCS score next
+- Need to make sure to annotate the script correctly
+- Might be helpful to put the scoring into a function instead of in the main script
+- Need to figure out the actualf formula for the optimisation algo with the changes that are made to the inclusion of the unclustered genes in teh calculation
+- Need to try to find the best values for lambda (penalty for the negtative values in the intra-CCS score), as well as for p and q (the powers that control the emphasis on poositive and negative correlations, can be different or the same)
+
+- Tomorrow (Wednesday) start on the Inter score and on the presentation for monday
