@@ -39,18 +39,18 @@ inter_coef <- function(x) {
   x * x_squared * non_neg + 1 * x_squared * (!non_neg)
 }
   
-sigmoid <- function(x) {
-  1 / (1 + exp(-10 * (x - 0.5)))
+sigmoid <- function(x,s = sig_sens,m = sig_m) {
+  1 / (1 + exp(-s * (x - m)))
 }
 ```
 
-PREDETERMINED PARAMETERS
+PARAMETERS
 ```{r}
-lambda = 1 # ICSS negative cor penalty multiplier
-alpha = 0.9 # ICDS scaling factor to adjust the sensitivity to differences between clusters
-p = 5 # ICSS positive power
-q = 2 # ICSS negative power
-weight = 0.51 # the weight that is given to the ICSS
+lambda = 2 # ICSS negative cor penalty multiplier
+alpha = 0.9 # ICDS scaling factor to adjust the sensitivity to differences between clusters (lower = more sensitive)
+sig_m = 0.7 # sigmoid midpoint, the inflection point of r at which the scaling converts from negative (y < r) to positive (y > r)
+sig_sens = 15 # sensitivity of the sigmoid function to r (higher = more sensitive)
+weight = 0.6 # the weight that is given to the ICSS
 ```
 
 ### 1. COLLECT DATASETS
@@ -65,8 +65,7 @@ abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
 # Set of Interest TPM data
 full_soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi <- full_soi[-1]
-soi <- soi[0:30,0:100]
-# test_set <- soi[0:100,0:100]
+# soi <- soi[0:50,0:50]
 ```
 
 1.2 ORGANISE THE DATAFRAMES
@@ -134,7 +133,7 @@ xprss_df <- log_data %>%
 cor_mtrx_xprss <- cor(xprss_df) # correlation matrix
 
 # Set the breakpoint where the change in color will occur 
-myBreaks <- c(seq(-1, 0.70, length.out = 100), seq(0.71, 1, length.out = 100))
+myBreaks <- c(seq(-1, 0.749, length.out = 100), seq(0.750, 1, length.out = 100))
 myColors <- colorRampPalette(c("blue1", "white","red4"))(length(myBreaks) - 1)
 
 # Create and save the resulting heatmap
@@ -262,11 +261,11 @@ for (ht in seq(2,length(node_hts)-1)){
       t() %>% 
       cor()
     
-    # Sum positive correlations raised to the power of p
+    # Sum positive correlations
     positive_contrib <- sum((intra_corr > 0) * 
                              sigmoid(intra_corr))
     
-    # Sum negative correlations raised to the power of q
+    # Sum negative correlations
     negative_contrib <- sum((intra_corr < 0) * 
                              sigmoid(abs(intra_corr)))
     
@@ -327,26 +326,62 @@ for (ht in seq(2,length(node_hts)-1)){
        width = 30,
        height = 25)
   
+}
+```
+
+
+```{r}
+# locate the iteration with the greatest total combined score (TCCS)
+# use the node height to render the matrix, clusters & extract the tree 
+
+optimal_node_ht <- scoring_df %>%
+  filter(Total.Score == max(Total.Score)) %>% 
+    pull(Node.Height) 
+
+# Get the resulting dendrogram
+optimal_dendro <- cutree(dist_tree_xprss, h = optimal_node_ht)
+
+# Get the genetic makeup of each cluster
+optimal_clusters <- as.data.frame(optimal_dendro)%>%
+  rownames_to_column("Gene")
   
-   # 
+# Get the number of groups
+n_groups <- length(unique(clusters))
+
+# Add this iteration's cluster information to the expression matrix
+xprss_df_clustered <- left_join(log_data,
+                                optimal_clusters,
+                                by = "Gene") %>% 
+  mutate(n_genes = map_dbl(optimal_clusters, 
+                           ~sum(.x == optimal_clusters, na.rm = TRUE)
+                           ), # number of genes in the cluster
+         Cluster.Name = ifelse(n_genes == 1, Gene, 
+                               paste0("Clust.",optimal_clusters))) %>%
+  select(-c("clusters","n_genes"))
+  
+  # Group the expression matrix in terms of the clusters
+  grouped_xprss_df_clustered <- xprss_df_clustered %>% 
+    group_by(Cluster.Name) %>%
+    summarise(across(-Gene, ~ mean(., na.rm = TRUE))) 
+  
+
+
   # # Plot the resulting tree
   # plot(color_branches(distance.tree, h=cut.ht),
-  #      leaflab="none", 
-  #      col = paletteer_c("grDevices::Terrain 2", 
-  #                        length(unique(clusters))), 
+  #      leaflab="none",
+  #      col = paletteer_c("grDevices::Terrain 2",
+  #                        length(unique(clusters))),
   #      main = " Hierarchical clustering (average method)"
   #      )
   # abline(h = cut.ht, col = "red", lwd = 0.75)
   # mtext(paste0("Cut Height of ",round(cut.ht, 2),
-  #              ", yeilding ", 
-  #              n_clusters, 
+  #              ", yeilding ",
+  #              n_clusters,
   #              " clusters"
-  #              ), 
-  #       side = 3, 
-  #       line = 0.5, 
-  #       cex = 0.8, 
+  #              ),
+  #       side = 3,
+  #       line = 0.5,
+  #       cex = 0.8,
   #       adj = 0.5
   #       )
-  # 
-}
 ```

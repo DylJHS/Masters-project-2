@@ -1400,3 +1400,16 @@ At each step in the iteration:
 - Need to try to find the best values for lambda (penalty for the negtative values in the intra-CCS score), as well as for p and q (the powers that control the emphasis on poositive and negative correlations, can be different or the same)
 
 - Tomorrow (Wednesday) start on the Inter score and on the presentation for monday
+
+
+17/04/24
+
+- Renaming the constituents of the cluster correlaiton scoring
+- Intra-CCS to Intra Cluster Similarity Score, ICSS
+- Inter-CCS to Inter Cluster Dissimilarity Score, ICDS
+
+- Treating negative and positive correlations differently in terms of the dissimilarity is causing issues
+- Modifying the scoring system such that it only considers the magnitude when assessing the dissimilarity betweeen clusters and not the direction as well
+
+- Edits to the ICSS so that it applies a sigmoid function in order to scale the correlations 
+- Giving correlations above 0.7 a higher chance of being clustered
