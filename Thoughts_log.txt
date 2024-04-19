@@ -1413,3 +1413,16 @@ At each step in the iteration:
 
 - Edits to the ICSS so that it applies a sigmoid function in order to scale the correlations 
 - Giving correlations above 0.7 a higher chance of being clustered
+
+
+18/04/24
+
+- Edits to the correlation clustering algorithm
+- The sigmoid function intakes a midpoint threshold argument (set at 0.7) where the inflection point is located
+- It also intakes a sensitivity argument which controls the degree to which a sigmoid affects the original r coef
+
+
+- Try to find significant data on CBX1,3 or 5 for Aniek
+- Think about how to cluster the CIN data
+
+- After the selection of the optimal clustering it would be useful to know which genes get grouped together
