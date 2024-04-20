@@ -133,7 +133,7 @@ xprss_df <- log_data %>%
 cor_mtrx_xprss <- cor(xprss_df) # correlation matrix
 
 # Set the breakpoint where the change in color will occur 
-myBreaks <- c(seq(-1, 0.749, length.out = 100), seq(0, 1, length.out = 100))
+myBreaks <- c(seq(-1, 0.749, length.out = 250), seq(0, 1, length.out = 250))
 myColors <- colorRampPalette(c("blue1", "white","red4"))(length(myBreaks) - 1)
 
 # Create and save the resulting heatmap

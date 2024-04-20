@@ -1426,3 +1426,13 @@ At each step in the iteration:
 - Think about how to cluster the CIN data
 
 - After the selection of the optimal clustering it would be useful to know which genes get grouped together
+
+
+19/04/24
+
+- The optimisation algo that I have developed is a heuristic one as it does not find the exact solution but simplifies the task and finds the optimal solution given the conditions it is set
+- finished running the clustering script and the algorithm 
+- Generating the optimal clusters (12 clusters, 46 clustered genes, 281 unclustered genes)
+
+- Making edits to the Presentation slides for Monday
+
