@@ -11,10 +11,13 @@ string_api_url = "https://version-11-5.string-db.org/api"
 output_format = "tsv-no-header"
 
 ##LEM Domain proteins, LMNA, LMNB1 & LBR
-proteins_of_interest = [
+protein_genes_of_interest = [
     "MAN1","TMPO", "EMD", "TOR1AIP1", 
     'IFFO1', "LMNA", "LMNB1", "LMNB2", 
-    "LBR", "LEMD2", "PRR14", "CBX5"
+    "LBR", "LEMD2", "PRR14", "CBX5",
+    "CBX1","CBX3", "LEMD3", "EMD",
+	"BANF1","BAF","TERB1","TERB2",
+	"MAJIN"
     ]
     
 
@@ -24,7 +27,7 @@ proteins_of_interest = [
 
 params = {
 
-    "identifiers" : "\r".join(proteins_of_interest), # your protein list
+    "identifiers" : "\r".join(protein_genes_of_interest), # your protein list
     "species" : 9606, # species NCBI identifier 
     "limit" : 1, # only one (best) identifier per input protein
     "echo_query" : 1, # see your input identifiers in the output
@@ -79,7 +82,7 @@ for line in response2.text.strip().split("\n"):
     combined_score = l[5]
     Experimental_score = l[10]
 
-    proteins_of_interest.append(partner_name)
+    protein_genes_of_interest.append(partner_name)
 
     row = [
         [
@@ -101,8 +104,10 @@ for line in response2.text.strip().split("\n"):
 
 
 
-full_list = list(set(proteins_of_interest))
+full_list = list(set(protein_genes_of_interest))
 print(' '.join(full_list))
+
+print(len(full_list))
 
 
 

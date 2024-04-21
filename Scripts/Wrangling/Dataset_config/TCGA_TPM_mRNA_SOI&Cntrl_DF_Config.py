@@ -44,7 +44,9 @@ protein_genes_of_interest = [
     "MAN1","TMPO", "EMD", "TOR1AIP1", 
     'IFFO1', "LMNA", "LMNB1", "LMNB2", 
     "LBR", "LEMD2", "PRR14", "CBX5",
-    "CBX1","CBX3", "LEMD3"
+    "CBX1","CBX3", "LEMD3", "EMD",
+	"BANF1","BAF","TERB1","TERB2",
+	"MAJIN"
     ]
 
 
