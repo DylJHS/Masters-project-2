@@ -1441,3 +1441,8 @@ At each step in the iteration:
 20/04/24
 
 - Presentation prep
+ 
+
+21/04/24
+
+- Included all Initial genes in the TCGA_Configuration sript
