@@ -32,25 +32,12 @@ extract_element <- function(strings, index) {
   return(element_list)
 }
 
-inter_coef <- function(x) {
-  # Inter-cluster coefficient calculation
-  x_squared <- x^2
-  non_neg <- x >= 0
-  x * x_squared * non_neg + 1 * x_squared * (!non_neg)
-}
-  
-sigmoid <- function(x,s = sig_sens,m = sig_m) {
-  1 / (1 + exp(-s * (x - m)))
-}
-```
-
-PARAMETERS
-```{r}
-lambda = 2 # ICSS negative cor penalty multiplier
-alpha = 0.9 # ICDS scaling factor to adjust the sensitivity to differences between clusters (lower = more sensitive)
-sig_m = 0.7 # sigmoid midpoint, the inflection point of r at which the scaling converts from negative (y < r) to positive (y > r)
-sig_sens = 15 # sensitivity of the sigmoid function to r (higher = more sensitive)
-weight = 0.6 # the weight that is given to the ICSS
+  inter_coef <- function(x) {
+    # Inter-cluster coefficient calculation
+    x_squared <- x^2
+    non_neg <- x >= 0
+    x * x_squared * non_neg + 1 * x_squared * (!non_neg)
+    }
 ```
 
 ### 1. COLLECT DATASETS
@@ -65,7 +52,7 @@ abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
 # Set of Interest TPM data
 full_soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi <- full_soi[-1]
-# soi <- soi[0:50,0:50]
+test_set <- soi[0:100,0:100]
 ```
 
 1.2 ORGANISE THE DATAFRAMES
@@ -90,27 +77,25 @@ meta <- left_join(tss_meta %>%
 ### 2. CLEAN & PRE-PROCESS THE DATA
 
 2.1 EDIT THE SAMPLE NAMES (COLUMN NAMES) INTO IDS SO AS TO BE ABLE TO IDENTIFY THE PARTICIPANT AND THE CANCER TYPE
-
 ```{r}
-ids <- colnames(soi)[-1]
+ids <- colnames(test_set)[-1]
 participants <- extract_element(ids, 3)
 condition <- extract_element(ids, 4)
 tissue_type <- extract_element(ids, 2)
 
 column_names <- c("Gene" ,  paste(tissue_type, participants, condition, sep = "."))
-colnames(soi) <- column_names
+colnames(test_set) <- column_names
 ```
 
-2,4 REMOVE THE UNVIABLE SAMPLES FROM THE DATA
 
+2,4 REMOVE THE UNVIABLE SAMPLES FROM THE DATA
 ```{r}
 # Remove the unwanted sample types from the samples based on the code
 codes_to_use <- c("01","02","03","04","05","08","09")
-viable_soi <- soi %>%  dplyr::select("Gene" | ends_with(codes_to_use))
+viable_soi <- test_set %>%  dplyr::select("Gene" | ends_with(codes_to_use))
 ```
 
 2.3 FORMAT THE DF
-
 ```{r}
 # Summarise the duplicate genes by their mean
 log_data <- viable_soi %>% 
@@ -119,101 +104,99 @@ log_data <- viable_soi %>%
 
 # Set the Gene column as the rownames
 # and transpose the df so rows become the columns
-xprss_df <- log_data %>%
+final_df <- log_data %>%
   column_to_rownames(var = "Gene") %>% 
   t()
 ```
 
+
 ### 3. PROCESSING
 
 3.1 CORRELATION MATRIX CREATION
-
 ```{r}
 # Calculate the correlation matrix 
-cor_mtrx_xprss <- cor(xprss_df) # correlation matrix
+corr_matrix <- cor(final_df) # correlation matrix
 
 # Set the breakpoint where the change in color will occur 
-myBreaks <- c(seq(-1, 0.749, length.out = 250), seq(0, 1, length.out = 250))
+myBreaks <- c(seq(-1, 0.00, length.out = 100), seq(0.01, 1, length.out = 100))
 myColors <- colorRampPalette(c("blue1", "white","red4"))(length(myBreaks) - 1)
 
 # Create and save the resulting heatmap
-cor_hmap_xprss <- pheatmap(cor_mtrx_xprss, color = myColors, breaks = myBreaks, border_color = NA)
-ggsave("Plots/full_heatmap.png",   
-       plot = cor_hmap_xprss,
+cor_heatmap <- pheatmap(corr_matrix, color = myColors, breaks = myBreaks, border_color = NA)
+ggsave("heatmap.pdf",   
+       plot = cor_heatmap,
        width = 30,
        height = 25)
 ```
 
 3.2 DISTANCE MATRIX CREATION
-
 ```{r}
 # Create the distance matrix
-dist_mtrx_xprss <- as.dist(1 - cor_mtrx_xprss) # dissimilarity matrix
-xprss_dist_df <- as.data.frame(as.matrix(dist_mtrx_xprss)) # dissimilarity df
+dist_matrix <- as.dist(1 - corr_matrix) # dissimilarity matrix
+dist_df <- as.data.frame(as.matrix(dist_matrix)) # dissimilarity df
 
 # Create the resulting distance heatmap
-hmap_dist_mtrx <- pheatmap(dist_mtrx_xprss, border_color = NA)
+dist_heatmap <- pheatmap(dist_matrix, border_color = NA)
 ```
 
 3.3 DENDROGRAM GENERATION
-
 ```{r}
 # Cluster the Genes using the average distance and
 # extract the dendrogram from the matrix 
-dist_tree_xprss <- hclust(dist_mtrx_xprss, method="average") %>%
+distance.tree <- hclust(dist_matrix, method="average") %>%
   as.dendrogram()
 
 # Get the different heights that show up in the tree
 # and sort them
-node_hts <- dist_tree_xprss %>% 
+node_heights <- distance.tree %>% 
   get_nodes_attr("height") %>% 
   unique() %>% 
   sort()
 
 # Plot the tree
-dist_tree_xprss %>% dendextend::set("labels_cex", 0.4) %>% plot()
+distance.tree %>% dendextend::set("labels_cex", 0.4) %>% plot()
 ```
 
 3.4 HEIGHT BASED CLUSTERING OPTIMISATION
-
 ```{r}
 # Set the breakpoints for the corr matrix where the change in color will occur 
 newBreaks <- c(seq(-1, 0.00, length.out = 100), seq(0.01, 1, length.out = 100))
 
 # Initialise the df that will contain the coef Score, Node height, Number of groups formed
-scoring_df <- data.frame(Iteration = integer(),
-                                ICSS = numeric(),
-                                ICDS = numeric(),
-                                TCSS = numeric(),
-                                Node.Heightt = numeric(),
-                                Cluster.Count = integer())
+cluster_groups_df <- data.frame(Iteration = integer(),
+                                Intra.Score = numeric(),
+                                Inter.Score = numeric(),
+                                Total.Score = numeric(),
+                                Node.Height = numeric(),
+                                Cluster.Number = integer())
 
 # Initialise the scores 
-initial_ICSS <- 1
-initial_ICDS <- sum((1 - abs(cor_mtrx_xprss) / (alpha))) / length(cor_mtrx_xprss)
-tot_score <- weight*initial_ICSS + (1-weight)*initial_ICDS
+initial_intra <- length(colnames(final_df))
+initial_inter <- sum(inter_coef(corr_matrix))
+tot_score <- initial_intra - initial_inter
 
-scoring_df <- rbind(
-    scoring_df,
+cluster_groups_df <- rbind(
+    cluster_groups_df,
     data.frame(Iteration = 1,
-               Intra.Score = initial_ICSS,
-               Inter.Score = initial_ICDS,
+               Intra.Score = initial_intra,
+               Inter.Score = initial_inter,
                Total.Score = tot_score,
                Node.Height = 0,
-               Cluster.Count = 0
+               Cluster.Number = distance.tree %>% nleaves
                )
     )
 ```
 
-```{r}
-# Iterate over the differnet node heights
-for (ht in seq(2,length(node_hts)-1)){
-  # Select the cut height 
-  cut.ht = node_hts[ht]
 
+```{r}
+for (height in seq(2,length(node_heights)-1,5)){
+  # Select the cut height 
+  cutheight = node_heights[height]
+  print('\n')
+  print(height)
   
   # Get the resulting dendrogram
-  clusters <- cutree(dist_tree_xprss, h = cut.ht)
+  clusters <- cutree(distance.tree, h = cutheight)
 
   # Get the genetic makeup of each cluster
   cluster_df <- as.data.frame(clusters)%>%
@@ -223,7 +206,7 @@ for (ht in seq(2,length(node_hts)-1)){
   n_groups <- length(unique(clusters))
 
   # Add this iteration's cluster information to the expression matrix
-  xprss_df_clustered <- left_join(log_data,
+  clustered_xprss <- left_join(log_data,
                    cluster_df,
                    by = "Gene") %>% 
     mutate(n_genes = map_dbl(clusters, 
@@ -234,46 +217,47 @@ for (ht in seq(2,length(node_hts)-1)){
     select(-c("clusters","n_genes"))
   
   # Group the expression matrix in terms of the clusters
-  grouped_xprss_df_clustered <- xprss_df_clustered %>% 
+  clustered_xprss_grouped <- clustered_xprss %>% 
     group_by(Cluster.Name) %>%
     summarise(across(-Gene, ~ mean(., na.rm = TRUE))) 
   
   
-  # Intra Cluster Similarity Score (ICSS)
+  # Intra Cluster Similarity Score (ICSS) Calculation
   
   # Find the clusters with more than a single gene occupant
-  filled_clusters <- grouped_xprss_df_clustered %>% 
+  filled_clusters <- clustered_xprss_grouped %>% 
     filter(str_detect(Cluster.Name, "^Clust.")) %>% 
     pull(Cluster.Name) 
   
    # The number of unclustered genes 
   n_unclust_genes <- n_groups - length(filled_clusters)
   
-  # Iterate over each cluster to calculate its specific similarity score
+  # Iterate over each cluster to calculate its specific score
   total_intra_score <- 0
   
-  # Filter over these individual clusters creating the cluster specific corr matrix
+  # Filter over these individual clusters creating the cluster specific corr matrices and collecting the average coefficient of each 
+  intra_cluster_averages = c()
   for (clust in filled_clusters){
-    intra_corr <- xprss_df_clustered %>% 
+    intra_corr <- clustered_xprss %>% 
       filter(Cluster.Name == clust) %>% 
       select(-Cluster.Name) %>% 
       column_to_rownames("Gene") %>% 
       t() %>% 
       cor()
     
-    # Sum positive correlations
-    positive_contrib <- sum((intra_corr > 0) * 
-                             sigmoid(intra_corr))
+    # Sum positive correlations raised to the power of p
+    positive_contribution <- sum((intra_corr > 0) * 
+                             intra_corr^2)
     
-    # Sum negative correlations
-    negative_contrib <- sum((intra_corr < 0) * 
-                             sigmoid(abs(intra_corr)))
+    # Sum negative correlations raised to the power of q
+    negative_contribution <- sum((intra_corr < 0) * 
+                             abs(intra_corr)^2)
     
     # Get the number of gene pairs
     n_pairs <- length(intra_corr)
     
     # Calculate cluster score and adjust by the number of pairs
-    cluster_score <- (positive_contrib - lambda * negative_contrib) / n_pairs
+    cluster_score <- (positive_contribution - 1 * negative_contribution) / n_pairs
     
     # Add to total score
     total_intra_score <- total_intra_score + cluster_score
@@ -284,114 +268,71 @@ for (ht in seq(2,length(node_hts)-1)){
   
   # Average the score by the number of clusters
   ICSS <- total_intra_score / n_groups
-
+  
  
-  # Inter Cluster Dissimilarity Score, ICDS
-
-  # Redefine the correlation matrix in terms of the clusters
-  reclustered_matrix <- grouped_xprss_df_clustered %>%
-    column_to_rownames("Cluster.Name") %>%
-    t() %>%
-    cor(., method = "pearson")
-  
-  ICDS <- sum((1 - abs(reclustered_matrix) / (alpha))) / length(reclustered_matrix)
   
   
-  # Total Cluster Correlation Score (TCCS)
-
-  TCCS <- weight*ICSS + (1 - weight)*ICDS
-
-
-  # Collect the Scores from the different iterations
-
-  scoring_df <- rbind(
-    scoring_df,
-    data.frame(Iteration = ht,
-               Intra.Score = ICSS,
-               Inter.Score = ICDS,
-               Total.Score = TCCS,
-               Node.Height = cut.ht,
-               Cluster.Count = length(filled_clusters)
-               )
-    )
+  # # Inter-Cluster Dissimilarity Score (ICDS)
+  # 
+  # # Redefine the correlation matrix in terms of the clusters
+  # clustered_corr <- clustered_xprss_grouped %>%
+  #   column_to_rownames("Cluster.Name") %>%
+  #   t() %>% 
+  #   cor(., method = "pearson")
+  # 
+  # # Calculate the Inter-CCS
+  # ICDS <- sum(inter_coef(clustered_corr))
+  # 
+  # 
+  # # Total Cluster Correlation Score (TCCS)
+  # 
+  # TCCS <- ICSS + ICDS
+  # 
+  # 
+  # # Collect the Scores from the different iterations 
+  # 
+  # cluster_groups_df <- rbind(
+  #   cluster_groups_df,
+  #   data.frame(Iteration = height,
+  #              Intra.Score = ICSS,
+  #              Inter.Score = ICDS,
+  #              Total.Score = TCCS,
+  #              Node.Height = cutheight,
+  #              Cluster.Number = n_groups
+  #              )
+  #   )
   
-  clust_heatmap <- pheatmap(reclustered_matrix,
-                            breaks = newBreaks ,
-                            color = myColors,
-                            border_color = NA)
-
-  # Save the heatmaps
-  ggsave(paste0("Plots/clustered_hmap_", ht, ".png"),
-       plot = clust_heatmap,
-       width = 30,
-       height = 25)
-  
+  # 
+  # # Plot the resulting tree
+  # plot(color_branches(distance.tree, h=cutheight),
+  #      leaflab="none", 
+  #      col = paletteer_c("grDevices::Terrain 2", 
+  #                        length(unique(clusters))), 
+  #      main = " Hierarchical clustering (average method)"
+  #      )
+  # abline(h = cutheight, col = "red", lwd = 0.75)
+  # mtext(paste0("Cut Height of ",round(cutheight, 2),
+  #              ", yeilding ", 
+  #              n_clusters, 
+  #              " clusters"
+  #              ), 
+  #       side = 3, 
+  #       line = 0.5, 
+  #       cex = 0.8, 
+  #       adj = 0.5
+  #       )
+  # 
+  # clust_heatmap <- pheatmap(clustered_corr, 
+  #                           breaks = newBreaks ,
+  #                           color = myColors,
+  #                           border_color = NA)
+  # 
+  # # # Save the heatmaps
+  # # ggsave(paste0("Plots/clsutered_heatmap", height, ".png"),
+  # #      plot = clust_heatmap,
+  # #      width = 30,
+  # #      height = 25)
 }
 ```
 
 
-```{r}
-# locate the iteration with the greatest total combined score (TCCS)
-# use the node height to render the matrix, clusters & extract the tree 
-
-optimal_node_ht <- scoring_df %>%
-  filter(Total.Score == max(Total.Score)) %>% 
-    pull(Node.Height) 
-
-# Get the resulting dendrogram
-optimal_clusters <- cutree(dist_tree_xprss, h = optimal_node_ht)
-
-# Get the genetic makeup of each cluster
-optimal_clusters_df <- as.data.frame(optimal_clusters)%>%
-  rownames_to_column("Gene") %>%
-  mutate(n_genes = map_dbl(optimal_clusters,
-                           ~sum(.x == optimal_clusters, na.rm = TRUE)
-                           ), # number of genes in the cluster
-         Cluster.Name = ifelse(n_genes == 1, Gene,
-                               paste0("Clust.",optimal_clusters)))
-
-
-# Add this iteration's cluster information to the expression matrix
-optimal_xprss_df_clustered <- left_join(log_data,
-                                optimal_clusters_df,
-                                by = "Gene") %>%
-  select(-c("optimal_clusters","n_genes"))
-
-# Group the expression matrix in terms of the clusters
-optimal_grouped_xprss_clustered_df <- optimal_xprss_df_clustered %>%
-  group_by(Cluster.Name) %>%
-  summarise(across(-Gene, ~ mean(., na.rm = TRUE)))
-```
-
-
-```{r}
-# Get the number of groups, clusters, unclustered genes & clustered genes
-optimal_n_groups <- length(unique(optimal_clusters))
-optimal_n_clusts <- optimal_clusters_df %>% 
-  filter(n_genes > 1) %>% 
-  pull(Cluster.Name) %>% 
-  unique() %>% 
-  length()
-optimal_n_unclustered <- optimal_n_groups - optimal_n_clusts
-optimal_n_clustered <- length(optimal_clusters_df$Gene) - optimal_n_unclustered
-
-
-  # Plot the resulting tree
-  plot(color_branches(dist_tree_xprss, h=optimal_node_ht),
-       leaflab="none",
-       col = paletteer_c("grDevices::Terrain 2",
-                         length(unique(clusters))),
-       main = " Hierarchical clustering (average method)"
-       )
-  abline(h = optimal_node_ht, col = "red", lwd = 0.75)
-  mtext(paste0("Cut Height of ",round(optimal_node_ht, 2),
-               ", yeilding ",
-               optimal_n_clusts,
-               " clusters"
-               ),
-        side = 3,
-        line = 0.5,
-        cex = 0.8,
-        adj = 0.5
-        )
-```

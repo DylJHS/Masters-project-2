@@ -1446,3 +1446,20 @@ At each step in the iteration:
 21/04/24
 
 - Included all Initial genes in the TCGA_Configuration sript
+
+
+22/04/24
+
+- Project presentation Monday meeting
+
+- Starting on the different CIN/Aberrant Features
+ 
+- Adi provided the feedback document based on the presentation
+- Would be useful to integrate the information from the feedback into future presentations
+- Explain the terms clearly and simply
+- Use graphs in the initial part of the pres and guide the audience through them
+- Give more details about the number of samples in the analysis and the references healthy/cancer or SOI/random set
+- Explaining the cutoff selection
+- Explanation on how the performance of the model can be affected by changes to the input parameters
+ 
+- Reading up on the GLM and other multimodal classification models
