@@ -1488,3 +1488,8 @@ At each step in the iteration:
 
 - Actually the multiclass-multioutput classifier aka multitask one is the best solution 
 - It is able to handle cases where the number properties (variables) and the number of classes (possible outcomes per property) are greater than 2
+- Need to use the segmented data in order to determine the structural aneuploidy of the samples (arm loss)
+- Need the segmented based log ratio cnv data to determine whole aneuploidy for the chromosomes as a whole (because need the info on the chromosomes as well as the loss/gain info)
+- Not sure if i need the gene level CNV data yet
+- Need to find a way of incorporating the arm loss/gain into the data 
+- Should the analysis focus on differenet segments or on whole arms gained/lost as well
