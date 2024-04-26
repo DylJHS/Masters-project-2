@@ -1,0 +1,23 @@
+---
+  title: "TCGA_CIN_FEATURES"
+format: html
+editor: visual
+Notes: This script is intended to do some exploration of the samples in the CIN Features in the TCGA PanCan datasets.
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+## Load the libraries
+
+```{r}
+library(dplyr)
+library(plyr)
+library(knitr)
+library(tidyverse)
+library(edgeR)
+library(limma)
+library(data.table)
+library(ggpubr)
+```
