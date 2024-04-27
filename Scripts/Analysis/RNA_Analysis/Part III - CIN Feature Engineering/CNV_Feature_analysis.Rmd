@@ -20,6 +20,7 @@ library(edgeR)
 library(limma)
 library(data.table)
 library(ggpubr)
+library(psych)
 ```
 
 Import data

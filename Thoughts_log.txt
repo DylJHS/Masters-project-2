@@ -1404,12 +1404,12 @@ At each step in the iteration:
 
 17/04/24
 
-- Renaming the constituents of the cluster correlaiton scoring
+- Renaming the constituents of the cluster correlation scoring
 - Intra-CCS to Intra Cluster Similarity Score, ICSS
 - Inter-CCS to Inter Cluster Dissimilarity Score, ICDS
 
 - Treating negative and positive correlations differently in terms of the dissimilarity is causing issues
-- Modifying the scoring system such that it only considers the magnitude when assessing the dissimilarity betweeen clusters and not the direction as well
+- Modifying the scoring system such that it only considers the magnitude when assessing the dissimilarity between clusters and not the direction as well
 
 - Edits to the ICSS so that it applies a sigmoid function in order to scale the correlations 
 - Giving correlations above 0.7 a higher chance of being clustered
@@ -1484,6 +1484,7 @@ At each step in the iteration:
  
 - A multi-output classifier will be needed, likely a multi-label classifier specifically
 
+
 25/04/24
 
 - Actually the multiclass-multioutput classifier aka multitask one is the best solution 
@@ -1492,4 +1493,27 @@ At each step in the iteration:
 - Need the segmented based log ratio cnv data to determine whole aneuploidy for the chromosomes as a whole (because need the info on the chromosomes as well as the loss/gain info)
 - Not sure if i need the gene level CNV data yet
 - Need to find a way of incorporating the arm loss/gain into the data 
-- Should the analysis focus on differenet segments or on whole arms gained/lost as well
+- Should the analysis focus on different segments or on whole arms gained/lost as well
+
+
+26/04/24
+
+- found the Aneuploidy score file
+- Shows the score as well as the arm specific gain/loss
+- Only +1,0,-1 values in the gain/loss section
+- Need to handle the null values
+- Either reference the segment-based cnv file and use a measure from there
+- Or assign them a value of 0 (no change in CN)
+- The value given in the arm specific score is relative not absolute 
+- Specifies a general gain or loss 
+- will need to hot-encode each of the 3 possibilities for each arm of each chromosome
+- each chromosome arm will represent a Property with the 3 possible values as the classes (multi-class)
+- Should also use the chromosome segmental data for aneuploidies in specific segments
+
+- The segmental data should be reduced before hand getting rid of some of the 1700000 samples
+- Filter to be set on the range between the start and end bases 
+- Filter to be set on the logFC of the tumour/normal
+- For the log filter values of -1 or less as well as +1 or more should be included
+
+- Aniek wants the DGEA information for 2 additional genes CHAF1B and EHMT1
+- Wants the focus to be on Ovarian cancer if possible
