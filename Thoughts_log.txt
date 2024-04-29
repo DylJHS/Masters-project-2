@@ -1517,3 +1517,15 @@ At each step in the iteration:
 
 - Aniek wants the DGEA information for 2 additional genes CHAF1B and EHMT1
 - Wants the focus to be on Ovarian cancer if possible
+
+
+27/04/24
+
+- Looking at the data of the DGEA for the ovarian samples 
+- Looks like the samples for that cancer type are not paired
+
+- the data from the PanCan studies in the TCGA dataset for ovarian cancer do not have any healthy control samples
+- Will need to use another dataset for ovarian cancer samples
+
+- Created the cvs & excel table for the complete gene list
+- Need to find a dataset for ovarian cancer types with matching normal controls (couldn't find one) 
