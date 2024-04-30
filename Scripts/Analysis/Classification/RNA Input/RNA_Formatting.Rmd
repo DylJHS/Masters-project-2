@@ -84,6 +84,10 @@ extract_element <- function(strings, index) {
   element_list <- sapply(strsplit(strings, "\\."), function(x) x[index])
   return(element_list)
 }
+
+untransform <- function(x) {#Function to convert the log transformed counts back into original counts
+  return(ceiling((2^x)-1))
+}
 ```
 
 2.  COLLECTION
@@ -92,13 +96,15 @@ extract_element <- function(strings, index) {
 
 ```{r}
 # Load the TCGA PanCan RSEM Expected Counts
-original <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
-order_data <- original[,order(colnames(original))]
+# ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+order_exp <- ori_exp[,order(colnames(ori_exp))]
+order_exp <- order_exp[0:6000,0:2500]
 
 # Load the TCGA PanCan TPM counts
-original <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
-order_data <- original[,order(colnames(original))]
-
+# ori_cts <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
+order_cts <- ori_cts[,order(colnames(ori_cts))] %>% 
+  dplyr::select(-"id")
+order_cts <- order_cts[0:6000,0:2500]
 
 # Cancer/Tissue Metadata
 tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
@@ -125,62 +131,70 @@ soi_genes <-soi[,2]
 
 3.  CLEANING AND PRE-PROCESSING
 
-3.1. RE-TRANSFORM THE DATA FROM THE y = Log2(x+1) VALUES TO THE COUNTS USING THE FOLLOWING FORUMLA: x = 2^y^−1.
+3.1. RE-TRANSFORM THE EXPECTED COUNT DATA FROM THE y = Log2(x+1) VALUES TO THE COUNTS USING THE FOLLOWING FORUMLA: x = 2^y^−1.
 
 ```{r}
-transformed_data <- order_data
-rownames(transformed_data) <- NULL
+trans_exp <- order_exp
+rownames(trans_exp) <- NULL
 
-
-untransform <- function(x) {#Function to convert the log transformed counts back into original counts
-  return(ceiling((2^x)-1))
-}
-
-count_data <- transformed_data %>%
+count_exp <- trans_exp %>%
   mutate_at(vars(-1), untransform)
 ```
+
+```{r}
+# Remove the non-cancerous sample types from the set
+codes_to_use <- c("01","02","03","04","05","08","09")
+
+exp_samples_to_use <- count_exp %>%  dplyr::select(c("sample", ends_with(codes_to_use)))
+cts_samples_to_use <- order_cts %>%  dplyr::select(c("Gene", ends_with(codes_to_use)))
+```
+
 
 3.2. CONVERT THE GENE IDS INTO GENE NAMES
 
 ```{r}
-counts_data <- right_join(gene_ids %>% 
+counts_exp <- right_join(gene_ids %>% 
                     dplyr::select(c("id", "gene")) %>% 
                     sapply(trimws) %>% 
                     as.data.frame(),
-                  count_data,
+                  count_exp,
                   by = c("id" = "sample")) %>% 
   dplyr::select(-"id")
 
-counts_data <- counts_data %>%
+counts_exp <- counts_exp %>%
   mutate(gene = trimws(gene))
   
 ```
 
-3.3. EDIT THE SAMPLES (COLUMN NAMES) INTO IDS SO AS TO BE ABLE TO IDENTIFY THE PARTICIPANT, CONDITION AND CANCER TYPE
 
+HANDLE DUPLICATE GENES
 ```{r}
-ids <- colnames(counts_data)[-1]
-participants <- extract_element(ids, 3)
-condition <- extract_element(ids, 4)
-tissue_type <- extract_element(ids, 2)
-
-column_names <- c("Genes" ,  paste(tissue_type, participants, condition, sep = "."))
-colnames(counts_data) <- column_names
-
 # Convert data to a data.table for faster processing during the grouping of the duplicate genes
-setDT(counts_data)  
+setDT(counts_exp)  
+
+setDT(order_cts)  
 
 # Combine duplicate genes together using the median of the expression
-grouped <- counts_data[, lapply(.SD, function(x) if (length(x) > 1) median(x, na.rm = TRUE) else x), by = Genes, .SDcols = -"Genes"]
+grouped_exp <- counts_exp[, lapply(.SD, function(x) if (length(x) > 1) median(x, na.rm = TRUE) else x), by = gene, .SDcols = -"gene"]
+
+grouped_cts <- order_cts[, lapply(.SD, function(x) if (length(x) > 1) median(x, na.rm = TRUE) else x), by = Gene, .SDcols = -"Gene"]
 
 # Edit ids so as to be able to identify the condition
 # Reset the row names to the Gene names
-grouped_data <- as.data.frame(grouped)
-data <- distinct(grouped_data) %>% 
-  column_to_rownames(var = "Genes") 
+groups_exp <- as.data.frame(grouped_exp)
+exp_data <- distinct(groups_exp) %>% 
+  column_to_rownames(var = "gene")
 
+groups_cts <- as.data.frame(grouped_cts)
+cts_data <- distinct(groups_cts) %>% 
+  column_to_rownames(var = "Gene")
+```
+
+
+3.3. REMOVE THE NON-CANCEROUS SAMPLES FROM THE SET
+```{r}
 # Remove the unwanted sample types from the samples based on the code
-codes_to_use <- c("01","02","03","04","05","08","09","10","11","12","14","40")
+codes_to_use <- c("01","02","03","04","05","08","09")
 samples_to_use <- data %>%  dplyr::select(ends_with(codes_to_use))
 
 # Map the codes by health status (cancer <= 9 < Normal)
