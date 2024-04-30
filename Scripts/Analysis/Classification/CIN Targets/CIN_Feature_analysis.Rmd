@@ -76,12 +76,12 @@ cvn_arm <- ori_arm_cnv %>% replace(is.na(.), 0)
 # Re-organise the columns 
 cnvs_arm <- cvn_arm %>%
   column_to_rownames("Sample") %>% 
-  select(-"Type")
+  dplyr::select(-"Type")
   
 ```
 
-
 JOIN THE CIN-BASED FEATURES
+
 ```{r}
 
 full_cin <- merge(
@@ -90,13 +90,3 @@ full_cin <- merge(
   by = "row.names"
 )
 ```
-
-
-
-
-
-
-
-
-
-
