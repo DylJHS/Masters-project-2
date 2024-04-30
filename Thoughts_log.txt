@@ -1510,7 +1510,7 @@ At each step in the iteration:
 - each chromosome arm will represent a Property with the 3 possible values as the classes (multi-class)
 - Should also use the chromosome segmental data for aneuploidies in specific segments
 
-- The segmental data should be reduced before hand getting rid of some of the 1700000 samples
+- The segmental data should be reduced beforehand getting rid of some of the 1700000 samples
 - Filter to be set on the range between the start and end bases 
 - Filter to be set on the logFC of the tumour/normal
 - For the log filter values of -1 or less as well as +1 or more should be included
@@ -1529,3 +1529,20 @@ At each step in the iteration:
 
 - Created the cvs & excel table for the complete gene list
 - Need to find a dataset for ovarian cancer types with matching normal controls (couldn't find one) 
+
+
+28/04/24 
+
+- Converting the chromosome arm CNVs into the correct format (hot encoding)
+- hot encoding the data may be a better method for logistic regression than maintining the numerical values
+- But mainting the numerical values (-1,0,1) embeds the underlying relationship between the categories and may be beneficial for RFs and GBMs
+
+- Remember that from your presentation last week that it was mentioned that i had a lot of mitotic genes in the over/under expressed genes in the volcano plot
+- Look more into the gnees that are shown in your plots
+- Show the individual clusters and tehir makeup in a plot format as well
+ 
+- Plotting the mds of the chromosome arm-level aneuploidies does not reveal anything too significant
+- Will add in the Signature scores to see if they make a difference
+- Including the individual hrd (loh, lst, Tai) scores as target features
+- Removal of the total sum of the scores for now
+- Most of these scores have to do with breast (BRCA1/2) affected cancer types, not sure they will be relevant in the determination of the rest of the cancer types
