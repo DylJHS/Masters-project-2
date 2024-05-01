@@ -1546,3 +1546,19 @@ At each step in the iteration:
 - Including the individual hrd (loh, lst, Tai) scores as target features
 - Removal of the total sum of the scores for now
 - Most of these scores have to do with breast (BRCA1/2) affected cancer types, not sure they will be relevant in the determination of the rest of the cancer types
+
+
+30/04/24
+
+- Using the segmental copy number data will prove difficult
+- The ranges in teh start and ending bps are not constant across all sample
+- Therefore unlikely to be able to be used as an accurate measure of CIN across multiple samples
+
+
+- Going to test multiple types of input RNAseq data
+- The TPM values which will likely be the default
+- And then refined normalised data for both within and across sample 
+
+- Might add another type of RNAseq normalisation using the log2 Fold Change from the mean of all samples for said gene
+
+- When formatting the RNAseq data for use dropping the metastatic cancer types from the analysis as well as the normal, and other types that are not explicitly human-patient based (i.e. cell lines, xenografts, unspecified samples...)
