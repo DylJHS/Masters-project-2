@@ -1562,3 +1562,11 @@ At each step in the iteration:
 - Might add another type of RNAseq normalisation using the log2 Fold Change from the mean of all samples for said gene
 
 - When formatting the RNAseq data for use dropping the metastatic cancer types from the analysis as well as the normal, and other types that are not explicitly human-patient based (i.e. cell lines, xenografts, unspecified samples...)
+ 
+
+01/05/24
+
+- the RNAseq data should also be mean centrered using the mean of the each gene across the full sample set (training set)
+- Mean centering the log values is the equivalent of calculating the log fold change between the value and the mean value
+- Ultametly I should iterate over different input methods (types of normalisation if any) when runnign the model to see which method performs best (cross validation)
+- First need to actually implement the model

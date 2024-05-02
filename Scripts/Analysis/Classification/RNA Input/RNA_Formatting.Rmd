@@ -41,8 +41,16 @@ untransform_exp <- function(x) {#Function to convert the log transformed counts 
   return(ceiling((2^x)-1))
 }
 
+transform_exp <- function(x) {#Function to convert the log transformed counts back into original counts
+  return(log2(x + 1))
+}
+
 untransform_tpm <- function(x) {#Function to convert the log transformed counts back into original counts
   return(ceiling((2^x)-0.001))
+}
+
+transform_tpm <- function(x) {#Function to convert the log transformed counts back into original counts
+  return(log2(x + 0.001))
 }
 ```
 
@@ -152,7 +160,7 @@ tpm_data <- distinct(groups_tpm) %>%
 ```
 
 ```{r}
-df_long <- pivot_longer(tpm_data[,72:80], cols = everything(), names_to = "Variable", values_to = "Value")
+df_long <- pivot_longer(exp_data[,75:80], cols = everything(), names_to = "Variable", values_to = "Value")
 
 # Plot using ggplot
 ggplot(df_long, aes(x = Value)) +
@@ -187,7 +195,6 @@ if (length(cols_zeros_exp) > 0) {
 
 
 
-
 3.5. DGE MODELLING FOR THE COUNT DATA IN ORDER TO GENERATE A INPUT SET THAT HAS BEEN NORMALISED TO ACCOUNT FOR LIBRARY SIZE
 Only need to do this once for the expected count data (will not work with the tpm due to lower counts) but can then apply the library size factors to their respective samples in both the expected counts dataset and the tpm dataset
 
@@ -208,5 +215,43 @@ Normfact_exp <- calcNormFactors(d_exp, method = "TMM")
 ```
 
 
+3.6 SCALE THE COUNTS IN TERMS OF LIBRARY SIZE FACTORS
+```{r}
+Normfactors <- as.data.frame(Normfact_exp$samples) %>% select("norm.factors")
+
+# match the column names from the normalisation factor df with that of the other dfs in order to divide the count values by the library size factors for the correct samples 
+matching_cols_tpm <- colnames(tpm_data)[match(rownames(Normfactors), colnames(tpm_data))]
+scld_cnts_tpm <- round(sweep(tpm_data[, matching_cols_tpm], 2, Normfactors$norm.factors, "/"),2)
+
+matching_cols_exp <- colnames(exp_data)[match(rownames(Normfactors), colnames(exp_data))]
+scld_cnts_exp <- round(sweep(exp_data[, matching_cols_exp], 2, Normfactors$norm.factors, "/"),2)
+```
+
+
+4 GENERATE THE DIFFERENT INPUT TYPES TO USE
+
+ALL SET OF INTEREST GENES
+```{r}
+# Expected Counts
+exp_set <- data_complete_exp %>% filter(rownames(.) %in% soi_genes)# Raw expected counts 
+scld_exp_set <- scld_cnts_exp %>% filter(rownames(.) %in% soi_genes)# Library size normalised Expected counts
+log_exp <- exp_set %>%
+  mutate_at(vars(everything()), transform_exp) # Log transformed expected counts
+log_scld_exp <- scld_exp_set %>%
+  mutate_at(vars(everything()), transform_exp) # Log transformed Library size normalised expected counts
+
+# Transcript per million (TPM)
+tpm_set <- data_complete_tpm %>% filter(rownames(.) %in% soi_genes)# Raw TPM counts 
+scld_tpm_set <- scld_cnts_tpm %>% filter(rownames(.) %in% soi_genes)# Library size normalised TPM counts
+log_tpm <- tpm_set %>%
+  mutate_at(vars(everything()), transform_tpm) # Log transformed TPM counts
+log_scld_tpm <- scld_tpm_set %>%
+  mutate_at(vars(everything()), transform_tpm) # Log transformed Library size normalised TPM counts
+```
+
+WITH THE CLUSTERING
+```{r}
+
+```
 
 
