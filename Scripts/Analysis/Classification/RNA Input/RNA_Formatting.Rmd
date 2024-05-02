@@ -207,61 +207,6 @@ d_exp <- DGEList(matrix_exp)
 Normfact_exp <- calcNormFactors(d_exp, method = "TMM")
 ```
 
-4.2. CREATE THE SAMPLE FACTORS
 
-IMPORTANT: The order of the condition factor will determine how the logFCs are calculated, with the first level representing the reference (denominator) which in this case should be the healthy condition.
-
-```{r}
-participants <- extract_element(colnames(mapped_matrix), 2)
-condition <- extract_element(colnames(mapped_matrix), 3)
-tissue_type <- extract_element(colnames(mapped_matrix), 1)
-
-participants <- factor(participants)
-tissue_type <- factor(tissue_type)
-condition <- factor(condition, levels=c("N","C"))
-```
-
-4.3. TRIM LOW COUNT GENES
-
-```{r}
-# Remove low count genes, those with a count below 10
-keep<-filterByExpr(d0,group = condition, min.count = 10)
-d0<-d0[keep,,keep.lib.size=FALSE]
-
-print(paste("The size of the dataframe is now", 
-            dim(d0)[1], "x", dim(d0)[2]))
-```
-
-4.4. PLOT THE MDS OF THE FACTORS
-
-Plot the 2 dimensional graph of the main logFC components in terms of the condition
-
-```{r}
-plotMDS(d0, pch = 1, col = ifelse(condition == "C", "red", "blue"))
-```
-
-Plot the 2 dimensional graph of the main logFC components in terms of the tissue type
-
-```{r}
-plotMDS(d0, pch = 3, col = tissue_type)
-```
-
-4.5. CREATE THE LINEAR MODEL
-
-```{r}
-# Set the unique participants and the condition as the main effects.
-mm <- model.matrix(~ participants + condition)
-```
-
-```{r}
-# Apply voom() to transfrom the data so that it is suitable for linear modelling.
-y <- voom(d0, mm, plot = T)
-
-# Fit the linear model
-fit <- lmFit(y, mm)
-
-# smooth the standard errors
-fit2 <- eBayes(fit)
-```
 
 
