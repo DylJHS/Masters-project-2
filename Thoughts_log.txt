@@ -1570,3 +1570,10 @@ At each step in the iteration:
 - Mean centering the log values is the equivalent of calculating the log fold change between the value and the mean value
 - Ultametly I should iterate over different input methods (types of normalisation if any) when runnign the model to see which method performs best (cross validation)
 - First need to actually implement the model
+ 
+
+02/05/24
+
+- Genreaated theh diiffernet types of expression inputs for the model to try in cross validation
+- The different expression input sets that are finalised do not use clustering (dimensionality reduction) 
+- Need to implement the dimensionality reduction method as well for all the different types (Expected counts, TPM, log transformed & library size scaled) 
