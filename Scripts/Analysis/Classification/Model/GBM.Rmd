@@ -24,6 +24,7 @@ library(ggpubr)
 library(psych)
 library(limma)
 library(edgeR)
+library(tidyverse)
 
 ```
 
@@ -57,18 +58,18 @@ Import data
 
 ```{r}
 # SOI genes
-# soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
 
 # Predictor variables
 
 # Expected Counts
-# ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 order_exp <- ori_exp[,order(colnames(ori_exp))]
 order_exp <- order_exp[0:6000,0:2500]
 
 # TPM counts
-# ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
+ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
 order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
   dplyr::select(-"id")
 order_tpm <- order_tpm[0:6000,0:2500]
@@ -94,7 +95,6 @@ gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.tx
 
 ```
 
-
 ```{r}
 # Combine the metadata
 meta <- left_join(tss_meta %>% 
@@ -110,7 +110,7 @@ meta <- left_join(tss_meta %>%
                    by = "Study.Name")
 ```
 
-1. Handle the configuration of the RNA seq data 
+1.  Handle the configuration of the RNA seq data
 
 ```{r}
 trans_exp <- order_exp # Log transformed Expected Counts
@@ -196,7 +196,6 @@ matching_cols_exp <- colnames(exp_data)[match(rownames(Normfactors), colnames(ex
 scld_cnts_exp <- round(sweep(exp_data[, matching_cols_exp], 2, Normfactors$norm.factors, "/"),2)
 ```
 
-
 ```{r}
 # Expected Counts
 exp_set <- data_complete_exp %>% # Raw expected counts
@@ -233,7 +232,7 @@ log_scld_tpm <- scld_tpm_set %>% # Log transformed Library size normalised TPM c
   mutate_at(vars(everything()), transform_tpm) 
 ```
 
-2. Handle the configuration of the CIN-based features
+2.  Handle the configuration of the CIN-based features
 
 ```{r}
 
@@ -249,7 +248,8 @@ cvn_arm <- ori_arm_cnv %>% replace(is.na(.), 0)
 # Re-organise the columns 
 cnvs_arm <- cvn_arm %>%
   column_to_rownames("Sample") %>% 
-  dplyr::select(-"Type")
+  dplyr::select(-"Type") %>% 
+  mutate_all(as.numeric)
 
 full_cin <- merge(
   hrd,
@@ -261,7 +261,7 @@ full_cin <- merge(
 
 ```
 
-3. Complete merge of all the DFs
+3.  Complete merge of all the DFs
 
 ```{r}
 rna_list <- list(tpm_set, scld_tpm_set, log_scld_tpm, log_tpm, exp_set, scld_exp_set, log_exp, log_scld_exp)
@@ -273,6 +273,3 @@ for (rna_set in  rna_list){
 # full_df <- merge(log_scld_exp, full_cin, by = "row.names") 
 
 ```
-
-
-
