@@ -1589,3 +1589,11 @@ At each step in the iteration:
 04/05/24
 
 - Reading up on the paper for my JC presentation
+
+
+06/05/24
+
+- In the model script making sure that the variables are in the right data type
+ 
+- Going over some the genes that are in teh differential gene expression analysis that was done for Aniek
+- Need to restrict the output to only the genes in the gene-set

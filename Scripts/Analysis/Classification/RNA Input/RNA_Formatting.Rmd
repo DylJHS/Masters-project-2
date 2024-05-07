@@ -6,7 +6,6 @@ Note: This script is for the formatting of the input RNAseq for the model.
 ---
 
 
-
 1.  SETUP
 
 1.1. SETUP
