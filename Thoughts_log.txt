@@ -1597,3 +1597,24 @@ At each step in the iteration:
  
 - Going over some the genes that are in teh differential gene expression analysis that was done for Aniek
 - Need to restrict the output to only the genes in the gene-set
+ 
+
+07/05/24
+
+- Need to go over the genes in the output for the DGEA and add a value column for the genes of interest
+
+- Met with Marit about the het protein genes that she is looking into
+- Would like some DGEA done on the set 
+
+- Implementation of the train and test set for the model training
+
+
+08/05/24
+
+- JC prep 
+
+
+
+09/05/24
+
+- JC paper reading/prep
