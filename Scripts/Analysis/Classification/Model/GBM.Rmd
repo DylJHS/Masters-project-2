@@ -287,11 +287,57 @@ sample_split <- sample.split(Y = full_df[colnames(full_cin)], SplitRatio = 0.7)
 train_set <- subset(x = full_df, sample_split == TRUE)
 test_set <- subset(x = full_df, sample_split == FALSE)
 
-y_train <- train_set[colnames(full_cin)]
-X_train <- train_set %>% select(-colnames(full_cin))
+y_train <- as.integer(train_set$HRD)
+X_train <- train_set %>% select(-append("Row.names",colnames(full_cin)))
 
-# X_test <- test_set %>% select(-Species)
-# y_test <- as.integer(test_set$Species) - 1
+y_test <- as.integer(test_set$HRD)
+X_test <- test_set %>% select(-append("Row.names",colnames(full_cin)))
 
 ```
+
+
+```{r}
+xgb_train <- xgb.DMatrix(data = as.matrix(X_train), label = y_train)
+xgb_test <- xgb.DMatrix(data = as.matrix(X_test), label = y_test)
+
+watchlist <- list(train = xgb_train, test = xgb_test)
+
+xgb_params <- list(
+booster = "gbtree",
+max_depth = 4,
+gamma = 4,
+subsample = 0.75,
+colsample_bytree = 1,
+objective = "reg:squarederror",
+eval_metric = "rmse", 
+eta = 0.24
+)
+
+xgb_model <- xgb.train(
+params = xgb_params,
+data = xgb_train,
+watchlist = watchlist, 
+early_stopping_rounds = 50,
+nrounds = 2000,
+verbose = 1
+)
+
+# xgb_model
+
+# Best RMSE and iteration number
+best_rmse <- min(xgb_model[["evaluation_log"]][["test_rmse"]])
+best_iteration <- which.min(xgb_model[["evaluation_log"]][["test_rmse"]])
+
+# Print the best RMSE and its corresponding iteration
+print(paste("Best RMSE:", best_rmse, "at iteration:", best_iteration))
+```
+
+```{r}
+xgb_preds <- predict(xgb_model, as.matrix(X_test), reshape = TRUE)
+xgb_preds <- as.data.frame(xgb_preds)
+
+xgb_preds$actual <- y_test
+
+```
+
 
