@@ -1618,3 +1618,15 @@ At each step in the iteration:
 09/05/24
 
 - JC paper reading/prep
+
+
+10/05/24
+
+- Model building
+- Need to apply cross validation so that it runs over all of the following:
+   - RNAseq data type
+   - eta, or learning rate parameter
+   - max tree depth
+
+- The best form of the RNAseq data seems to be the log transformed expected count data without scalling
+- But need to perform the cross validation in combo with the other (hyper)parameters in order to determine for sure

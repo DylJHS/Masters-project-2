@@ -58,6 +58,8 @@ transform_tpm <- function(x) {#Function to convert the log transformed counts ba
 }
 ```
 
+
+
 Import data
 
 ```{r}
@@ -70,15 +72,22 @@ soi_genes <-soi[,2]
 # Expected Counts
 # ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 order_exp <- ori_exp[,order(colnames(ori_exp))]
-order_exp <- order_exp[0:35000,0:10000]
 
 
 # TPM counts
 # ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
 order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
   dplyr::select(-"id")
-order_tpm <- order_tpm[0:35000,0:10000]
 
+
+
+# Number of random rows and columns to select
+n_rows <- 55000
+row_samples <- sample(nrow(order_exp), n_rows)
+
+
+order_tpm <- order_tpm[row_samples,0:7000]
+order_exp <- order_exp[row_samples,0:7000]
 
 # Response data
 
@@ -198,7 +207,6 @@ matching_cols_tpm <- colnames(tpm_data)[match(rownames(Normfactors), colnames(tp
 
 ```
 
-
 ```{r}
 matching_cols_tpm <- matching_cols_tpm[!is.na(matching_cols_tpm)]
 
@@ -276,76 +284,87 @@ full_cin <- merge(
 
 ```
 
-3.  Complete merge of all the predictor and response vars 
+3.  Complete merge of all the predictor and response vars
 
 ```{r}
-rna_list <- list(tpm_set, scld_tpm_set, log_scld_tpm, log_tpm, exp_set, scld_exp_set, log_exp, log_scld_exp)
+rna_list <- list(transcripts_per_million = tpm_set, scalled_transcripts_per_million = scld_tpm_set, log_scalled_transcripts_per_million = log_scld_tpm, log_transcripts_per_million = log_tpm, expected_counts = exp_set, scalled_expected_counts = scld_exp_set, log_expected_counts = log_exp, log_scalled_expected_counts = log_scld_exp)
 
-full_df <- merge(log_exp, full_cin, by = "row.names")
+feature_list <- list("loh_hrd","ai1", "lst1")
 
+# set.seed(40)
+
+for (i in 1:length(rna_list)){
+  
+  rna <- rna_list[[i]]
+  name <- names(rna_list)[i]
+  
+  full_df <- merge(rna, full_cin, by = "row.names")
+  
+  sample_split <- sample.split(Y = full_df[colnames(full_cin)], SplitRatio = 0.7)
+  train_set <- subset(x = full_df, sample_split == TRUE)
+  test_set <- subset(x = full_df, sample_split == FALSE)
+  
+  cat(paste0("\n\n", name, ": \n"))
+  
+  for (feature in feature_list){
+    
+  
+    y_train <- as.integer(train_set[[feature]])
+    X_train <- train_set %>% select(-append("Row.names",colnames(full_cin)))
+    
+    y_test <- as.integer(test_set[[feature]])
+    X_test <- test_set %>% select(-append("Row.names",colnames(full_cin)))
+    
+    
+    xgb_train <- xgb.DMatrix(data = as.matrix(X_train), label = y_train)
+    xgb_test <- xgb.DMatrix(data = as.matrix(X_test), label = y_test)
+    
+    watchlist <- list(train = xgb_train, test = xgb_test)
+    
+    xgb_params <- list(
+      booster = "gbtree",
+      max_depth = 4,
+      gamma = 6,
+      subsample = 0.75,
+      colsample_bytree = 1,
+      objective = "reg:squarederror",
+      eval_metric = "rmse", 
+      eta = 0.24
+    )
+    
+    xgb_model <- xgb.train(
+      params = xgb_params,
+      data = xgb_train,
+      watchlist = watchlist, 
+      early_stopping_rounds = 100,
+      nrounds = 5000,
+      verbose = 0
+    )
+    
+    # xgb_model
+    
+    # Best RMSE and iteration number
+    best_rmse <- min(xgb_model[["evaluation_log"]][["test_rmse"]])
+    best_iteration <- which.min(xgb_model[["evaluation_log"]][["test_rmse"]])
+    
+    xgb_preds <- predict(xgb_model, as.matrix(X_test), reshape = TRUE)
+    xgb_preds <- as.data.frame(xgb_preds) %>% 
+      rename(base_pred = "xgb_preds")
+    xgb_preds <- xgb_preds %>% 
+      mutate(mod_pred = ifelse(base_pred < 0, 0, base_pred),
+             actual = y_test,
+             base_res_sqrd = round((base_pred - actual)^2,2),
+             mod_res_sqrd = round((mod_pred - actual)^2,2))
+    
+    base_rsme <- sqrt(sum(xgb_preds$base_res_sqrd)/length(xgb_preds$base_res_sqrd))
+    mod_rsme <- sqrt(sum(xgb_preds$mod_res_sqrd)/length(xgb_preds$mod_res_sqrd))
+    
+    # Print the best RMSE and its corresponding iteration
+    cat(paste(feature, ": \n Best RMSE:", best_rmse, "at iteration:", best_iteration, '\n',
+              "Test Results: \n Base RSME: ", base_rsme, 
+              "\n Modified RSME: ", mod_rsme))
+  }
+  
+}
 ```
-
-
-
-```{r}
-set.seed(40)
-
-sample_split <- sample.split(Y = full_df[colnames(full_cin)], SplitRatio = 0.7)
-train_set <- subset(x = full_df, sample_split == TRUE)
-test_set <- subset(x = full_df, sample_split == FALSE)
-
-y_train <- as.integer(train_set$loh_hrd)
-X_train <- train_set %>% select(-append("Row.names",colnames(full_cin)))
-
-y_test <- as.integer(test_set$loh_hrd)
-X_test <- test_set %>% select(-append("Row.names",colnames(full_cin)))
-
-```
-
-
-```{r}
-xgb_train <- xgb.DMatrix(data = as.matrix(X_train), label = y_train)
-xgb_test <- xgb.DMatrix(data = as.matrix(X_test), label = y_test)
-
-watchlist <- list(train = xgb_train, test = xgb_test)
-
-xgb_params <- list(
-booster = "gbtree",
-max_depth = 4,
-gamma = 6,
-subsample = 0.75,
-colsample_bytree = 1,
-objective = "reg:squarederror",
-eval_metric = "rmse", 
-eta = 0.24
-)
-
-xgb_model <- xgb.train(
-params = xgb_params,
-data = xgb_train,
-watchlist = watchlist, 
-early_stopping_rounds = 50,
-nrounds = 5000,
-verbose = 0
-)
-
-# xgb_model
-
-# Best RMSE and iteration number
-best_rmse <- min(xgb_model[["evaluation_log"]][["test_rmse"]])
-best_iteration <- which.min(xgb_model[["evaluation_log"]][["test_rmse"]])
-
-# Print the best RMSE and its corresponding iteration
-print(paste("Best RMSE:", best_rmse, "at iteration:", best_iteration))
-```
-
-```{r}
-xgb_preds <- predict(xgb_model, as.matrix(X_test), reshape = TRUE)
-xgb_preds <- as.data.frame(round(xgb_preds)) %>% 
-  rename(prediction = "round(xgb_preds)")
-xgb_preds$actual <- y_test
-xgb_preds$squared_error <- (xgb_preds$prediction - xgb_preds$actual)^2
-
-```
-
 
