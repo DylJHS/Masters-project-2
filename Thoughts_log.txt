@@ -1630,3 +1630,10 @@ At each step in the iteration:
 
 - The best form of the RNAseq data seems to be the log transformed expected count data without scalling
 - But need to perform the cross validation in combo with the other (hyper)parameters in order to determine for sure
+
+
+11/05/24
+
+- Thinking about a 10 fold cross validation for the GBM model training
+- Need to figure out how to implement the model for multioutput with xgboost
+
