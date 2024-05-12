@@ -330,9 +330,9 @@ for (i in 1:length(rna_list)){
     
     watchlist <- list(train = xgb_train, test = xgb_test)
     
-    for (depth in seq(2,5)){
+    for (depth in seq(2,4)){
       cat(paste0("Depth: ", depth, "\n"))
-      for (lr in seq(0.10,0.20, by = 0.02)){
+      for (lr in seq(0.10,0.20, by = 0.05)){
         cat(paste0("Learning Rate: ", lr, "\n"))
         
         xgb_params <- list(
