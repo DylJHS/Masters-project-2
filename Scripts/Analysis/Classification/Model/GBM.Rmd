@@ -70,12 +70,12 @@ soi_genes <-soi[,2]
 # Predictor variables
 
 # Expected Counts
-# ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 order_exp <- ori_exp[,order(colnames(ori_exp))]
 
 
 # TPM counts
-# ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
+ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
 order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
   dplyr::select(-"id")
 
@@ -315,7 +315,7 @@ for (i in 1:length(rna_list)){
   cat(paste0("\n", name, ": \n"))
   
   for (feature in feature_list){
-    cat(paste0(feature, ": \n"))
+    cat(paste0("\n", feature, ": \n"))
     
   
     y_train <- as.integer(train_set[[feature]])
@@ -331,9 +331,9 @@ for (i in 1:length(rna_list)){
     watchlist <- list(train = xgb_train, test = xgb_test)
     
     for (depth in seq(2,4)){
-      cat(paste0("Depth: ", depth, "\n"))
-      for (lr in seq(0.10,0.20, by = 0.05)){
-        cat(paste0("Learning Rate: ", lr, "\n"))
+      cat(paste0("\t Depth: ", depth, "\n"))
+      for (lr in seq(0.10,0.15, by = 0.01)){
+        cat(paste0("\t\t Learning Rate: ", lr, "\n"))
         
         xgb_params <- list(
           booster = "gbtree",
@@ -376,7 +376,7 @@ for (i in 1:length(rna_list)){
         # Print the best RMSE and its corresponding iteration
         cat(paste(
                   # ": Best RMSE:", best_rmse, "at iteration:", best_iteration, '\n',
-                  ": Test Results: \n Modified RSME: ", mod_rsme, "\n"))
+                  "\t\t\t Modified RSME: ", mod_rsme, "\n"))
       }
     }
     

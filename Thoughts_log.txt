@@ -1637,3 +1637,12 @@ At each step in the iteration:
 - Thinking about a 10 fold cross validation for the GBM model training
 - Need to figure out how to implement the model for multioutput with xgboost
 
+ 
+
+12/05/24
+
+- Likely going to need to implement a type of ensemble, chained or stacked model 
+- For each of the different target types (continuous or categorical)
+- Check Kaggle competitions and mutlioutput sklearn packages for a solution
+ 
+- Would be nice to add the metrics that are assessed during the loops to a df and extract it in excel
