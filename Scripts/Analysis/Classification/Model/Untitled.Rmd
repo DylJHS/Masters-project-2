@@ -1,0 +1,52 @@
+---
+title: "dd"
+format: html 
+editor: visual
+Notes: This script is intended to do initialise the building of the gbm ml model using the input and ouput data.
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+## Load the libraries
+
+## Load the libraries
+
+```{r}
+library(dplyr)
+library(readr)
+library(mltools)
+library(knitr)
+library(factoextra)
+library(data.table)
+library(ggpubr)
+library(psych)
+library(tidyverse)
+library(caTools)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
+```
+
+
+```{r}
+try <- ggplot(cnv, aes(x= cnv$value)) + 
+  geom_histogram(color = 1, fill = "white",
+                 bins = 100) 
+
+cnv <- cnv %>% 
+  mutate(seg_len = end - start)
+
+try2 <- ggplot(cnv, aes(x= seg_len)) + 
+  geom_histogram(color = 1, fill = "white",
+                 bins = 20) +
+  xlim(0,100000)
+try
+try2
+```
+

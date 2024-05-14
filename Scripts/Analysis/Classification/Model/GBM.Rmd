@@ -1,6 +1,6 @@
 ---
 title: "gbm model"
-format: html
+format: html 
 editor: visual
 Notes: This script is intended to do initialise the building of the gbm ml model using the input and ouput data.
 ---
@@ -82,7 +82,7 @@ order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>%
 
 
 # Number of random rows and columns to select
-n_rows <- 50000
+n_rows <- 45000
 row_samples <- sample(nrow(order_exp), n_rows)
 
 
@@ -287,19 +287,34 @@ full_cin <- merge(
 3.  Complete merge of all the predictor and response vars
 
 ```{r}
-rna_list <- list(transcripts_per_million = tpm_set,
-                 scalled_transcripts_per_million = scld_tpm_set,
-                 log_scalled_transcripts_per_million = log_scld_tpm,
-                 log_transcripts_per_million = log_tpm, 
-                 expected_counts =exp_set, 
-                 scalled_expected_counts = scld_exp_set, 
-                 log_expected_counts = log_exp, 
-                 log_scalled_expected_counts = log_scld_exp
-                 )
+rna_list <- list(
+  transcripts_per_million = tpm_set, # Seems to be the best performing
+  scalled_transcripts_per_million = scld_tpm_set,
+  log_scalled_transcripts_per_million = log_scld_tpm,
+  log_transcripts_per_million = log_tpm, # Best for Aneuploidy Score
+  expected_counts =exp_set, 
+  scalled_expected_counts = scld_exp_set,
+  log_expected_counts = log_exp,
+  log_scalled_expected_counts = log_scld_exp
+)
 
-feature_list <- list("loh_hrd","ai1", "lst1", "Aneuploidy Score")
+feature_list <- list(
+  # "loh_hrd",
+  # "ai1",
+  # "lst1",
+  "Aneuploidy Score"
+)
 
-set.seed(40)
+metrics_df <- data.frame(
+  RNA_Set = character(),
+  Feature = character(),
+  Depth = numeric(),
+  Learning_Rate = numeric(),
+  RSME = numeric(),
+  MAE = numeric()
+)
+
+set.seed(42)
 
 for (i in 1:length(rna_list)){
   
@@ -330,9 +345,9 @@ for (i in 1:length(rna_list)){
     
     watchlist <- list(train = xgb_train, test = xgb_test)
     
-    for (depth in seq(2,4)){
+    for (depth in seq(3,8)){
       cat(paste0("\t Depth: ", depth, "\n"))
-      for (lr in seq(0.10,0.15, by = 0.01)){
+      for (lr in seq(0.06,0.1, by = 0.02)){
         cat(paste0("\t\t Learning Rate: ", lr, "\n"))
         
         xgb_params <- list(
@@ -362,25 +377,64 @@ for (i in 1:length(rna_list)){
         best_iteration <- which.min(xgb_model[["evaluation_log"]][["test_rmse"]])
         
         xgb_preds <- predict(xgb_model, as.matrix(X_test), reshape = TRUE)
-        xgb_preds <- as.data.frame(xgb_preds) %>% 
-          rename(base_pred = "xgb_preds")
+        xgb_preds <- as.data.frame(xgb_preds)
         xgb_preds <- xgb_preds %>% 
+          rename(base_pred = "xgb_preds") %>% 
           mutate(mod_pred = ifelse(base_pred < 0, 0, base_pred),
                  actual = y_test,
-                 base_res_sqrd = round((base_pred - actual)^2,2),
-                 mod_res_sqrd = round((mod_pred - actual)^2,2))
+                 base_residual = round(base_pred - actual, 3),
+                 mod_residual = round(mod_pred - actual, 3),
+                 base_res_sqrd = base_residual^2,
+                 mod_res_sqrd = mod_residual^2
+                 )
         
-        base_rsme <- sqrt(sum(xgb_preds$base_res_sqrd)/length(xgb_preds$base_res_sqrd))
-        mod_rsme <- sqrt(sum(xgb_preds$mod_res_sqrd)/length(xgb_preds$mod_res_sqrd))
+        # assign(paste0("df_", variable), df)
+        
+        base_rsme <- round(sqrt(
+          sum(xgb_preds$base_res_sqrd)/length(xgb_preds$base_res_sqrd)
+          ),3)
+        
+        mod_rsme <- round(sqrt(
+          sum(xgb_preds$mod_res_sqrd)/length(xgb_preds$mod_res_sqrd)
+          ),3)
+        
+        base_mae <- round(mean(abs(xgb_preds$base_residual)),3)
+        mod_mae <- round(mean(abs(xgb_preds$mod_residual)),3)
         
         # Print the best RMSE and its corresponding iteration
-        cat(paste(
+        # cat(paste(
                   # ": Best RMSE:", best_rmse, "at iteration:", best_iteration, '\n',
-                  "\t\t\t Modified RSME: ", mod_rsme, "\n"))
+                  # "\t\t\t Modified RSME: ", mod_rsme, "\n",
+                  # "\t\t\t Modified MAE: ", mod_mae, "\n"))
+        
+        metrics_df <- rbind(metrics_df,
+                            data.frame(
+                              RNA_Set = name,
+                              Feature = feature,
+                              Depth = depth,
+                              Learning_Rate = lr,
+                              RSME = mod_rsme,
+                              MAE = mod_mae
+                              )
+                            )
       }
     }
     
   }
 }
 ```
+
+
+```{r}
+min_metrics <- metrics_df %>%
+  group_by(Feature) %>%
+  summarise(Min = min(RSME)) %>%
+  left_join(metrics_df, by = c("Feature", "Min" = "RSME"))
+
+```
+
+```{r}
+# write.csv(metrics_df, "Data/gbm_metrics_params")
+```
+
 
