@@ -28,25 +28,22 @@ library(dplyr)
 library(ggplot2)
 ```
 
-
 ```{r}
 cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
 ```
 
-
 ```{r}
-try <- ggplot(cnv, aes(x= cnv$value)) + 
+try <- ggplot(cnv, aes(x= value)) + 
   geom_histogram(color = 1, fill = "white",
                  bins = 100) 
 
 cnv <- cnv %>% 
   mutate(seg_len = end - start)
 
-try2 <- ggplot(cnv, aes(x= seg_len)) + 
+seg_len1 <- ggplot(cnv, aes(x= seg_len)) + 
   geom_histogram(color = 1, fill = "white",
-                 bins = 20) +
-  xlim(0,100000)
+                 bins = 20) 
+  # xlim(0,100000)
 try
-try2
+seg_len1
 ```
-

@@ -1646,3 +1646,20 @@ At each step in the iteration:
 - Check Kaggle competitions and mutlioutput sklearn packages for a solution
  
 - Would be nice to add the metrics that are assessed during the loops to a df and extract it in excel
+
+
+14/05/24
+
+- In the GBM script would be nice to check if the predicted aneuploidy score is better or worse than the addition of the the individual arm measurements
+
+- or if the addition of the hrd metrics beat out the prediction of the overall HRD score
+ 
+- The TPM measurements as opposed to the expected counts seem to perform best
+
+- Except for the Aneuploidy score where the log expected counts seems to outperform the rest
+
+
+15/05/24
+
+- Lower learning rates seem to improve the model prediction 
+
