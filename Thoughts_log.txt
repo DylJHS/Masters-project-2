@@ -1662,4 +1662,35 @@ At each step in the iteration:
 15/05/24
 
 - Lower learning rates seem to improve the model prediction 
+- Prep for Thursday JC on the EpiSegMix paper
+
+
+16/05/24
+
+Meeting with Aniek:
+- For the unformatted data
+- Focus on the pericentromeric regions
+- Try to define the start/end sequences that encompase the region and count the number of copy number aberrations that show up in the regions
+- Can find the chromosome specific mappings by focusing on the proteins that bind to those regions and finding ChIP-seq data 
+- Or can use the mappings for the centromere and combine that information for the edge regions of the euchromatin across the different chromosomes
+- Check the Transposable elements and other types of elements that could be enriched in the region and might have been used as the basis for a ChIP-Seq experiment
+
+- Start with finishing the modelling of the categorical based chromosome arm aneuploidies
+- Then move on to trying to engineer a 'Pericentromeric cnv' feature
+
+- Go over the data and teh analysis for Marit this weekend
+
+
+17/05/24
+
+- Running the xgboost model on the arm level aneuploidy values independently 
+- Trying out both a categorical model as well as a regression model
+- Iterating over:
+	- all the RNA seq datasets 
+	- Values for gamma (0-4)
+	- The depth level usually between (2-5)
+
+Lower depth trees seem to outperform the higher depth ones 
+As do lower levels of gamma 
+
 
