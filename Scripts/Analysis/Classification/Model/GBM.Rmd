@@ -67,12 +67,12 @@ soi_genes <-soi[,2]
 # Predictor variables
 
 # Expected Counts
-# ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 order_exp <- ori_exp[,order(colnames(ori_exp))]
 
 
 # TPM counts
-# ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
+ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
 order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
   dplyr::select(-"id")
 
@@ -440,17 +440,17 @@ full_cin <- merge(
 ```{r}
 rna_list <- list(
   transcripts_per_million = tpm_set, # Seems to be the best performing
-  # scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
+  scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
   log_scalled_transcripts_per_million = log_scld_tpm,
-  # log_transcripts_per_million = log_tpm, 
+  log_transcripts_per_million = log_tpm,
   expected_counts = exp_set,
-  # scalled_expected_counts = scld_exp_set,
+  scalled_expected_counts = scld_exp_set,
   log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp 
 )
 
 # aneu_feature_list <- colnames(full_cin[1,6:length(full_cin)])
-aneu_feature_list <- colnames(full_cin[1,6:13])
+aneu_feature_list <- colnames(full_cin[1,18:28])
 
 aneu_cat_metrics_df <- data.frame(
   RNA_Set = character(),
@@ -461,6 +461,7 @@ aneu_cat_metrics_df <- data.frame(
   Loss = numeric()
 )
 
+lr= 0.04
 set.seed(33)
 
 for (i in 1:length(rna_list)){
@@ -500,9 +501,9 @@ for (i in 1:length(rna_list)){
     
     watchlist <- list(train = xgb_train, test = xgb_test)
     
-    for (depth in seq(2,4)){
+    for (depth in seq(1,8,2)){
       cat(paste0("\n\t\t Depth: ", depth, "\n"))
-      for (gam in seq(0.25,2.5,0.5)) {
+      for (gam in seq(1,2.5)) {
         cat(paste0("\t\t\t Gamma: ", gam))
     
         xgb_params <- list(
@@ -577,9 +578,9 @@ write.csv(aneu_cat_metrics_df, paste0("Data/aneu_cat_xgb_metrics_params_",Sys.Da
 rna_list <- list(
   transcripts_per_million = tpm_set, # Seems to be the best performing
   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
-  # log_scalled_transcripts_per_million = log_scld_tpm,
+  log_scalled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm, # Best for Aneuploidy Score
-  # expected_counts =exp_set,
+  expected_counts =exp_set,
   scalled_expected_counts = scld_exp_set, # not too useful (scalled)
   log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp # not too useful (scalled)
@@ -630,10 +631,10 @@ for (i in 1:length(rna_list)){
     
     watchlist <- list(train = xgb_train, test = xgb_test)
     
-    for (depth in seq(4,5)){
+    for (depth in seq(1,10,2)){
       cat(paste0("\n\t\t Depth: ", depth, "\n"))
       # cat(paste0("\t\t Learning Rate: ", 0.04, "\n"))
-        for (gam in seq(0.25,2.5,0.5)){
+        for (gam in seq(1,2.5,1.25)){
           cat(paste0("\t\t\t Gamma: ", gam))
           xgb_params <- list(
             booster = "gbtree",
