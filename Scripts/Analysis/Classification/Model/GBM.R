@@ -1,19 +1,3 @@
----
-title: "gbm model"
-format: html 
-editor: visual
-Notes: This script is intended to do initialise the building of the gbm ml model using the input and ouput data.
----
-
-```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
-```
-
-## Load the libraries
-
-## Load the libraries
-
-```{r}
 library(dplyr)
 library(readr)
 library(mltools)
@@ -29,11 +13,7 @@ library(xgboost)
 library(caTools)
 library(dplyr)
 library(caret)
-```
 
-Re-usable functions
-
-```{r}
 extract_element <- function(strings, index) {
   # Split each string by "." and extract the third element
   element_list <- sapply(strsplit(strings, "\\."), function(x) x[index])
@@ -55,24 +35,20 @@ untransform_tpm <- function(x) {#Function to convert the log transformed counts 
 transform_tpm <- function(x) {#Function to convert the log transformed counts back into original counts
   return(log2(x + 0.001))
 }
-```
 
-Import data
-
-```{r}
 # SOI genes
-soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+soi <- read.csv("../../../data/mRNA/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
 
 # Predictor variables
 
 # Expected Counts
-ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
+ori_exp <- read.csv("../../../data/mRNA/tcga_gene_expected_count.csv")
 order_exp <- ori_exp[,order(colnames(ori_exp))]
 
 
 # TPM counts
-ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
+ori_tpm <- read.csv("../../../data/mRNA/TCGA_mRNA_TPM_Full.csv")
 order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
   dplyr::select(-"id")
 
@@ -89,41 +65,33 @@ order_exp <- order_exp[row_samples,0:5000]
 # Response data
 
 # HRD scores
-ori_hrd <- read_tsv("Data/CIN_Features/TCGA.HRD_withSampleID.txt")
+ori_hrd <- read_tsv("../../../data/CIN/TCGA.HRD_withSampleID.txt")
 
 # Arm level aneuploidies
-ori_arm_cnv <- read_tsv("Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt")
+ori_arm_cnv <- read_tsv("../../../data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt")
 
 
 # Metadata
 
 # Sample meta
-tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
-abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
+tss_meta <- read.csv("../../../data/meta/tissueSourceSite.tsv", sep = "\t")
+abbrv_meta <- read.csv("../../../data/meta/bcrBatchCode.tsv", sep = "\t")
 
 # Gene Metadata
-gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
+gene_ids <- read.delim("../../../data/meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
 
-```
-
-```{r}
-# Combine the metadata
 meta <- left_join(tss_meta %>% 
-                     dplyr::select(c("TSS.Code", "Study.Name")) %>% 
-                     distinct() %>% 
-                     sapply(trimws) %>% 
-                     as.data.frame(),
-                   abbrv_meta %>%
-                     dplyr::select(c("Study.Abbreviation", "Study.Name")) %>% 
-                     distinct()%>% 
-                     sapply(trimws) %>% 
-                     as.data.frame(), 
-                   by = "Study.Name")
-```
+                    dplyr::select(c("TSS.Code", "Study.Name")) %>% 
+                    distinct() %>% 
+                    sapply(trimws) %>% 
+                    as.data.frame(),
+                  abbrv_meta %>%
+                    dplyr::select(c("Study.Abbreviation", "Study.Name")) %>% 
+                    distinct()%>% 
+                    sapply(trimws) %>% 
+                    as.data.frame(), 
+                  by = "Study.Name")
 
-1.  Handle the configuration of the RNA seq data
-
-```{r}
 trans_exp <- order_exp # Log transformed Expected Counts
 rownames(trans_exp) <- NULL
 trans_tpm <- order_tpm # Log transformed TPM Counts
@@ -142,11 +110,11 @@ tpm_samples_to_use <- count_tpm %>%  dplyr::select(c("Gene", ends_with(codes_to_
 
 # Convert the Gene Ids into names
 counts_exp <- right_join(gene_ids %>% 
-                    dplyr::select(c("id", "gene")) %>% 
-                    sapply(trimws) %>% 
-                    as.data.frame(),
-                  exp_samples_to_use,
-                  by = c("id" = "sample")) %>% 
+                           dplyr::select(c("id", "gene")) %>% 
+                           sapply(trimws) %>% 
+                           as.data.frame(),
+                         exp_samples_to_use,
+                         by = c("id" = "sample")) %>% 
   dplyr::select(-"id")
 
 counts_exp <- counts_exp %>%
@@ -202,9 +170,6 @@ Normfactors <- as.data.frame(Normfact_exp$samples) %>% select("norm.factors")
 # match the column names from the normalisation factor df with that of the other dfs in order to divide the count values by the library size factors for the correct samples 
 matching_cols_tpm <- colnames(tpm_data)[match(rownames(Normfactors), colnames(tpm_data))] 
 
-```
-
-```{r}
 matching_cols_tpm <- matching_cols_tpm[!is.na(matching_cols_tpm)]
 
 scld_cnts_tpm <- round(sweep(tpm_data[, matching_cols_tpm], 2, Normfactors$norm.factors, "/"),2)
@@ -247,11 +212,6 @@ log_tpm <- tpm_set %>% # Log transformed TPM counts
 
 log_scld_tpm <- scld_tpm_set %>% # Log transformed Library size normalised TPM counts
   mutate_at(vars(everything()), transform_tpm) 
-```
-
-2.  Handle the configuration of the CIN-based features
-
-```{r}
 
 t_hrd <- as.data.frame(t(ori_hrd)) 
 first_hrd <- t_hrd
@@ -279,165 +239,6 @@ full_cin <- merge(
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
 
-```
-
-3.  Complete merge of all the predictor and the "continuous" response vars
-
-```{r}
-# rna_list <- list(
-#   transcripts_per_million = tpm_set, # Seems to be the best performing
-#   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
-#   log_scalled_transcripts_per_million = log_scld_tpm,
-#   log_transcripts_per_million = log_tpm, # Best for Aneuploidy Score
-#   expected_counts =exp_set,
-#   scalled_expected_counts = scld_exp_set, # not too useful (scalled)
-#   log_expected_counts = log_exp,
-#   log_scalled_expected_counts = log_scld_exp # not too useful (scalled)
-# )
-# 
-# feature_list <- list(
-#   "loh_hrd",
-#   "ai1",
-#   "lst1",
-#   "Aneuploidy Score"
-# )
-# 
-# 
-# reg_metrics_df <- data.frame(
-#   RNA_Set = character(),
-#   Feature = character(),
-#   Depth = numeric(),
-#   Learning_Rate = numeric(),
-#   Gamma = numeric(),
-#   RSME = numeric(),
-#   MAE = numeric()
-# )
-# 
-# set.seed(35)
-# 
-# lr = 0.04
-# 
-# for (i in 1:length(rna_list)){
-#   
-#   rna <- rna_list[[i]]
-#   name <- names(rna_list)[i]
-#   
-#   full_df <- merge(rna, full_cin, by = "row.names")
-#   
-#   sample_split <- sample.split(Y = full_df[colnames(full_cin)], SplitRatio = 0.7)
-#   train_set <- subset(x = full_df, sample_split == TRUE)
-#   test_set <- subset(x = full_df, sample_split == FALSE)
-#   
-#   cat(paste0("\n", name, ": \n"))
-#   
-#   for (feature in feature_list){
-#     cat(paste0("\n", feature, ": \n"))
-#     
-#   
-#     y_train <- as.integer(train_set[[feature]])
-#     X_train <- train_set %>% select(-append("Row.names",colnames(full_cin)))
-#     
-#     y_test <- as.integer(test_set[[feature]])
-#     X_test <- test_set %>% select(-append("Row.names",colnames(full_cin)))
-#     
-#     
-#     xgb_train <- xgb.DMatrix(data = as.matrix(X_train), label = y_train)
-#     xgb_test <- xgb.DMatrix(data = as.matrix(X_test), label = y_test)
-#     
-#     watchlist <- list(train = xgb_train, test = xgb_test)
-#     
-#     for (depth in seq(4,6)){
-#       # cat(paste0("\t Depth: ", depth, "\n"))
-#       # cat(paste0("\t\t Learning Rate: ", 0.04, "\n"))
-#         for (gam in seq(0,3)){
-#           xgb_params <- list(
-#             booster = "gbtree",
-#             max_depth = depth,
-#             gamma = gam,
-#             subsample = 0.75,
-#             colsample_bytree = 1,
-#             objective = "reg:squarederror",
-#             eval_metric = "rmse", 
-#             eta = lr # Seems like the best eta is the closest one to 0
-#           )
-#           
-#           xgb_model <- xgb.train(
-#             params = xgb_params,
-#             data = xgb_train,
-#             watchlist = watchlist, 
-#             early_stopping_rounds = 50,
-#             nrounds = 6000,
-#             verbose = 0
-#           )
-#           
-#           # xgb_model
-#           
-#           # Best RMSE and iteration number
-#           best_rmse <- min(xgb_model[["evaluation_log"]][["test_rmse"]])
-#           
-#           xgb_preds <- predict(xgb_model, as.matrix(X_test), reshape = TRUE)
-#           xgb_preds <- as.data.frame(xgb_preds)
-#           xgb_preds <- xgb_preds %>% 
-#             rename(base_pred = "xgb_preds") %>% 
-#             mutate(mod_pred = ifelse(base_pred < 0, 0, base_pred),
-#                    actual = y_test,
-#                    base_residual = round(base_pred - actual, 3),
-#                    mod_residual = round(mod_pred - actual, 3),
-#                    base_res_sqrd = base_residual^2,
-#                    mod_res_sqrd = mod_residual^2
-#             )
-#           
-#           # assign(paste0("df_", variable), df)
-#           
-#           base_rsme <- round(sqrt(
-#             sum(xgb_preds$base_res_sqrd)/length(xgb_preds$base_res_sqrd)
-#           ),3)
-#           
-#           mod_rsme <- round(sqrt(
-#             sum(xgb_preds$mod_res_sqrd)/length(xgb_preds$mod_res_sqrd)
-#           ),3)
-#           
-#           base_mae <- round(mean(abs(xgb_preds$base_residual)),3)
-#           mod_mae <- round(mean(abs(xgb_preds$mod_residual)),3)
-#           
-#           # Print the best RMSE and its corresponding iteration
-#           # cat(paste(
-#           # ": Best RMSE:", best_rmse, "at iteration:", best_iteration, '\n',
-#           # "\t\t\t Modified RSME: ", mod_rsme, "\n",
-#           # "\t\t\t Modified MAE: ", mod_mae, "\n"))
-#           
-#           reg_metrics_df <- rbind(reg_metrics_df,
-#                               data.frame(
-#                                 RNA_Set = name,
-#                                 Feature = feature,
-#                                 Depth = depth,
-#                                 Learning_Rate = lr,
-#                                 Gamma = gam,
-#                                 RSME = mod_rsme,
-#                                 MAE = mod_mae
-#                               )
-#                             )
-#           }
-#       
-#     }
-#     
-#   }
-# }
-# 
-# 
-# min_metrics <- reg_metrics_df %>%
-#   group_by(Feature) %>%
-#   summarise(Min = min(RSME)) %>%
-#   left_join(reg_metrics_df, by = c("Feature", "Min" = "RSME"))
-```
-
-
-```{r}
-# write.csv(reg_metrics_df, paste0("Data/regr_xgb_metrics_params_",Sys.Date(), ".csv"))
-```
-
-4.  Complete merge of all the predictor and the "categorical" aneuploidy vars
-```{r}
 rna_list <- list(
   transcripts_per_million = tpm_set, # Seems to be the best performing
   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
@@ -466,7 +267,7 @@ set.seed(33)
 
 for (feature in aneu_feature_list){
   cat(paste0("\n", feature, ":"))
-
+  
   for (i in 1:length(rna_list)){
     
     rna <- rna_list[[i]]
@@ -480,7 +281,7 @@ for (feature in aneu_feature_list){
     train_set <- subset(x = full_df, sample_split == TRUE)
     test_set <- subset(x = full_df, sample_split == FALSE)
     
-  
+    
     y_train <- as.integer(train_set[[feature]])
     X_train <- train_set %>% select(-append("Row.names",colnames(full_cin)))
     
@@ -501,11 +302,11 @@ for (feature in aneu_feature_list){
     
     watchlist <- list(train = xgb_train, test = xgb_test)
     
-    for (depth in seq(1,10,2)){
+    for (depth in seq(1,14,2)){
       cat(paste0("\n\t\t Depth: ", depth, "\n"))
-      for (gam in seq(1,3.5)) {
+      for (gam in seq(0.5,3.5,1.5)) {
         cat(paste0("\t\t\t Gamma: ", gam))
-    
+        
         xgb_params <- list(
           booster = "gbtree",
           num_class=3,
@@ -540,40 +341,22 @@ for (feature in aneu_feature_list){
           )
         
         aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df,
-                                data.frame(
-                                  RNA_Set = name,
-                                  Feature = feature,
-                                  Depth = depth,
-                                  Learning_Rate = lr,
-                                  Gamma = gam,
-                                  Accuracy = 
-                                    sum(xgb_cat_preds$correct)/
-                                    length(xgb_cat_preds$correct)                                  )
-                                )
+                                     data.frame(
+                                       RNA_Set = name,
+                                       Feature = feature,
+                                       Depth = depth,
+                                       Learning_Rate = lr,
+                                       Gamma = gam,
+                                       Accuracy = 
+                                         sum(xgb_cat_preds$correct)/
+                                         length(xgb_cat_preds$correct)                                  )
+        )
       }
     }
   }
-  write.csv(aneu_cat_metrics_df, paste0("Data/aneu_cat_xgb_metrics_params_",feature,"_",Sys.Date(), ".csv"))
-    
-  }
-
-
-```
-
-5.  Complete merge, regression model and results for all the arm level aneuploidies as  "continuous"  vars instead of categorical
-
-```{r}
-
-rna_list <- list(
-  transcripts_per_million = tpm_set, # Seems to be the best performing
-  scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
-  log_scalled_transcripts_per_million = log_scld_tpm,
-  log_transcripts_per_million = log_tpm, # Best for Aneuploidy Score
-  expected_counts =exp_set,
-  scalled_expected_counts = scld_exp_set, # not too useful (scalled)
-  log_expected_counts = log_exp,
-  log_scalled_expected_counts = log_scld_exp # not too useful (scalled)
-)
+  write.csv(aneu_cat_metrics_df, paste0("../../../data/model_output/aneu_cat_xgb_metrics_params_",feature,"_",Sys.Date(), ".csv"))
+  
+}
 
 reg_feature_list <- colnames(full_cin[1,6:12])
 
@@ -617,10 +400,10 @@ for (feature in reg_feature_list){
     
     watchlist <- list(train = xgb_train, test = xgb_test)
     
-    for (depth in seq(1,10,2)){
+    for (depth in seq(1,14,2)){
       cat(paste0("\n\t\t Depth: ", depth, "\n"))
       # cat(paste0("\t\t Learning Rate: ", 0.04, "\n"))
-      for (gam in seq(1,3.5)){
+      for (gam in seq(0.5,3.5,1.5)){
         cat(paste0("\t\t\t Gamma: ", gam))
         xgb_params <- list(
           booster = "gbtree",
@@ -666,7 +449,7 @@ for (feature in reg_feature_list){
                                        Accuracy = 
                                          sum(xgb_preds$correct)/
                                          length(xgb_preds$correct)
-                                         
+                                       
                                      )
         )
       }
@@ -674,10 +457,7 @@ for (feature in reg_feature_list){
     }
     
   }
-  write.csv(aneu_reg_metrics_df, paste0("Data/aneu_reg_xgb_metrics_params_",feature,"_",Sys.Date(), ".csv"))
+  write.csv(aneu_reg_metrics_df, paste0("../../../data/model_output/aneu_reg_xgb_metrics_params_",feature,"_",Sys.Date(), ".csv"))
 }
-
-
-```
 
 

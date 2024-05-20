@@ -1694,3 +1694,23 @@ Lower depth trees seem to outperform the higher depth ones
 As do lower levels of gamma 
 
 
+
+
+18/05/24
+
+- Need to initialise the GBM on the HpC
+
+ 
+
+19/05/24
+
+- Initialising the GBM script for use on the hpc 
+- Creation and modification of the plots/graphs in the excel files
+
+20/05/24
+
+- Change of the emaasure of the model performance 
+- From trying to assess the RSME to using the Accuracy
+- Measure is able to be calculated for both the regression and the categorical models for all the features
+- The accuracy so far (for the 1st chromosome) seems quite high
+
