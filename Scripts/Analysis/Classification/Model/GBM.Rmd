@@ -79,12 +79,12 @@ order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>%
 
 
 # Number of random rows and columns to select
-n_rows <- 30000
+n_rows <- 10000
 row_samples <- sample(nrow(order_exp), n_rows)
 
 
-order_tpm <- order_tpm[row_samples,0:5000]
-order_exp <- order_exp[row_samples,0:5000]
+order_tpm <- order_tpm[row_samples,0:3000]
+order_exp <- order_exp[row_samples,0:3000]
 
 # Response data
 
@@ -431,12 +431,12 @@ full_cin <- merge(
 #   left_join(reg_metrics_df, by = c("Feature", "Min" = "RSME"))
 ```
 
-
 ```{r}
 # write.csv(reg_metrics_df, paste0("Data/regr_xgb_metrics_params_",Sys.Date(), ".csv"))
 ```
 
 4.  Complete merge of all the predictor and the "categorical" aneuploidy vars
+
 ```{r}
 rna_list <- list(
   transcripts_per_million = tpm_set, # Seems to be the best performing
@@ -450,7 +450,7 @@ rna_list <- list(
 )
 
 # aneu_feature_list <- colnames(full_cin[1,6:length(full_cin)])
-aneu_feature_list <- colnames(full_cin[1,6:12])
+aneu_feature_list <- colnames(full_cin[1,16:18])
 
 aneu_cat_metrics_df <- data.frame(
   RNA_Set = character(),
@@ -503,7 +503,7 @@ for (feature in aneu_feature_list){
     
     for (depth in seq(1,10,2)){
       cat(paste0("\n\t\t Depth: ", depth, "\n"))
-      for (gam in seq(1,3.5)) {
+      for (gam in seq(1,3.5,2)) {
         cat(paste0("\t\t\t Gamma: ", gam))
     
         xgb_params <- list(
@@ -560,7 +560,7 @@ for (feature in aneu_feature_list){
 
 ```
 
-5.  Complete merge, regression model and results for all the arm level aneuploidies as  "continuous"  vars instead of categorical
+5.  Complete merge, regression model and results for all the arm level aneuploidies as "continuous" vars instead of categorical
 
 ```{r}
 
@@ -575,7 +575,7 @@ rna_list <- list(
   log_scalled_expected_counts = log_scld_exp # not too useful (scalled)
 )
 
-reg_feature_list <- colnames(full_cin[1,6:12])
+reg_feature_list <- colnames(full_cin[1,16:18])
 
 set.seed(35)
 
@@ -620,7 +620,7 @@ for (feature in reg_feature_list){
     for (depth in seq(1,10,2)){
       cat(paste0("\n\t\t Depth: ", depth, "\n"))
       # cat(paste0("\t\t Learning Rate: ", 0.04, "\n"))
-      for (gam in seq(1,3.5)){
+      for (gam in seq(1,3.5,2)){
         cat(paste0("\t\t\t Gamma: ", gam))
         xgb_params <- list(
           booster = "gbtree",
@@ -679,5 +679,3 @@ for (feature in reg_feature_list){
 
 
 ```
-
-
