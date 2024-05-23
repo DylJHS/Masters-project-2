@@ -498,6 +498,14 @@ for (feature in aneu_feature_list){
           verbose = 1
         )
         
+        train_control <- trainControl(
+          method = "cv",  # Use cross-validation
+          number = 10,    # Number of cross-validation folds
+          verboseIter = TRUE,
+          allowParallel = TRUE,  # If supported by your R setup
+          search = "grid"  # Indicates grid search
+        )
+        
         grid <- expand.grid(
           max_depth = c(3, 6, 9),
           gamma = c(0, 0.1, 0.2),

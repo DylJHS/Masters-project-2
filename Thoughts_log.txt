@@ -1,4 +1,4 @@
-
+ 
 04/01/24
 
 Thinking about editing the SoI-to-Control-set Wilcoxon Signed Rank test so as to become directional
@@ -1714,3 +1714,31 @@ As do lower levels of gamma
 - Measure is able to be calculated for both the regression and the categorical models for all the features
 - The accuracy so far (for the 1st chromosome) seems quite high
 
+
+
+21/05/24
+
+- Looking at the results of the differnet models in terms of Accuracy may be deceiving
+- This is due to some of the classes being easier to identify than others
+- Should break out the accuracy by class (+1, 0 and -1 for the aneuploidies) and maybe add in the TPR, FPR, and AUC
+ 
+- Running the DGEA on the list of 6 proteins that Marit supplied
+- Might also be good to run it on the fuller list that she included it
+
+- For the GBM model, will likely have to be a stacked ensemble model
+- With the first layer composed of all the target feature models
+- The second layer composed of models for the same target features but using the output from the models in the first layer as the input for the models
+ 
+
+22/05/24
+
+- Run of the DGEA for marit overnight on the hpc
+- Spending the morning looking at the results of the tables a
+- Making the charts (volcano plots) ...
+
+
+- For the 6 of the genes that Marit 
+- most do not show DGE in any of the cancer types
+- Only SUV39H1/2 do on a few occasions
+- Sent the graphs to the cancer_chromatin group 
+- Did not send the tables which might be helpful
