@@ -24,7 +24,13 @@ library(psych)
 library(limma)
 library(edgeR)
 library(tidyverse)
+library(xgboost)
 library(caret)
+library(ranger)
+library(caTools)
+library(palmerpenguins)
+library(parallel)
+library(foreach)
 ```
 
 Re-usable functions
@@ -176,9 +182,7 @@ grouped_tpm <- tpm_samples_to_use[, lapply(.SD, function(x) if (length(x) > 1) m
 # Reset the row names to the Gene names
 groups_exp <- as.data.frame(grouped_exp)
 groups_tpm <- as.data.frame(grouped_tpm)
-```
 
-```{r}
 exp_data <- distinct(groups_exp) %>% 
   column_to_rownames(var = "Gene")
 tpm_data <- distinct(groups_tpm) %>% 
@@ -292,7 +296,6 @@ rm(tpm_data)
 2.  Handle the configuration of the CIN-based features
 
 ```{r}
-
 t_hrd <- as.data.frame(t(ori_hrd)) 
 first_hrd <- t_hrd
 colnames(first_hrd) <- t_hrd[1, ]
@@ -326,19 +329,11 @@ rm(hrd)
 rm(cnvs_arm)
 ```
 
-```{r}
-n.cores <- parallel::detectCores() - 1
-my.cluster <- parallel::makeCluster(
-  n.cores, 
-  type = "FORK"
-  )
-
-print(my.cluster)
-```
 
 4.  Complete merge of all the predictor and the "categorical" aneuploidy vars
 
 ```{r}
+
 rna_list <- list(
   transcripts_per_million = tpm_set, # Seems to be the best performing
   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
@@ -351,14 +346,25 @@ rna_list <- list(
 )
 
 # aneu_feature_list <- colnames(full_cin[1,6:length(full_cin)])
-aneu_feature_list <- colnames(full_cin[1,20:24])
+aneu_feature_list <- colnames(full_cin[1,30:31])
 reg_feature_list <- colnames(full_cin[1,1:5])
 
+n.cores <- parallel::detectCores() - 1
 
 ```
 
 ```{r}
-set.seed(123)
+my.cluster <- parallel::makeCluster(
+  n.cores, 
+  type = "PSOCK"
+  )
+
+doParallel::registerDoParallel(cl = my.cluster)
+
+foreach::getDoParRegistered()
+foreach::getDoParWorkers()
+print(my.cluster)
+
 for (feature in aneu_feature_list){
   cat(paste0("\n", feature, ":"))
   
@@ -371,70 +377,82 @@ for (feature in aneu_feature_list){
     Logloss = numeric()
   ) 
   
-  for (i in 1:length(rna_list)) {
+  results <- foreach(i = 7:length(rna_list), .combine = rbind) %dopar% {
+    library(dplyr)
+    library(xgboost)
     
     rna <- rna_list[[i]]
     name <- names(rna_list)[i]
     
-    cat(paste0("\n\t", name, ":"))
-    
     full_df <- merge(rna, full_cin, by = "row.names")
     
     y <- as.integer(full_df[[feature]])
-    X <- full_df %>% select(-append("Row.names",colnames(full_cin)))
-    
+    X <- full_df %>% select(-append("Row.names", colnames(full_cin)))
     y[y == -1] <- 0
     y[y == 1] <- 2
     y[y == 0] <- 1
     
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
-    
     grid <- expand.grid(
-      max_depth = seq(1, 15,4),
+      max_depth = seq(1, 15, 4),
       gamma = seq(0, 2, 2.3),
       eta = seq(0.01, 0.1, 1)
     )
     
+    temp_df <- data.frame(
+      Feature = character(),
+      RNA_Set = character(),
+      Depth = numeric(),
+      Learning_Rate = numeric(),
+      Gamma = numeric(),
+      Logloss = numeric()
+    )
+    
     for (j in 1:nrow(grid)) {
-      cat("\n Depth ",grid$max_depth[j], 
-          "\n Eta ", grid$eta[j], 
-          "\n Gamma ", grid$gamma[j], "\n")
       m_xgb_untuned <- xgb.cv(
         data = xgb_data,
-        nrounds = 1000,
+        nrounds = 100,
         objective = "multi:softmax",
-        early_stopping_rounds = 50,
-        nfold = 3,
+        early_stopping_rounds = 5,
+        nfold = 2,
         max_depth = grid$max_depth[j],
         eta = grid$eta[j],
+        gamma = grid$gamma[j],
         num_class = 3,
         verbose = 0
       )
       
-      
       best_loss <- m_xgb_untuned$evaluation_log$test_mlogloss_mean[m_xgb_untuned$best_iteration]
       
-      aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df,
-                                   data.frame(
-                                     Feature = feature,
-                                     RNA_Set = name,
-                                     Depth = grid$max_depth[j],
-                                     Learning_Rate = grid$eta[j],
-                                     Gamma = grid$gamma[j],
-                                     Logloss = best_loss
-                                   )
-      )
-      
+      temp_df <- rbind(temp_df, data.frame(
+        Feature = feature,
+        RNA_Set = name,
+        Depth = grid$max_depth[j],
+        Learning_Rate = grid$eta[j],
+        Gamma = grid$gamma[j],
+        Logloss = best_loss
+      ))
     }
+    return(temp_df)
   }
-  write.csv(aneu_cat_metrics_df, paste0("Data/aneu_cat_xgb_metrics_params_d",feature,"_",Sys.Date(), ".csv"))
+  write.csv(results, paste0("Data/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"))
 }
+parallel::stopCluster(cl = my.cluster)
 
 ```
 
 5.  Complete merge, regression model and results for all the arm level aneuploidies as "continuous" vars instead of categorical
 
 ```{r}
+my.cluster <- parallel::makeCluster(
+  n.cores, 
+  type = "PSOCK"
+  )
+
+doParallel::registerDoParallel(cl = my.cluster)
+
+foreach::getDoParRegistered()
+foreach::getDoParWorkers()
 
 
 for (feature in reg_feature_list){
@@ -448,43 +466,49 @@ for (feature in reg_feature_list){
     Gamma = numeric(),
     RMSE = numeric()
   )
-
-  for (i in 1:length(rna_list)){
+  
+  results <- foreach(i = 7:length(rna_list), .combine = rbind) %dopar% {
+    library(dplyr)
+    library(xgboost)
     
     rna <- rna_list[[i]]
     name <- names(rna_list)[i]
     
-    cat(paste0("\n\t", name, ":"))
-    
     full_df <- merge(rna, full_cin, by = "row.names")
-  
+    
     y <- as.integer(full_df[[feature]])
     X <- full_df %>% select(-append("Row.names",colnames(full_cin)))
-    
     y[y == -1] <- 0
     y[y == 1] <- 2
     y[y == 0] <- 1
     
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
-    
     grid <- expand.grid(
-          max_depth = seq(1, 15,4),
-          gamma = seq(0, 2, 2.3),
-          eta = seq(0.01, 0.1, 1)
+      max_depth = seq(1, 15,4),
+      gamma = seq(0, 2, 2.3),
+      eta = seq(0.01, 0.1, 1)
     )
-        
+    
+    temp_df <- data.frame(
+      Feature = character(),
+      RNA_Set = character(),
+      Depth = numeric(),
+      Learning_Rate = numeric(),
+      Gamma = numeric(),
+      RMSE = numeric()
+    )
+    
     for (j in 1:nrow(grid)) {
       cat("\n Depth ",grid$max_depth[j], 
           "\n Eta ", grid$eta[j], 
           "\n Gamma ", grid$gamma[j], "\n")
-      set.seed(123)
       m_xgb_untuned <- xgb.cv(
         data = xgb_data,
-        nrounds = 2000,
+        nrounds = 200,
         objective = "reg:squarederror",
         eval_metric = "rmse",
-        early_stopping_rounds = 50,
-        nfold = 3,
+        early_stopping_rounds = 5,
+        nfold = 2,
         max_depth = grid$max_depth[j],
         eta = grid$eta[j],
         verbose = 0
@@ -492,23 +516,24 @@ for (feature in reg_feature_list){
       
       best_rmse <- m_xgb_untuned$evaluation_log$test_rmse_mean[m_xgb_untuned$best_iteration]
       
-      aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df,
-                                data.frame(
-                                  Feature = feature,
-                                  RNA_Set = name,
-                                  Depth = grid$max_depth[j],
-                                  Learning_Rate = grid$eta[j],
-                                  Gamma = grid$gamma[j],
-                                  RMSE = best_rmse
-                                  )
-                                )
-      
-        
-      }
+      temp_df <- rbind(temp_df,
+                       data.frame(
+                         Feature = feature,
+                         RNA_Set = name,
+                         Depth = grid$max_depth[j],
+                         Learning_Rate = grid$eta[j],
+                         Gamma = grid$gamma[j],
+                         RMSE = best_rmse
+                         )
+                       )
     }
+    return(temp_df)
+  }
   
-  write.csv(aneu_reg_metrics_df, paste0("Data/aneu_reg_xgb_metrics_params_",feature,"_",Sys.Date(), ".csv"))
+  write.csv(results, paste0("Data/aneu_reg_xgb_metrics_params_",feature,"_",Sys.Date(), ".csv"))
   
 }
+
+parallel::stopCluster(cl = my.cluster)
 
 ```

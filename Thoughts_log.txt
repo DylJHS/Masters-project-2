@@ -1742,3 +1742,15 @@ As do lower levels of gamma
 - Only SUV39H1/2 do on a few occasions
 - Sent the graphs to the cancer_chromatin group 
 - Did not send the tables which might be helpful
+
+
+23/05/24 
+
+- Need to implement CV for the different RNA sets
+- and across the different depths
+- and then the gammas once the RNAset/Depth has been set
+
+- Once the base models which are all GBMs but regression for the hrd scores and then classification for the aneuploidy types are set
+- Need to wrap them in based on the type
+- Then implement an additional layer of meta models trained on the output from the base layer using CV
+- The meta models will also be split into regression and classification based gbms
