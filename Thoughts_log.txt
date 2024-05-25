@@ -1754,3 +1754,23 @@ As do lower levels of gamma
 - Need to wrap them in based on the type
 - Then implement an additional layer of meta models trained on the output from the base layer using CV
 - The meta models will also be split into regression and classification based gbms
+
+
+24/05/24
+
+- Given that the classification GBMs continually outperform the regression ones for the prediction of the arm level aneuploidies only the classificaiton ones will be considered for those tasks
+- Given that the Scalled RNAseq data does not offer a constant outperformance in logloss when used with gbm predictoins for the arm level aneuploidies but requires significant ressources (number of genes) in order to accurately assess the datatype could be beneficial to be dropped
+- Chrom 1q and 8p showed the lowest log-loss when using scalled data. But the improvement was very slight (~0.002 for 1q, and ~0.006 for 8p) which does not indicate a sufficient increase in performance to value the use of the data type (which requires increase processing). 
+- Evaluating its use with the regression predictions for the hrd scores to determine whether the data processing step should be dropped entirely 
+
+
+- Need to split the dataset up prior to the CV in order to have an unbiased and unseen test set
+
+- Managed to enable multiprocessing for the gbm script on the local machine
+- Need to impelment it on the hpc server as well
+- Doing the above using 60gb & 4 cpus
+ for the regression model on the hrd scores, will need to standardise the data (mean scale)
+
+Tired to run the multiprocessing and cross validation scripts on the hpc
+- did not work due
+
