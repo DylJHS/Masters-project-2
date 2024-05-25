@@ -12,11 +12,7 @@ library(edgeR)
 library(tidyverse)
 library(xgboost)
 library(caret)
-library(ranger)
 library(caTools)
-library(palmerpenguins)
-library(parallel)
-library(foreach)
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project") # nolint
 
@@ -312,68 +308,41 @@ rna_list <- list(
   log_scalled_expected_counts = log_scld_exp 
 )
 
-aneu_feature_list <- colnames(full_cin[1,6:length(full_cin)])
-
-n.cores <- parallel::detectCores() - 1
-
-my.cluster <- parallel::makeCluster(
-  n.cores, 
-  type = "PSOCK"
-)
-
-doParallel::registerDoParallel(cl = my.cluster)
-
-foreach::getDoParRegistered()
-foreach::getDoParWorkers()
-
-print(my.cluster)
+aneu_feature_list <- colnames(full_cin[1, 6:length(full_cin)])
 
 for (feature in aneu_feature_list){
   cat(paste0("\n", feature, ":"))
-  
+
   aneu_cat_metrics_df <- data.frame(
     RNA_Set = character(),
     Feature = character(),
     Depth = numeric(),
     Learning_Rate = numeric(),
     Gamma = numeric(),
-    Accuracy = numeric()
+    Logloss = numeric()
   )
-  
-  results <- foreach(i = 1:length(rna_list), .combine = rbind) %dopar% { # nolint
-    library(dplyr)
-    library(xgboost)
-    
+
+  for (i in 1:length(rna_list)) {
+
     rna <- rna_list[[i]]
     name <- names(rna_list)[i]
-    
+
     full_df <- merge(rna, full_cin, by = "row.names")
     y <- as.integer(full_df[[feature]])
     X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
-    
+
     y[y == -1] <- 0
     y[y == 1] <- 2
     y[y == 0] <- 1
-    
+
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
-    
+
     grid <- expand.grid(
-      max_depth = seq(1, 15, 3),
-      gamma = seq(0, 2, 0.5),
-      eta = seq(0.01, 0.1),
-      subsample = 1,
-      colsample_bytree = 1
+      max_depth = seq(1, 15, 5),
+      gamma = seq(0, 2, 1.5),
+      eta = seq(0.01, 0.1)
     )
-    
-    temp_df <- data.frame(
-      Feature = character(),
-      RNA_Set = character(),
-      Depth = numeric(),
-      Learning_Rate = numeric(),
-      Gamma = numeric(),
-      Logloss = numeric()
-    )
-    
+
     for (j in 1:nrow(grid)) { # nolint
       m_xgb_untuned <- xgb.cv(
         data = xgb_data,
@@ -387,10 +356,12 @@ for (feature in aneu_feature_list){
         num_class = 3,
         verbose = 0
       )
-      
-      best_loss <- m_xgb_untuned$evaluation_log$test_mlogloss_mean[m_xgb_untuned$best_iteration]
-      
-      temp_df <- rbind(temp_df, data.frame(
+
+      best_loss <- m_xgb_untuned$evaluation_log$test_mlogloss_mean[
+        m_xgb_untuned$best_iteration
+      ]
+
+      aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
         Feature = feature,
         RNA_Set = name,
         Depth = grid$max_depth[j],
@@ -399,9 +370,10 @@ for (feature in aneu_feature_list){
         Logloss = best_loss
       ))
     }
-    return(temp_df)
   }
-  write.csv(results, paste0("Data/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"))
+  write.csv(aneu_cat_metrics_df,
+    paste0(
+      "Data/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"
+    )
+  )
 }
-parallel::stopCluster(cl = my.cluster)
-

@@ -10,11 +10,7 @@ library(edgeR)
 library(tidyverse)
 library(xgboost)
 library(caret)
-library(ranger)
 library(caTools)
-library(palmerpenguins)
-library(parallel)
-library(foreach)
 
 extract_element <- function(strings, index) {
   # Split each string by "." and extract the third element
@@ -91,6 +87,31 @@ order_exp <- right_join(gene_ids %>%
 rm(gene_ids)
 rm(order_exp0)
 
+# Number of random rows and columns to select
+n_extra_genes <- 10000
+n_samples <- 2000
+
+tpm_not_soi <- order_tpm %>%
+  filter(!Gene %in% soi_genes) %>%
+  sample_n(size = n_extra_genes, replace = FALSE)
+
+order_tpm_soi <- order_tpm[order_tpm$Gene %in% soi_genes, ]
+rm(order_tpm)
+
+exp_not_soi <- order_exp %>%
+  filter(!Gene %in% soi_genes) %>%
+  sample_n(size = n_extra_genes, replace = FALSE)
+
+order_exp_soi <- order_exp[order_exp$Gene %in% soi_genes, ]
+rm(order_exp)
+
+order_tpm <- rbind(tpm_not_soi, order_tpm_soi)[,0:n_samples]
+order_exp <- rbind(exp_not_soi, order_exp_soi)[,0:n_samples]
+rm(tpm_not_soi)
+rm(exp_not_soi)
+rm(order_tpm_soi)
+rm(order_exp_soi)
+
 # Response data
 
 # HRD scores
@@ -118,7 +139,7 @@ rm(trans_tpm)
 # Remove the non-cancerous sample types from the set
 codes_to_use <- c("01","02","03","04","05","08","09")
 
-exp_samples_to_use <- count_exp %>%  dplyr::select(c("sample", ends_with(codes_to_use)))
+exp_samples_to_use <- count_exp %>%  dplyr::select(c("Gene", ends_with(codes_to_use)))
 tpm_samples_to_use <- count_tpm %>%  dplyr::select(c("Gene", ends_with(codes_to_use)))
 rm(count_exp)
 rm(count_tpm)
@@ -281,19 +302,6 @@ rna_list <- list(
 
 aneu_feature_list <- colnames(full_cin[1,6:length(full_cin)])
 
-n.cores <- parallel::detectCores() - 1
-
-my.cluster <- parallel::makeCluster(
-  n.cores, 
-  type = "PSOCK"
-)
-
-doParallel::registerDoParallel(cl = my.cluster)
-
-foreach::getDoParRegistered()
-foreach::getDoParWorkers()
-
-print(my.cluster)
 
 for (feature in aneu_feature_list){
   cat(paste0("\n", feature, ":"))
@@ -304,12 +312,10 @@ for (feature in aneu_feature_list){
     Depth = numeric(),
     Learning_Rate = numeric(),
     Gamma = numeric(),
-    Accuracy = numeric()
+    Logloss = numeric()
   )
   
-  results <- foreach(i = 1:length(rna_list), .combine = rbind) %dopar% {
-    library(dplyr)
-    library(xgboost)
+  for (i in 1:length(rna_list)) {
     
     rna <- rna_list[[i]]
     name <- names(rna_list)[i]
@@ -332,15 +338,6 @@ for (feature in aneu_feature_list){
       colsample_bytree = 1
     )
     
-    temp_df <- data.frame(
-      Feature = character(),
-      RNA_Set = character(),
-      Depth = numeric(),
-      Learning_Rate = numeric(),
-      Gamma = numeric(),
-      Logloss = numeric()
-    )
-    
     for (j in 1:nrow(grid)) {
       m_xgb_untuned <- xgb.cv(
         data = xgb_data,
@@ -357,7 +354,7 @@ for (feature in aneu_feature_list){
       
       best_loss <- m_xgb_untuned$evaluation_log$test_mlogloss_mean[m_xgb_untuned$best_iteration]
       
-      temp_df <- rbind(temp_df, data.frame(
+      aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
         Feature = feature,
         RNA_Set = name,
         Depth = grid$max_depth[j],
@@ -366,9 +363,7 @@ for (feature in aneu_feature_list){
         Logloss = best_loss
       ))
     }
-    return(temp_df)
   }
-  write.csv(results, paste0("output/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"))
+  write.csv(aneu_cat_metrics_df, paste0("output/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"))
 }
-parallel::stopCluster(cl = my.cluster)
 
