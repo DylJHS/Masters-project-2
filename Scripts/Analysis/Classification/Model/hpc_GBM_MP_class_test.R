@@ -43,30 +43,6 @@ soi <- read.csv("../../../../data/mRNA/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <-soi[,2]
 rm(soi)
 
-# Predictor variables
-
-# Expected Counts
-ori_exp <- read.csv("../../../../data/mRNA/tcga_gene_expected_count.csv")
-order_exp <- ori_exp[,order(colnames(ori_exp))]
-rm(ori_exp)
-
-
-# TPM counts
-ori_tpm <- read.csv("../../../../data/mRNA/TCGA_mRNA_TPM_Full.csv")
-order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
-  dplyr::select(-"id")
-rm(ori_tpm)
-
-
-# Response data
-
-# HRD scores
-ori_hrd <- read_tsv("../../../../data/CIN/TCGA.HRD_withSampleID.txt")
-
-# Arm level aneuploidies
-ori_arm_cnv <- read_tsv("../../../../data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt")
-
-
 # Metadata
 
 # Sample meta
@@ -90,6 +66,64 @@ meta <- left_join(tss_meta %>%
 rm(tss_meta)
 rm(abbrv_meta)
 
+# Predictor variables
+
+# TPM counts
+ori_tpm <- read.csv("../../../../data/mRNA/TCGA_mRNA_TPM_Full.csv")
+order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
+  dplyr::select(-"id")
+rm(ori_tpm)
+
+# Expected Counts
+ori_exp <- read.csv("../../../../data/mRNA/tcga_gene_expected_count.csv")
+order_exp0 <- ori_exp[,order(colnames(ori_exp))]
+rm(ori_exp)
+
+# Convert the Gene Ids into names
+order_exp <- right_join(gene_ids %>% 
+                           dplyr::select(c("id", "gene")) %>% 
+                           sapply(trimws) %>% 
+                           as.data.frame(),
+                         order_exp0,
+                         by = c("id" = "sample")) %>% 
+  dplyr::select(-"id") %>% 
+  rename(Gene = "gene")
+rm(gene_ids)
+rm(order_exp0)
+
+# Number of random rows and columns to select
+n_extra_genes <- 10000
+n_samples <- 2000
+
+tpm_not_soi <- order_tpm %>%
+  filter(!Gene %in% soi_genes) %>%
+  sample_n(size = n_extra_genes, replace = FALSE)
+
+order_tpm_soi <- order_tpm[order_tpm$Gene %in% soi_genes, ]
+rm(order_tpm)
+
+exp_not_soi <- order_exp %>%
+  filter(!Gene %in% soi_genes) %>%
+  sample_n(size = n_extra_genes, replace = FALSE)
+
+order_exp_soi <- order_exp[order_exp$Gene %in% soi_genes, ]
+rm(order_exp)
+
+order_tpm <- rbind(tpm_not_soi, order_tpm_soi)[,0:n_samples]
+order_exp <- rbind(exp_not_soi, order_exp_soi)[,0:n_samples]
+rm(tpm_not_soi)
+rm(exp_not_soi)
+rm(order_tpm_soi)
+rm(order_exp_soi)
+
+# Response data
+
+# HRD scores
+ori_hrd <- read_tsv("../../../../data/CIN/TCGA.HRD_withSampleID.txt")
+
+# Arm level aneuploidies
+ori_arm_cnv <- read_tsv("../../../../data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt")
+
 trans_exp <- order_exp # Log transformed Expected Counts
 rownames(trans_exp) <- NULL
 trans_tpm <- order_tpm # Log transformed TPM Counts
@@ -109,22 +143,12 @@ rm(trans_tpm)
 # Remove the non-cancerous sample types from the set
 codes_to_use <- c("01","02","03","04","05","08","09")
 
-exp_samples_to_use <- count_exp %>%  dplyr::select(c("sample", ends_with(codes_to_use)))
+exp_samples_to_use <- count_exp %>%  dplyr::select(c("Gene", ends_with(codes_to_use)))
 tpm_samples_to_use <- count_tpm %>%  dplyr::select(c("Gene", ends_with(codes_to_use)))
+rm(count_exp)
+rm(count_tpm)
 
-
-# Convert the Gene Ids into names
-counts_exp <- right_join(gene_ids %>% 
-                           dplyr::select(c("id", "gene")) %>% 
-                           sapply(trimws) %>% 
-                           as.data.frame(),
-                         exp_samples_to_use,
-                         by = c("id" = "sample")) %>% 
-  dplyr::select(-"id")
-rm(gene_ids)
-rm(exp_samples_to_use)
-
-counts_exp <- counts_exp %>%
+counts_exp <- exp_samples_to_use %>%
   mutate(gene = trimws(gene))
 
 # Convert data to a data.table for faster processing during the grouping of the duplicate genes
@@ -281,7 +305,6 @@ rna_list <- list(
 )
 
 aneu_feature_list <- colnames(full_cin[1,6:length(full_cin)])
-reg_feature_list <- colnames(full_cin[1,1:5])
 
 n.cores <- parallel::detectCores() - 1
 
@@ -357,6 +380,8 @@ for (feature in aneu_feature_list){
         verbose = 0
       )
       
+      best_loss <- m_xgb_untuned$evaluation_log$test_mlogloss_mean[m_xgb_untuned$best_iteration]
+      
       temp_df <- rbind(temp_df, data.frame(
         Feature = feature,
         RNA_Set = name,
@@ -368,107 +393,7 @@ for (feature in aneu_feature_list){
     }
     return(temp_df)
   }
-  write.csv(results, paste0("Data/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"))
+  write.csv(results, paste0("output/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"))
 }
 parallel::stopCluster(cl = my.cluster)
 
-rm(aneu_feature_list)
-rm(temp_df)
-rm(results)
-rm(xgb_params)
-rm(xgb_model)
-rm(best_loss)
-rm(xgb_cat_preds)
-rm(aneu_cat_metrics_df)
-rm(my.cluster)
-
-my.cluster <- parallel::makeCluster(
-  n.cores, 
-  type = "PSOCK"
-)
-
-doParallel::registerDoParallel(cl = my.cluster)
-foreach::getDoParRegistered()
-foreach::getDoParWorkers()
-
-print(my.cluster)
-
-for (feature in aneu_feature_list){
-  cat(paste0("\n", feature, ":"))
-  
-  aneu_reg_metrics_df <- data.frame(
-    RNA_Set = character(),
-    Feature = character(),
-    Depth = numeric(),
-    Learning_Rate = numeric(),
-    Gamma = numeric(),
-    RMSE = numeric()
-  )
-  
-  results <- foreach(i = 1:length(rna_list), .combine = rbind) %dopar% {
-    library(dplyr)
-    library(xgboost)
-    
-    rna <- rna_list[[i]]
-    name <- names(rna_list)[i]
-    
-    full_df <- merge(rna, full_cin, by = "row.names")
-    
-    y <- as.integer(full_df[[feature]])
-    X <- full_df %>% select(-append("Row.names",colnames(full_cin)))
-    
-    y[y == -1] <- 0
-    y[y == 1] <- 2
-    y[y == 0] <- 1
-    
-    xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
-    
-    grid <- expand.grid(
-      max_depth = seq(1, 15,4),
-      gamma = seq(0, 2, 2.3),
-      eta = seq(0.01, 0.1, 1)
-    )
-    
-    temp_df <- data.frame(
-      Feature = character(),
-      RNA_Set = character(),
-      Depth = numeric(),
-      Learning_Rate = numeric(),
-      Gamma = numeric(),
-      Logloss = numeric()
-    )
-    
-    for (j in 1:nrow(grid)) {
-      m_xgb_untuned <- xgb.cv(
-        data = xgb_data,
-        nrounds = 1000,
-        objective = "reg:squarederror",
-        eval_metric = "rmse",
-        early_stopping_rounds = 50,
-        nfold = 5,
-        max_depth = grid$max_depth[j],
-        eta = grid$eta[j],
-        verbose = 0
-      )
-      
-      best_rmse <- m_xgb_untuned$evaluation_log$test_rmse_mean[m_xgb_untuned$best_iteration]
-      
-      temp_df <- rbind(temp_df,
-                       data.frame(
-                         Feature = feature,
-                         RNA_Set = name,
-                         Depth = grid$max_depth[j],
-                         Learning_Rate = grid$eta[j],
-                         Gamma = grid$gamma[j],
-                         RMSE = best_rmse
-                       )
-      )
-    }
-    return(temp_df)
-  }
-  
-  write.csv(results, paste0("Data/aneu_reg_xgb_metrics_params_",feature,"_",Sys.Date(), ".csv"))
-  
-}
-
-parallel::stopCluster(cl = my.cluster)
