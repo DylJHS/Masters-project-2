@@ -289,7 +289,7 @@ for (feature in aneu_feature_list){
     Depth = numeric(),
     Learning_Rate = numeric(),
     Gamma = numeric(),
-    Accuracy = numeric()
+    Logloss = numeric()
   )
   
   for (i in 1:length(rna_list)){

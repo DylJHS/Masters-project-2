@@ -329,7 +329,7 @@ for (feature in aneu_feature_list){
     Depth = numeric(),
     Learning_Rate = numeric(),
     Gamma = numeric(),
-    Accuracy = numeric()
+    Logloss = numeric()
   )
   
   results <- foreach(i = 1:length(rna_list), .combine = rbind) %dopar% {

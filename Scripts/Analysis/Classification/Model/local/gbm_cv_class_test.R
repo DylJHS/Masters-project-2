@@ -1,5 +1,3 @@
-
-
 library(dplyr)
 library(readr)
 library(mltools)
@@ -23,25 +21,25 @@ extract_element <- function(strings, index) {
   return(element_list)
 }
 
-untransform_exp <- function(x) {#Function to convert the log transformed counts back into original counts # nolint
+untransform_exp <- function(x) { # Function to convert the log transformed counts back into original counts # nolint
   return(ceiling((2^x) - 1))
 }
 
-transform_exp <- function(x) {#Function to convert the log transformed counts back into original counts # nolint
+transform_exp <- function(x) { # Function to convert the log transformed counts back into original counts # nolint
   return(log2(x + 1))
 }
 
-untransform_tpm <- function(x) {#Function to convert the log transformed counts back into original counts # nolint: line_length_linter.
+untransform_tpm <- function(x) { # Function to convert the log transformed counts back into original counts # nolint: line_length_linter.
   return(ceiling((2^x) - 0.001))
 }
 
-transform_tpm <- function(x) {#Function to convert the log transformed counts back into original counts # nolint
+transform_tpm <- function(x) { # Function to convert the log transformed counts back into original counts # nolint
   return(log2(x + 0.001))
 }
 
 # SOI genes
 soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
-soi_genes <-soi[,2] # nolint
+soi_genes <- soi[, 2] # nolint
 rm(soi)
 
 # Metadata
@@ -53,17 +51,19 @@ abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
 # Gene Metadata
 gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.txt") # nolint
 
-meta <- left_join(tss_meta %>%
-                    dplyr::select(c("TSS.Code", "Study.Name")) %>%
-                    distinct() %>%
-                    sapply(trimws) %>%
-                    as.data.frame(),
-                  abbrv_meta %>%
-                    dplyr::select(c("Study.Abbreviation", "Study.Name")) %>%
-                    distinct() %>%
-                    sapply(trimws) %>%
-                    as.data.frame(),
-                  by = "Study.Name")
+meta <- left_join(
+  tss_meta %>%
+    dplyr::select(c("TSS.Code", "Study.Name")) %>%
+    distinct() %>%
+    sapply(trimws) %>%
+    as.data.frame(),
+  abbrv_meta %>%
+    dplyr::select(c("Study.Abbreviation", "Study.Name")) %>%
+    distinct() %>%
+    sapply(trimws) %>%
+    as.data.frame(),
+  by = "Study.Name"
+)
 rm(tss_meta)
 rm(abbrv_meta)
 
@@ -81,12 +81,14 @@ order_exp0 <- ori_exp[, order(colnames(ori_exp))]
 rm(ori_exp)
 
 # Convert the Gene Ids into names
-order_exp <- right_join(gene_ids %>%
-                          dplyr::select(c("id", "gene")) %>%
-                          sapply(trimws) %>%
-                          as.data.frame(),
-                        order_exp0,
-                        by = c("id" = "sample")) %>%
+order_exp <- right_join(
+  gene_ids %>%
+    dplyr::select(c("id", "gene")) %>%
+    sapply(trimws) %>%
+    as.data.frame(),
+  order_exp0,
+  by = c("id" = "sample")
+) %>%
   dplyr::select(-"id") %>%
   rename(Gene = "gene")
 rm(gene_ids)
@@ -156,8 +158,8 @@ counts_exp <- exp_samples_to_use %>%
   mutate(Gene = trimws(Gene))
 
 # Convert data to a data.table for faster processing during the grouping of the duplicate genes # nolint
-setDT(counts_exp)  
-setDT(tpm_samples_to_use)  
+setDT(counts_exp)
+setDT(tpm_samples_to_use)
 
 # Combine duplicate genes together using the median of the expression
 grouped_exp <- counts_exp[, lapply(.SD, function(x) if (length(x) > 1) median(x, na.rm = TRUE) else x), by = Gene, .SDcols = -"Gene"] # nolint
@@ -171,9 +173,9 @@ groups_tpm <- as.data.frame(grouped_tpm)
 rm(grouped_exp)
 rm(grouped_tpm)
 
-exp_data <- distinct(groups_exp) %>% 
+exp_data <- distinct(groups_exp) %>%
   column_to_rownames(var = "Gene")
-tpm_data <- distinct(groups_tpm) %>% 
+tpm_data <- distinct(groups_tpm) %>%
   column_to_rownames(var = "Gene")
 rm(groups_exp)
 rm(groups_tpm)
@@ -208,69 +210,69 @@ rm(filt_dt_exp)
 d_exp <- DGEList(matrix_exp)
 rm(matrix_exp)
 
-# Calculate the normalisation factor 
+# Calculate the normalisation factor
 Normfact_exp <- calcNormFactors(d_exp, method = "TMM")
 rm(d_exp)
 Normfactors <- as.data.frame(Normfact_exp$samples) %>% select("norm.factors")
 rm(Normfact_exp)
 
 # match the column names from the normalisation factor df with that of the other dfs in order to divide the count values by the library size factors for the correct samples  # nolint
-matching_cols_tpm <- colnames(tpm_data)[match(rownames(Normfactors), colnames(tpm_data))] 
+matching_cols_tpm <- colnames(tpm_data)[match(rownames(Normfactors), colnames(tpm_data))]
 
 matching_cols_tpm <- matching_cols_tpm[!is.na(matching_cols_tpm)]
 
-scld_cnts_tpm <- round(sweep(tpm_data[, matching_cols_tpm], 2, Normfactors$norm.factors, "/"),2)
+scld_cnts_tpm <- round(sweep(tpm_data[, matching_cols_tpm], 2, Normfactors$norm.factors, "/"), 2)
 rm(tpm_data)
 
 matching_cols_exp <- colnames(exp_data)[match(rownames(Normfactors), colnames(exp_data))]
 matching_cols_exp <- matching_cols_exp[!is.na(matching_cols_exp)]
 
-scld_cnts_exp <- round(sweep(exp_data[, matching_cols_exp], 2, Normfactors$norm.factors, "/"),2)
+scld_cnts_exp <- round(sweep(exp_data[, matching_cols_exp], 2, Normfactors$norm.factors, "/"), 2)
 rm(exp_data)
 
 # Expected Counts
 exp_set <- data_complete_exp %>% # Raw expected counts
   filter(rownames(.) %in% soi_genes) %>%
-  t() %>% 
+  t() %>%
   as.data.frame()
 rm(data_complete_exp)
 
 scld_exp_set <- scld_cnts_exp %>% # Library size normalised Expected counts
-  filter(rownames(.) %in% soi_genes) %>% 
-  t() %>% 
+  filter(rownames(.) %in% soi_genes) %>%
+  t() %>%
   as.data.frame()
 rm(scld_cnts_exp)
 
 log_exp <- exp_set %>% # Log transformed expected counts
-  mutate_at(vars(everything()), transform_exp) 
+  mutate_at(vars(everything()), transform_exp)
 
 log_scld_exp <- scld_exp_set %>% # Log transformed Library size normalised expected counts
-  mutate_at(vars(everything()), transform_exp) 
+  mutate_at(vars(everything()), transform_exp)
 
 # Transcript per million (TPM)
-tpm_set <- data_complete_tpm %>% # Raw TPM counts 
-  filter(rownames(.) %in% soi_genes) %>% 
-  t() %>% 
+tpm_set <- data_complete_tpm %>% # Raw TPM counts
+  filter(rownames(.) %in% soi_genes) %>%
+  t() %>%
   as.data.frame()
 rm(data_complete_tpm)
 
 scld_tpm_set <- scld_cnts_tpm %>% # Library size normalised TPM counts
-  filter(rownames(.) %in% soi_genes) %>% 
-  t() %>% 
+  filter(rownames(.) %in% soi_genes) %>%
+  t() %>%
   as.data.frame()
 rm(scld_cnts_tpm)
 
 log_tpm <- tpm_set %>% # Log transformed TPM counts
-  mutate_at(vars(everything()), transform_tpm) 
+  mutate_at(vars(everything()), transform_tpm)
 
 log_scld_tpm <- scld_tpm_set %>% # Log transformed Library size normalised TPM counts
-  mutate_at(vars(everything()), transform_tpm) 
+  mutate_at(vars(everything()), transform_tpm)
 
-t_hrd <- as.data.frame(t(ori_hrd)) 
+t_hrd <- as.data.frame(t(ori_hrd))
 first_hrd <- t_hrd
 colnames(first_hrd) <- t_hrd[1, ]
-hrd <- as.data.frame(first_hrd[-1,]) %>% 
-  mutate_all(as.numeric) %>% 
+hrd <- as.data.frame(first_hrd[-1, ]) %>%
+  mutate_all(as.numeric) %>%
   rename(loh_hrd = "hrd-loh")
 rm(t_hrd)
 rm(first_hrd)
@@ -280,10 +282,10 @@ rm(first_hrd)
 cvn_arm <- ori_arm_cnv %>% replace(is.na(.), 0)
 rm(ori_arm_cnv)
 
-# Re-organise the columns 
+# Re-organise the columns
 cnvs_arm <- cvn_arm %>%
-  column_to_rownames("Sample") %>% 
-  dplyr::select(-"Type") %>% 
+  column_to_rownames("Sample") %>%
+  dplyr::select(-"Type") %>%
   mutate_all(as.numeric)
 rm(cvn_arm)
 
@@ -291,7 +293,7 @@ full_cin <- merge(
   hrd,
   cnvs_arm,
   by = "row.names"
-) %>% 
+) %>%
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
 rm(hrd)
@@ -305,12 +307,12 @@ rna_list <- list(
   expected_counts = exp_set,
   scalled_expected_counts = scld_exp_set,
   log_expected_counts = log_exp,
-  log_scalled_expected_counts = log_scld_exp 
+  log_scalled_expected_counts = log_scld_exp
 )
 
 aneu_feature_list <- colnames(full_cin[1, 6:length(full_cin)])
 
-for (feature in aneu_feature_list){
+for (feature in aneu_feature_list) {
   cat(paste0("\n", feature, ":"))
 
   aneu_cat_metrics_df <- data.frame(
@@ -323,7 +325,6 @@ for (feature in aneu_feature_list){
   )
 
   for (i in 1:length(rna_list)) {
-
     rna <- rna_list[[i]]
     name <- names(rna_list)[i]
 
@@ -371,7 +372,8 @@ for (feature in aneu_feature_list){
       ))
     }
   }
-  write.csv(aneu_cat_metrics_df,
+  write.csv(
+    aneu_cat_metrics_df,
     paste0(
       "Data/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"
     )
