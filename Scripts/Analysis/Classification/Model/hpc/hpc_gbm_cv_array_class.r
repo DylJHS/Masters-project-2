@@ -16,16 +16,16 @@ tuning_samples <- 8000
 
 # RNA SOI SETS
 # Expected Counts
-exp_set <- read.csv("exp_soi.csv")[,]
-scld_exp_set <- read.csv("scld_exp_soi.csv")
-log_exp <- read.csv("log_exp_soi.csv")
-log_scld_exp <- read.csv("log_scld_exp_soi.csv")
+exp_set <- read.csv("exp_soi.csv")[,1:8000]
+scld_exp_set <- read.csv("scld_exp_soi.csv")[,1:8000]
+log_exp <- read.csv("log_exp_soi.csv")[,1:8000]
+log_scld_exp <- read.csv("log_scld_exp_soi.csv")[,1:8000]
 
 # Transcripts Per Million
-tpm_set <- read.csv("tpm_soi.csv")
-scld_tpm_set <- read.csv("scld_tpm_soi.csv")
-log_tpm <- read.csv("log_tpm_soi.csv")
-log_scld_tpm <- read.csv("log_scld_tpm_soi.csv")
+tpm_set <- read.csv("tpm_soi.csv")[,1:8000]
+scld_tpm_set <- read.csv("scld_tpm_soi.csv")[,1:8000]
+log_tpm <- read.csv("log_tpm_soi.csv")[,1:8000]
+log_scld_tpm <- read.csv("log_scld_tpm_soi.csv")[,1:8000]
 
 
 # HRD scores
