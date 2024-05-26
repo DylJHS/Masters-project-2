@@ -271,6 +271,7 @@ rm(t_hrd)
 rm(first_hrd)
 cat("\n created all sets \n")
 
+
 # ARM-LEVEL ANEUPLOIDIES
 # Replace the NAs with 0
 cvn_arm <- ori_arm_cnv %>% replace(is.na(.), 0)
@@ -297,6 +298,8 @@ aneu_feature_list <- colnames(full_cin[1, 6:length(full_cin)])
 
 feature <- aneu_feature_list[[index]]
 cat(paste0("\n feature:", feature, "\n"))
+
+# MODELLING
 
 aneu_cat_metrics_df <- data.frame(
   RNA_Set = character(),
