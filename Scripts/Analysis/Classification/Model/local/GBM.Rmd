@@ -461,9 +461,7 @@ for (feature in reg_feature_list){
     y <- as.integer(full_df[[feature]])
     X <- full_df %>% select(-append("Row.names",colnames(full_cin)))
     
-    y[y == -1] <- 0
-    y[y == 1] <- 2
-    y[y == 0] <- 1
+
     
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
     

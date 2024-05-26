@@ -72,20 +72,20 @@ full_cin <- merge(
 rm(hrd)
 rm(cnvs_arm)
 
-aneu_feature_list <- colnames(full_cin[1, 6:length(full_cin)])
+aneu_feature_list <- colnames(full_cin[1, 1:5])
 
 feature <- aneu_feature_list[[index]]
 cat(paste0("\n feature:", feature, "\n"))
 
 # MODELLING
 
-aneu_cat_metrics_df <- data.frame(
+aneu_reg_metrics_df <- data.frame(
   RNA_Set = character(),
   Feature = character(),
   Depth = numeric(),
   Learning_Rate = numeric(),
   Gamma = numeric(),
-  Logloss = numeric()
+  RMSE = numeric()
 )
 
 rna_list <- list(
@@ -107,16 +107,12 @@ for (i in 1:length(rna_list)) {
 
   full_df <- merge(rna, full_cin, by = "row.names")
   y <- as.integer(full_df[[feature]])
-  X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
-
-  y[y == -1] <- 0
-  y[y == 1] <- 2
-  y[y == 0] <- 1
+  X <- full_df %>% select(-c("Row.names",colnames(full_cin)))
 
   xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
   grid <- expand.grid(
-    max_depth = seq(1, 12, 3)
+    max_depth = seq(1, 10, 2)
   )
 
   for (j in 1:nrow(grid)) { # nolint
@@ -128,7 +124,8 @@ for (i in 1:length(rna_list)) {
     m_xgb_untuned <- xgb.cv(
       data = xgb_data,
       nrounds = 5000,
-      objective = "multi:softmax",
+      objective = "reg:squarederror",
+      eval_metric = "rmse",
       early_stopping_rounds = 50,
       nfold = 3,
       max_depth = grid$max_depth[j],
@@ -138,24 +135,25 @@ for (i in 1:length(rna_list)) {
       verbose = 0
     )
 
-    best_loss <- m_xgb_untuned$evaluation_log$test_mlogloss_mean[
+    best_rmse <- m_xgb_untuned$evaluation_log$test_rmse_mean[
       m_xgb_untuned$best_iteration
     ]
 
-    aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
+
+    aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
       Feature = feature,
       RNA_Set = name,
       Depth = grid$max_depth[j],
       Learning_Rate = eta,
       Gamma = gamma,
-      Logloss = best_loss
+      RMSE = best_rmse
     ))
   }
 }
 write.csv(
-  aneu_cat_metrics_df,
+  aneu_reg_metrics_df,
   paste0(
-    "output/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"
+    "output/regression/aneu_reg_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"
   )
 )
 cat("\n Completed processing for index: ", index, "\n")
