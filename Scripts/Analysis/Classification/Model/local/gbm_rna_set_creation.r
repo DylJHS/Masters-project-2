@@ -1,6 +1,15 @@
+"""
+Creation of the RNA sets in their different forms 
+of the gbm hyperparameter tuning using array task
+in hpc such that each task can just load the data instead of 
+having to create it from scratch.
+
+"""
+
+
+
 library(dplyr)
 library(readr)
-library(mltools)
 library(knitr)
 library(factoextra)
 library(data.table)
@@ -8,10 +17,9 @@ library(psych)
 library(limma)
 library(edgeR)
 library(tidyverse)
-library(xgboost)
-library(caret)
-library(caTools)
 
+
+setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project") # nolint
 
 extract_element <- function(strings, index) {
   # Split each string by "." and extract the third element
@@ -35,23 +43,19 @@ transform_tpm <- function(x) { # Function to convert the log transformed counts 
   return(log2(x + 0.001))
 }
 
-
-args <- commandArgs(trailingOnly = TRUE)
-index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
-
 # SOI genes
-soi <- read.csv("../../../../data/mRNA/TCGA_mRNA_TPM_SOI.csv")
-soi_genes <- soi[, 2]
+soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
+soi_genes <-soi[,2]
 rm(soi)
 
 # Metadata
 
 # Sample meta
-tss_meta <- read.csv("../../../../data/meta/tissueSourceSite.tsv", sep = "\t")
-abbrv_meta <- read.csv("../../../../data/meta/bcrBatchCode.tsv", sep = "\t")
+tss_meta <- read.csv("Data/Other/TCGA_meta/tissueSourceSite.tsv", sep = "\t")
+abbrv_meta <- read.csv("Data/Other/TCGA_meta/bcrBatchCode.tsv", sep = "\t")
 
 # Gene Metadata
-gene_ids <- read.delim("../../../../data/meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
+gene_ids <- read.delim("Data/Other/TCGA_meta/TCGA_PanCan_TPM_Gene_Annotations.txt")
 
 meta <- left_join(
   tss_meta %>%
@@ -72,19 +76,19 @@ rm(abbrv_meta)
 # Predictor variables
 
 # TPM counts
-ori_tpm <- read.csv("../../../../data/mRNA/TCGA_mRNA_TPM_Full.csv")
-order_tpm1 <- ori_tpm[,order(colnames(ori_tpm))] %>% 
+ori_tpm <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv")
+order_tpm <- ori_tpm[,order(colnames(ori_tpm))] %>% 
   dplyr::select(-"id")
 rm(ori_tpm)
 cat("\n loaded tpm \n")
 
 # Expected Counts
-ori_exp <- read.csv("../../../../data/mRNA/tcga_gene_expected_count.csv")
+ori_exp <- read.csv("Data/RNA_Data/TCGA_Norm/tcga_gene_expected_count.csv")
 order_exp0 <- ori_exp[,order(colnames(ori_exp))]
 rm(ori_exp)
 
 # Convert the Gene Ids into names
-order_exp1 <- right_join(
+order_exp <- right_join(
   gene_ids %>%
     dplyr::select(c("id", "gene")) %>%
     sapply(trimws) %>%
@@ -97,24 +101,6 @@ order_exp1 <- right_join(
 rm(gene_ids)
 rm(order_exp0)
 cat("\n loaded exp \n")
-
-# Number of random columns to select
-
-n_samples <- 8000
-
-order_tpm <- order_tpm1[, 0:n_samples]
-order_exp <- order_exp1[, 0:n_samples]
-rm(order_tpm1)
-rm(order_exp1)
-rm(n_samples)
-
-# Response data
-
-# HRD scores
-ori_hrd <- read_tsv("../../../../data/CIN/TCGA.HRD_withSampleID.txt")
-
-# Arm level aneuploidies
-ori_arm_cnv <- read_tsv("../../../../data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt")
 
 trans_exp <- order_exp # Log transformed Expected Counts
 rownames(trans_exp) <- NULL
@@ -227,18 +213,34 @@ exp_set <- data_complete_exp %>% # Raw expected counts
   t() %>%
   as.data.frame()
 rm(data_complete_exp)
+write.csv(exp_set,
+  "exp_soi.csv"
+)
 
 scld_exp_set <- scld_cnts_exp %>% # Library size normalised Expected counts
   filter(rownames(.) %in% soi_genes) %>%
   t() %>%
   as.data.frame()
 rm(scld_cnts_exp)
+write.csv(scld_exp_set,
+  "scld_exp_soi.csv"
+)
 
 log_exp <- exp_set %>% # Log transformed expected counts
   mutate_at(vars(everything()), transform_exp)
+write.csv(log_exp,
+  "log_exp_soi.csv"
+)
+rm(log_exp)
+rm(exp_set)
 
 log_scld_exp <- scld_exp_set %>% # Log transformed Library size normalised expected counts
   mutate_at(vars(everything()), transform_exp)
+write.csv(log_scld_exp,
+  "log_scld_exp_soi.csv"
+)
+rm(log_scld_exp)
+rm(scld_exp_set)
 
 # Transcript per million (TPM)
 tpm_set <- data_complete_tpm %>% # Raw TPM counts
@@ -246,135 +248,29 @@ tpm_set <- data_complete_tpm %>% # Raw TPM counts
   t() %>%
   as.data.frame()
 rm(data_complete_tpm)
+write.csv(tpm_set,
+  "tpm_soi.csv"
+)
 
 scld_tpm_set <- scld_cnts_tpm %>% # Library size normalised TPM counts
   filter(rownames(.) %in% soi_genes) %>%
   t() %>%
   as.data.frame()
 rm(scld_cnts_tpm)
+write.csv(scld_tpm_set,
+  "scld_tpm_soi.csv"
+)
 
 log_tpm <- tpm_set %>% # Log transformed TPM counts
   mutate_at(vars(everything()), transform_tpm)
+write.csv(log_tpm,
+  "log_tpm_soi.csv"
+)
+rm(log_tpm)
+rm(tpm_set)
 
 log_scld_tpm <- scld_tpm_set %>% # Log transformed Library size normalised TPM counts
   mutate_at(vars(everything()), transform_tpm)
-
-t_hrd <- as.data.frame(t(ori_hrd))
-first_hrd <- t_hrd
-colnames(first_hrd) <- t_hrd[1, ]
-hrd <- as.data.frame(first_hrd[-1, ]) %>%
-  mutate_all(as.numeric) %>%
-  rename(loh_hrd = "hrd-loh")
-rm(t_hrd)
-rm(first_hrd)
-cat("\n created all sets \n")
-
-# ARM-LEVEL ANEUPLOIDIES
-# Replace the NAs with 0
-cvn_arm <- ori_arm_cnv %>% replace(is.na(.), 0)
-rm(ori_arm_cnv)
-
-# Re-organise the columns
-cnvs_arm <- cvn_arm %>%
-  column_to_rownames("Sample") %>%
-  dplyr::select(-"Type") %>%
-  mutate_all(as.numeric)
-rm(cvn_arm)
-
-full_cin <- merge(
-  hrd,
-  cnvs_arm,
-  by = "row.names"
-) %>%
-  mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
-  column_to_rownames("Row.names")
-rm(hrd)
-rm(cnvs_arm)
-
-aneu_feature_list <- colnames(full_cin[1, 6:length(full_cin)])
-
-feature <- aneu_feature_list[[index]]
-cat(paste0("\n feature:", feature, "\n"))
-
-aneu_cat_metrics_df <- data.frame(
-  RNA_Set = character(),
-  Feature = character(),
-  Depth = numeric(),
-  Learning_Rate = numeric(),
-  Gamma = numeric(),
-  Logloss = numeric()
+write.csv(log_scld_tpm,
+  "log_scld_tpm_soi.csv"
 )
-
-rna_list <- list(
-  transcripts_per_million = tpm_set, # Seems to be the best performing
-  scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
-  log_scalled_transcripts_per_million = log_scld_tpm,
-  log_transcripts_per_million = log_tpm,
-  expected_counts = exp_set,
-  scalled_expected_counts = scld_exp_set,
-  log_expected_counts = log_exp,
-  log_scalled_expected_counts = log_scld_exp
-)
-
-
-for (i in 1:length(rna_list)) {
-  rna <- rna_list[[i]]
-  name <- names(rna_list)[i]
-  cat(paste0("\t", name, "\n"))
-
-  full_df <- merge(rna, full_cin, by = "row.names")
-  y <- as.integer(full_df[[feature]])
-  X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
-
-  y[y == -1] <- 0
-  y[y == 1] <- 2
-  y[y == 0] <- 1
-
-  xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
-
-  grid <- expand.grid(
-    max_depth = seq(1, 12, 3),
-    gamma = seq(0, 2, 0.5),
-    eta = seq(0.01, 0.1, 0.3)
-  )
-
-  for (j in 1:nrow(grid)) { # nolint
-    cat(paste0(
-      "\t\t Depth: ", grid$max_depth[j], 
-      "\n")
-      )
-
-    m_xgb_untuned <- xgb.cv(
-      data = xgb_data,
-      nrounds = 5000,
-      objective = "multi:softmax",
-      early_stopping_rounds = 50,
-      nfold = 3,
-      max_depth = grid$max_depth[j],
-      eta = grid$eta[j],
-      gamma = grid$gamma[j],
-      num_class = 3,
-      verbose = 0
-    )
-
-    best_loss <- m_xgb_untuned$evaluation_log$test_mlogloss_mean[
-      m_xgb_untuned$best_iteration
-    ]
-
-    aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
-      Feature = feature,
-      RNA_Set = name,
-      Depth = grid$max_depth[j],
-      Learning_Rate = grid$eta[j],
-      Gamma = grid$gamma[j],
-      Logloss = best_loss
-    ))
-  }
-}
-write.csv(
-  aneu_cat_metrics_df,
-  paste0(
-    "output/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"
-  )
-)
-cat("\n Completed processing for index: ", index, "\n")

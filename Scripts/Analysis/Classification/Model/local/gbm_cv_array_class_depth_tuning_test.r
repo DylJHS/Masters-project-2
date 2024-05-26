@@ -45,11 +45,6 @@ args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 # SOI genes
-soi <- read.csv("../../../../data/mRNA/TCGA_mRNA_TPM_SOI.csv")
-soi_genes <-soi[,2]
-rm(soi)
-
-# SOI genes
 soi <- read.csv("Data/RNA_Data/TCGA_TPM/TCGA_mRNA_TPM_SOI.csv")
 soi_genes <- soi[, 2] # nolint
 rm(soi)

@@ -1774,3 +1774,12 @@ As do lower levels of gamma
 Tired to run the multiprocessing and cross validation scripts on the hpc
 - did not work due
 
+
+
+26/05/24
+
+- Rewriting the MP and CV gbm hyperparameter tuning script 
+- Writing a test one for both my machine and the hpc 
+
+- Running the smaller test which worked on Mac does not appear ot work on the hpc
+- Need to implement a process that generates each of the csv files as a separate job instead of using multi-thread/process from within the script
