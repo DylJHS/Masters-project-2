@@ -1783,3 +1783,20 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 
 - Running the smaller test which worked on Mac does not appear ot work on the hpc
 - Need to implement a process that generates each of the csv files as a separate job instead of using multi-thread/process from within the script
+
+
+27/05/24
+
+- hpc implementation is working
+- Using multiple jobs via an array instead of the MP
+- But need to change the tuning configuration
+
+- Start by tuning just the detph, and then the rest
+
+- also breaking out the rna set creation from the gbm model tuning
+- the soi specific rna sets are created in a separate script and then accessed by the individual job scripts 
+- instead of each job having to create the sets
+ 
+- Need to check the row/column configuration of the rna sets
+- Cannot tune the hyperparameters on the full dataset
+- Select a subset (8000/10000) of samples to use 

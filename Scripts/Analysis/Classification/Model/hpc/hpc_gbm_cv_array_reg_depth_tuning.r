@@ -131,7 +131,6 @@ for (i in 1:length(rna_list)) {
       max_depth = grid$max_depth[j],
       eta = eta,
       gamma = gamma,
-      num_class = 3,
       verbose = 0
     )
 

@@ -10,28 +10,28 @@ library(caret)
 library(caTools)
 
 tuning_samples <- 8000
-gamma <- 0
-eta <- 0.3
+depth <- 1
+
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 # RNA SOI SETS
 # Expected Counts
-exp_set <- read.csv("exp_soi.csv", row.names = 1)[1:8000,]
+exp_set <- read.csv("exp_soi.csv", row.names = 1)[1:8000, ]
 cat("\n Exp Count df: \n")
 print(head(exp_set[, 1:10]))
-scld_exp_set <- read.csv("scld_exp_soi.csv", row.names = 1)[1:8000,]
-log_exp <- read.csv("log_exp_soi.csv", row.names = 1)[1:8000,]
-log_scld_exp <- read.csv("log_scld_exp_soi.csv", row.names = 1)[1:8000,]
+scld_exp_set <- read.csv("scld_exp_soi.csv", row.names = 1)[1:8000, ]
+log_exp <- read.csv("log_exp_soi.csv", row.names = 1)[1:8000, ]
+log_scld_exp <- read.csv("log_scld_exp_soi.csv", row.names = 1)[1:8000, ]
 
 # Transcripts Per Million
-tpm_set <- read.csv("tpm_soi.csv", row.names = 1)[1:8000,]
+tpm_set <- read.csv("tpm_soi.csv", row.names = 1)[1:8000, ]
 cat("\n\n TPM df: \n")
 print(head(tpm_set[, 1:10]))
-scld_tpm_set <- read.csv("scld_tpm_soi.csv", row.names = 1)[1:8000,]
-log_tpm <- read.csv("log_tpm_soi.csv", row.names = 1)[1:8000,]
-log_scld_tpm <- read.csv("log_scld_tpm_soi.csv", row.names = 1)[1:8000,]
+scld_tpm_set <- read.csv("scld_tpm_soi.csv", row.names = 1)[1:8000, ]
+log_tpm <- read.csv("log_tpm_soi.csv", row.names = 1)[1:8000, ]
+log_scld_tpm <- read.csv("log_scld_tpm_soi.csv", row.names = 1)[1:8000, ]
 
 
 # HRD scores
@@ -92,11 +92,11 @@ rna_list <- list(
   transcripts_per_million = tpm_set, # Seems to be the best performing
   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
   log_scalled_transcripts_per_million = log_scld_tpm,
-  log_transcripts_per_million = log_tpm,
-  expected_counts = exp_set,
+  # log_transcripts_per_million = log_tpm,
+  # expected_counts = exp_set,
   scalled_expected_counts = scld_exp_set,
-  log_expected_counts = log_exp,
-  log_scalled_expected_counts = log_scld_exp
+  log_expected_counts = log_exp
+  # log_scalled_expected_counts = log_scld_exp
 )
 
 
@@ -116,14 +116,16 @@ for (i in 1:length(rna_list)) {
   xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
   grid <- expand.grid(
-    max_depth = seq(1, 12, 3)
+    lr = seq(0.01, 0.3, 0.05),
+    gam = seq(0, 0.1, 0.05)
   )
 
   for (j in 1:nrow(grid)) { # nolint
     cat(paste0(
-      "\t\t Depth: ", grid$max_depth[j], 
+      "\t\t eta: ", grid$lr[j],
+      "\t\t gamma: ", grid$gam[j],
       "\n")
-      )
+    )
 
     m_xgb_untuned <- xgb.cv(
       data = xgb_data,
@@ -131,9 +133,9 @@ for (i in 1:length(rna_list)) {
       objective = "multi:softmax",
       early_stopping_rounds = 50,
       nfold = 3,
-      max_depth = grid$max_depth[j],
-      eta = eta,
-      gamma = gamma,
+      max_depth = depth,
+      eta = grid$lr[j],
+      gamma = grid$gam[j],
       num_class = 3,
       verbose = 0
     )
@@ -145,9 +147,9 @@ for (i in 1:length(rna_list)) {
     aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
       Feature = feature,
       RNA_Set = name,
-      Depth = grid$max_depth[j],
-      Learning_Rate = eta,
-      Gamma = gamma,
+      Depth = depth,
+      Learning_Rate = grid$lr[j],
+      Gamma = grid$gam[j],
       Logloss = best_loss
     ))
   }
@@ -155,7 +157,7 @@ for (i in 1:length(rna_list)) {
 write.csv(
   aneu_cat_metrics_df,
   paste0(
-    "output/aneu_cat_xgb_metrics_params_", feature, "_", Sys.Date(), ".csv"
+    "output/categorical/aneu_cat_xgb_metrics_params_", feature, "_", Sys.time(), ".csv"
   )
 )
 cat("\n Completed processing for index: ", index, "\n")
