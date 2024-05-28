@@ -1776,7 +1776,7 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 
 
 
-26/05/24
+25/05/24
 
 - Rewriting the MP and CV gbm hyperparameter tuning script 
 - Writing a test one for both my machine and the hpc 
@@ -1785,7 +1785,7 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 - Need to implement a process that generates each of the csv files as a separate job instead of using multi-thread/process from within the script
 
 
-27/05/24
+26/05/24
 
 - hpc implementation is working
 - Using multiple jobs via an array instead of the MP
@@ -1800,3 +1800,33 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 - Need to check the row/column configuration of the rna sets
 - Cannot tune the hyperparameters on the full dataset
 - Select a subset (8000/10000) of samples to use 
+ 
+
+27/05/24
+
+- Ran the depth tuning script on the cat and reg gbm scripts
+- The scaled tpm rna sets seem to yield the best models (16/39) followed by log tpm (7/39) and then tpm (4/39)
+- The best depth appears to be 1 (shallow model) 
+ 
+- Depth of 1 (35/39) then 2 (3/39) followed by 3(1)
+- Depths greater than 3 ( up to 10) never yielded the best model
+
+- Set up excel macro to assess the individual tuning parameters for the categorical gbm
+- Need to do the same for the regression one
+- Need to better format the sheets that assess the minimum loss/RMSE for methods/supplemental docs
+
+- out of the 10/39 chromosome arms whose model did not perform best while using a TPM rna set, 6/10's second best performing model used a TPM set, while 4/10 continued to see a better model using an Expected Counts set
+
+- Met with Adi
+- Need to figure out the segment based CNVs
+- Using the T2T genome browser ucsc 
+- Determine the pericentromeric regions 
+- Their start-stop sites and then using the CNV data with threshold of 0.5 and -0.5 determine the number of CNVs within those regions 
+- Or look at the regions that seem to display a large or smaller portion of cnv's
+
+- Running the tuning for the gamma (leaf node regularisation) and the learning rate (eta, tree shrinkage factor) 
+- eta running between 0.01 and 0.3 at a 0.05 step increase
+- gamma at 0 to 0.1 at a 0.05 step increase
+
+- Rerunning the script on the hpc for tuning the hyper-parameters
+- Given the tree depth of 1 being optimal for the categorical gbm, I will be using a gamma value of 0 for those models 
