@@ -1,0 +1,22 @@
+---
+title: "CNV Segments"
+output: html_document
+date: "2024-05-28"
+Notes: This script is intended to transform the segment based CNV data into a more readable/standardised format.
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+## Load the libraries
+
+```{r}
+library(dplyr)
+library(mltools)
+library(knitr)
+library(tidyverse)
+library(data.table)
+library(ggpubr)
+library(psych)
+```

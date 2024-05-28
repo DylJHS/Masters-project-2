@@ -17,20 +17,20 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 # RNA SOI SETS
 # Expected Counts
-exp_set <- read.csv("exp_soi.csv", row.names = 1)[1:8000,]
+exp_set <- read.csv("exp_soi.csv", row.names = 1)[1:tuning_samples,]
 cat("\n Exp Count df: \n")
 print(head(exp_set[, 1:10]))
-scld_exp_set <- read.csv("scld_exp_soi.csv", row.names = 1)[1:8000,]
-log_exp <- read.csv("log_exp_soi.csv", row.names = 1)[1:8000,]
-log_scld_exp <- read.csv("log_scld_exp_soi.csv", row.names = 1)[1:8000,]
+scld_exp_set <- read.csv("scld_exp_soi.csv", row.names = 1)[1:tuning_samples,]
+log_exp <- read.csv("log_exp_soi.csv", row.names = 1)[1:tuning_samples,]
+log_scld_exp <- read.csv("log_scld_exp_soi.csv", row.names = 1)[1:tuning_samples,]
 
 # Transcripts Per Million
-tpm_set <- read.csv("tpm_soi.csv", row.names = 1)[1:8000,]
+tpm_set <- read.csv("tpm_soi.csv", row.names = 1)[1:tuning_samples,]
 cat("\n\n TPM df: \n")
 print(head(tpm_set[, 1:10]))
-scld_tpm_set <- read.csv("scld_tpm_soi.csv", row.names = 1)[1:8000,]
-log_tpm <- read.csv("log_tpm_soi.csv", row.names = 1)[1:8000,]
-log_scld_tpm <- read.csv("log_scld_tpm_soi.csv", row.names = 1)[1:8000,]
+scld_tpm_set <- read.csv("scld_tpm_soi.csv", row.names = 1)[1:tuning_samples,]
+log_tpm <- read.csv("log_tpm_soi.csv", row.names = 1)[1:tuning_samples,]
+log_scld_tpm <- read.csv("log_scld_tpm_soi.csv", row.names = 1)[1:tuning_samples,]
 
 
 # HRD scores
