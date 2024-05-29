@@ -17,16 +17,69 @@ library(rtracklayer)
 library(tidyverse)
 ```
 
-Import the data
+1. Import the data
 ```{r}
 ori_segmnt_cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
 maps <- import("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/censat.bb")
 ```
 
+2. Subset the data to the Hsat annotated regions only 
 ```{r}
 all_segs <- as.data.frame(maps)
 peri_segs <- all_segs %>% 
   filter(grepl("hsat", name)) %>% 
-  select(c("seqnames","start", "end", "width", "name"))
+  select(c("seqnames","start", "end", "width")) %>% 
+  arrange(seqnames, start)
 ```
+
+3. Combine end-to-end hsat regions of the same chromosome
+```{r}
+seen <- list()
+combined_df <- peri_segs %>%
+  group_by(seqnames) %>%
+  arrange(start) %>%
+  mutate(end_next = lead(start),
+         combined = ifelse(end == end_next & !is.na(end_next), TRUE, FALSE),
+         combined_group = 0) %>% 
+  select(-"end_next") %>% 
+  arrange(seqnames, start )
+
+for (i in 2:nrow(combined_df)) {
+  combined_df$combined_group[i] <- ifelse(
+    combined_df$combined[i - 1], 
+    combined_df$combined_group[i - 1],  
+    combined_df$combined_group[i - 1] + 1  
+  )
+}
+
+com_peri_segs <- combined_df %>% 
+  group_by(seqnames, combined_group) %>% 
+  summarise(start = first(start),
+            end = last(end),
+            width = sum(width)) 
+```
+
+4. alternative, Combine all hsat regions in the same chromosome
+```{r}
+alt_peri <- peri_segs %>% 
+  group_by(seqnames) %>% 
+  arrange(start) %>%
+  summarise(start = first(start),
+            end = last(end),
+            width = sum(width))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
