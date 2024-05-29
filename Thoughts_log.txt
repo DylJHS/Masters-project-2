@@ -1830,3 +1830,21 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 
 - Rerunning the script on the hpc for tuning the hyper-parameters
 - Given the tree depth of 1 being optimal for the categorical gbm, I will be using a gamma value of 0 for those models 
+
+
+28/05/24
+
+- Running the hyper-parameter tuning for the reg and cat gbm models 
+
+- Need to write up the Analyses that were done in the Inter genomic and tumour type analysis
+- Need to write up the Analysis that were done in the creation of the metagenes
+- Need to assess the use of the meta genes in the model vs the full gene set
+
+- Finding a way to incorporate the segment based CNVs into the analysis 
+- Looking at the ucsc genome browser with the T2T sequences in order to identify the regions that cover the pericentromeric regions
+- Which will then be able to help get the ranges for this region on each of the chromosomes
+- using the markers of Satellite repeats need to find out which ones are more specific to pericentromeric regions than the centromeric regions
+
+
+- Using Human Satellite DNA (HSat1, HSat2 & HSat3) annotated regions as the regions defined as pericentromeric and
+- Leaving out the other peri/centromeric annotations (censat, alphasat, betasat, gammasat and transition regions) as they don't seem to be as representative of pericentromeres as the HSat annotations

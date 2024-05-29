@@ -13,10 +13,20 @@ knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internsh
 
 ```{r}
 library(dplyr)
-library(mltools)
-library(knitr)
+library(rtracklayer)
 library(tidyverse)
-library(data.table)
-library(ggpubr)
-library(psych)
 ```
+
+Import the data
+```{r}
+ori_segmnt_cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
+maps <- import("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/censat.bb")
+```
+
+```{r}
+all_segs <- as.data.frame(maps)
+peri_segs <- all_segs %>% 
+  filter(grepl("hsat", name)) %>% 
+  select(c("seqnames","start", "end", "width", "name"))
+```
+
