@@ -1848,3 +1848,35 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 
 - Using Human Satellite DNA (HSat1, HSat2 & HSat3) annotated regions as the regions defined as pericentromeric and
 - Leaving out the other peri/centromeric annotations (censat, alphasat, betasat, gammasat and transition regions) as they don't seem to be as representative of pericentromeres as the HSat annotations
+
+
+29/04/24
+
+- For the continuous based target features  that use regression
+- the GBM models perform best when using a log or log-scaled TPM data type
+- The two are always the 2 best scoring for each of the features
+- Will only consider those two 
+
+- The best depth for the regression based trees is always 2
+- Will only be using 2 depth for tuning for each of the continuous features
+
+- When combining the directly adjacent regions within chromosomes themselves, this generates 181 different pericentromeric regions across all chromosomes
+- 181 additional target features seems like too many to include in the model 
+- This would add 2 * 181 targets to model for (due to the stacked nature of the model) 
+
+- Seeing how many pericentromeric regions are generated when including ct (transitions regions) as annotations for pericentromeric regions
+- Doing the above doesn't yield better results since the ct annotations cover transitions other than just between hsat annotations
+- Going to group all the hsat regions within a single chromosome as a single pericentromeric region and verify via genome browser if this is mostly accurate or if they should be parsed into different groups
+ 
+- Looking at the tuning results for the regression based trees (continuous target features)
+- The best eta appears to be between 0.05 and 0.09
+
+- Need to drop the Aneuploidy Score as well as the HRD scores
+- These are just summations of the hrd related scores for the HRD score and the arm level aneuploidies for the Aneuploidy score
+- They just add to the complexity of the model without revealing anything additional about the samples 
+- Need to rewrite the regression based gbm modelling script without the extra targets
+
+
+- In terms of defining the pericentromeric regions based on the hsat ranges and then combining these regions:
+- Some chromosome are lacking in these types of satellites completely (6, 8, 11)
+   - For chromosome 1 it adds up with the view of the sequences and other annotations on the genome browser

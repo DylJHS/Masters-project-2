@@ -17,15 +17,15 @@ library(rtracklayer)
 library(tidyverse)
 ```
 
-1. Import the data
+Import the data
 ```{r}
 ori_segmnt_cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
 maps <- import("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/censat.bb")
+all_segs <- as.data.frame(maps)
 ```
 
-2. Subset the data to the Hsat annotated regions only 
+I.1. Subset the data to the Hsat annotated regions only 
 ```{r}
-all_segs <- as.data.frame(maps)
 peri_segs <- all_segs %>% 
   filter(grepl("hsat", name)) %>% 
   select(c("seqnames","start", "end", "width")) %>% 
@@ -34,8 +34,7 @@ peri_segs <- all_segs %>%
 
 3. Combine end-to-end hsat regions of the same chromosome
 ```{r}
-seen <- list()
-combined_df <- peri_segs %>%
+combined_peri <- peri_segs %>%
   group_by(seqnames) %>%
   arrange(start) %>%
   mutate(end_next = lead(start),
@@ -44,15 +43,15 @@ combined_df <- peri_segs %>%
   select(-"end_next") %>% 
   arrange(seqnames, start )
 
-for (i in 2:nrow(combined_df)) {
-  combined_df$combined_group[i] <- ifelse(
-    combined_df$combined[i - 1], 
-    combined_df$combined_group[i - 1],  
-    combined_df$combined_group[i - 1] + 1  
+for (i in 2:nrow(combined_peri)) {
+  combined_peri$combined_group[i] <- ifelse(
+    combined_peri$combined[i - 1], 
+    combined_peri$combined_group[i - 1],  
+    combined_peri$combined_group[i - 1] + 1  
   )
 }
 
-com_peri_segs <- combined_df %>% 
+combined_peri <- combined_peri %>% 
   group_by(seqnames, combined_group) %>% 
   summarise(start = first(start),
             end = last(end),
@@ -61,7 +60,7 @@ com_peri_segs <- combined_df %>%
 
 4. alternative, Combine all hsat regions in the same chromosome
 ```{r}
-alt_peri <- peri_segs %>% 
+alt_com_peri <- combined_peri %>% 
   group_by(seqnames) %>% 
   arrange(start) %>%
   summarise(start = first(start),
@@ -71,11 +70,143 @@ alt_peri <- peri_segs %>%
 
 
 
+II. Alternative range, use HSat and beta and gamma Satellites to produce the pericentromeric regions 
+1. 
+```{r}
+gbh_segs <- all_segs %>% 
+  filter((grepl("hsat", name)) | (grepl("gsat", name)) | (grepl("bsat", name))) %>% 
+  select(c("seqnames","start", "end", "width")) %>% 
+  arrange(seqnames, start)
+```
+
+2. Combine end-to-end regions of the same chromosome
+```{r}
+comb_gbh <- gbh_segs %>%
+  group_by(seqnames) %>%
+  arrange(start) %>%
+  mutate(end_next = lead(start),
+         combined = ifelse(end == end_next & !is.na(end_next), TRUE, FALSE),
+         combined_group = 0) %>% 
+  select(-"end_next") %>% 
+  arrange(seqnames, start )
+
+for (i in 2:nrow(comb_gbh)) {
+  comb_gbh$combined_group[i] <- ifelse(
+    comb_gbh$combined[i - 1], 
+    comb_gbh$combined_group[i - 1],  
+    comb_gbh$combined_group[i - 1] + 1  
+  )
+}
+
+comb_gbh <- comb_gbh %>% 
+  group_by(seqnames, combined_group) %>% 
+  summarise(start = first(start),
+            end = last(end),
+            width = sum(width)) %>% 
+  select(-combined_group)
+```
+
+
+
+3. Find the distances for the active HOR regions for each chromosome
+
+```{r}
+# Get all regions annotated as HOR alpha satellites, transition satellites (ct) or general centromeric satellites (censat)
+HOR_segs <- all_segs %>% 
+  filter((grepl("hor", name)) | (grepl("ct", name))|(grepl("censat", name))) %>% 
+  select(c("seqnames","start", "end", "width", "name")) %>% 
+  arrange(seqnames, start)
+
+# Combine the regions into a single range if they are a adjacent to one another and only select the ranges that contain an active HOR (true centromeric) region
+
+comb_HOR <- HOR_segs %>%
+  group_by(seqnames) %>%
+  arrange(start) %>%
+  mutate(end_next = lead(start),
+         combined = ifelse(end == end_next & !is.na(end_next), TRUE, FALSE),
+         combined_group = 0) %>% 
+  select(-"end_next") %>% 
+  arrange(seqnames, start )
+
+for (i in 2:nrow(comb_HOR)) {
+  comb_HOR$combined_group[i] <- ifelse(
+    comb_HOR$combined[i - 1], 
+    comb_HOR$combined_group[i - 1],  
+    comb_HOR$combined_group[i - 1] + 1  
+  )
+}
+
+comb_HOR <- comb_HOR %>% 
+  group_by(seqnames, combined_group) %>% 
+  summarise(start = first(start),
+            end = last(end),
+            width = sum(width),
+            name = paste(name, collapse = ", ")) %>% 
+  filter((grepl("hor", name))&(grepl("L",name))) %>% 
+  select(-c("combined_group", "name"))
+```
+
+
+4. Approach 1:create the pericentromeric regions by combining the (already combined) gbh (gamma, beta, HSat satellite) regions which are not separated by the active HOR region from the same chromosome. 
+For chromosome 3 and 4 need to make sure that they are not separated by any of the active HOR regions first. 
+
+
+```{r}
+# Create the data frame that will contain the final pericentromeric regions
+
+final_peri <- data.frame(
+  Chromosome = character(), 
+  Start = numeric(), 
+  End = numeric(),
+  Width = numeric()
+)
+
+
+# Loop over the different chromosomes other than 3 and 4
+chroms <- unique(as.character(comb_gbh$seqnames))[!unique(comb_gbh$seqnames) %in% c("chr3", "chr4")]
+
+for (chr in chroms) {
+  gbh_ranges <- comb_gbh %>%
+    filter(seqnames == chr)
+  
+  # get the acctive HOR region for that chromosome
+  hor_start <- comb_HOR %>%
+    filter(seqnames == chr) %>%
+    pull(start) %>%
+    `[`(1)
+
+  # combine gbh ranges that are either all upstream or downstream of the hor region
+  gbh_ranges <- gbh_ranges %>% 
+    mutate(
+      BfAf = ifelse(end <= hor_start, 0, 1)
+    ) %>% 
+    group_by(seqnames, BfAf) %>% 
+    summarise(
+      start = first(start),
+      end = last(end),
+      width = sum(width)
+    ) %>% 
+    select(-BfAf)
+  
+  # add the new chromosome-specific pericentromeric regions to the final dataframe
+  final_peri <- rbind(final_peri,gbh_ranges)
+  
+  
+}
 
 
 
 
 
+# c34<- comb_gbh %>% 
+#   filter((seqnames == "chr3") | (seqnames == "chr4")) %>% 
+#   rename(seqnames = "Chromosome",
+#          start = "Start",
+#          end = "End",
+#          width = "Width")
+
+
+```
 
 
 
