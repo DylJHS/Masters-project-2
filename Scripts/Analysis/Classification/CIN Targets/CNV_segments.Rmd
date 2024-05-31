@@ -211,6 +211,7 @@ cgbh_segs <- all_segs %>%
   select(c("seqnames","start", "end", "width", "name")) %>% 
   arrange(seqnames, start)
 
+# Combine the adjacent ranges
 comb_cgbh <- cgbh_segs %>%
   group_by(seqnames) %>%
   arrange(start) %>%
@@ -222,9 +223,7 @@ comb_cgbh <- cgbh_segs %>%
 
 
 cgbh_subset <- comb_cgbh %>%
-  # Group by seqnames
   group_by(seqnames) %>%
-  # Add a cumulative sum that increments for each match of "hsat" in name, starting from the first occurrence
   mutate(first_hsat = cummax(grepl("hsat", name)),
          last_hsat = rev(cummax(rev(grepl("hsat", name))))) %>%
   filter((first_hsat == 1) & (last_hsat == 1)) %>%
@@ -241,24 +240,35 @@ for (i in 2:nrow(cgbh_subset)) {
 }
 
 
-
-# combine the adjacent ranges
+# Ensuring that the resulting combined regions start and end with HSat regions
 adj_cgbh <- cgbh_subset %>%
   group_by(seqnames, combined_group) %>%
+  mutate(first_hsat = cummax(grepl("hsat", name)),
+         last_hsat = rev(cummax(rev(grepl("hsat", name))))) %>% 
+  filter((first_hsat == 1) & (last_hsat == 1)) %>%
+  select(-c("first_hsat","last_hsat")) %>%
   summarise(start = dplyr::first(start),
             end = last(end),
             width = sum(width),
             name = paste(name, collapse = ", ")) %>%
-  filter(grepl("hsat", name))%>%
   select(-c("combined_group"))
+
+
+# Select the longest range from each chromosome and the regions that are greater than 1Mb in length
+final_cgbh <- adj_cgbh %>% 
+  group_by(seqnames) %>% 
+  filter((width == max(width)) | (width >= 1000000))
 ```
 
 
 
-
-
-
-
+Conclusion: the above yields 27 pericentromeric regions from 1 different chromosomes. The chromosomes that do not have any pericentromeric regions assigned to them include chromosomes 6,11, 12, 18 & 19, which seems to add up with what is seen in the genome viewer as well as what has been reported by Altmose (2022). The chromosomes which display more than a single elongated pericentromeric region include chromosomes:
+- 13 with 3
+- 15 with 2
+- 16 with 2
+- 21 with 2
+- 22 with 4 
+- Y with 2
 
 
 
