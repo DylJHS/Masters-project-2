@@ -1487,7 +1487,7 @@ At each step in the iteration:
 
 25/04/24
 
-- Actually the multiclass-multioutput classifier aka multitask one is the best solution 
+- Actually the multi-class-multi-output classifier aka multitask one is the best solution 
 - It is able to handle cases where the number properties (variables) and the number of classes (possible outcomes per property) are greater than 2
 - Need to use the segmented data in order to determine the structural aneuploidy of the samples (arm loss)
 - Need the segmented based log ratio cnv data to determine whole aneuploidy for the chromosomes as a whole (because need the info on the chromosomes as well as the loss/gain info)
@@ -1670,7 +1670,7 @@ At each step in the iteration:
 Meeting with Aniek:
 - For the unformatted data
 - Focus on the pericentromeric regions
-- Try to define the start/end sequences that encompase the region and count the number of copy number aberrations that show up in the regions
+- Try to define the start/end sequences that encompass the region and count the number of copy number aberrations that show up in the regions
 - Can find the chromosome specific mappings by focusing on the proteins that bind to those regions and finding ChIP-seq data 
 - Or can use the mappings for the centromere and combine that information for the edge regions of the euchromatin across the different chromosomes
 - Check the Transposable elements and other types of elements that could be enriched in the region and might have been used as the basis for a ChIP-Seq experiment
@@ -1678,7 +1678,7 @@ Meeting with Aniek:
 - Start with finishing the modelling of the categorical based chromosome arm aneuploidies
 - Then move on to trying to engineer a 'Pericentromeric cnv' feature
 
-- Go over the data and teh analysis for Marit this weekend
+- Go over the data and the analysis for Marit this weekend
 
 
 17/05/24
@@ -1709,7 +1709,7 @@ As do lower levels of gamma
 
 20/05/24
 
-- Change of the emaasure of the model performance 
+- Change of the measure of the model performance 
 - From trying to assess the RSME to using the Accuracy
 - Measure is able to be calculated for both the regression and the categorical models for all the features
 - The accuracy so far (for the 1st chromosome) seems quite high
@@ -1718,7 +1718,7 @@ As do lower levels of gamma
 
 21/05/24
 
-- Looking at the results of the differnet models in terms of Accuracy may be deceiving
+- Looking at the results of the different models in terms of Accuracy may be deceiving
 - This is due to some of the classes being easier to identify than others
 - Should break out the accuracy by class (+1, 0 and -1 for the aneuploidies) and maybe add in the TPR, FPR, and AUC
  
@@ -1732,7 +1732,7 @@ As do lower levels of gamma
 
 22/05/24
 
-- Run of the DGEA for marit overnight on the hpc
+- Run of the DGEA for Marit overnight on the hpc
 - Spending the morning looking at the results of the tables a
 - Making the charts (volcano plots) ...
 
@@ -1758,16 +1758,16 @@ As do lower levels of gamma
 
 24/05/24
 
-- Given that the classification GBMs continually outperform the regression ones for the prediction of the arm level aneuploidies only the classificaiton ones will be considered for those tasks
-- Given that the Scalled RNAseq data does not offer a constant outperformance in logloss when used with gbm predictoins for the arm level aneuploidies but requires significant ressources (number of genes) in order to accurately assess the datatype could be beneficial to be dropped
-- Chrom 1q and 8p showed the lowest log-loss when using scalled data. But the improvement was very slight (~0.002 for 1q, and ~0.006 for 8p) which does not indicate a sufficient increase in performance to value the use of the data type (which requires increase processing). 
+- Given that the classification GBMs continually outperform the regression ones for the prediction of the arm level aneuploidies only the classification ones will be considered for those tasks
+- Given that the Scaled RNAseq data does not offer a constant outperformance in log-loss when used with gbm predictions for the arm level aneuploidies but requires significant resources (number of genes) in order to accurately assess the datatype could be beneficial to be dropped
+- Chromosome 1q and 8p showed the lowest log-loss when using scaled data. But the improvement was very slight (~0.002 for 1q, and ~0.006 for 8p) which does not indicate a sufficient increase in performance to value the use of the data type (which requires increase processing). 
 - Evaluating its use with the regression predictions for the hrd scores to determine whether the data processing step should be dropped entirely 
 
 
 - Need to split the dataset up prior to the CV in order to have an unbiased and unseen test set
 
 - Managed to enable multiprocessing for the gbm script on the local machine
-- Need to impelment it on the hpc server as well
+- Need to implement it on the hpc server as well
 - Doing the above using 60gb & 4 cpus
  for the regression model on the hrd scores, will need to standardise the data (mean scale)
 
@@ -1778,7 +1778,7 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 
 25/05/24
 
-- Rewriting the MP and CV gbm hyperparameter tuning script 
+- Rewriting the MP and CV gbm hyper-parameter tuning script 
 - Writing a test one for both my machine and the hpc 
 
 - Running the smaller test which worked on Mac does not appear ot work on the hpc
@@ -1798,7 +1798,7 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 - instead of each job having to create the sets
  
 - Need to check the row/column configuration of the rna sets
-- Cannot tune the hyperparameters on the full dataset
+- Cannot tune the hyper-parameters on the full dataset
 - Select a subset (8000/10000) of samples to use 
  
 
@@ -1880,3 +1880,36 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 - In terms of defining the pericentromeric regions based on the hsat ranges and then combining these regions:
 - Some chromosome are lacking in these types of satellites completely (6, 8, 11)
    - For chromosome 1 it adds up with the view of the sequences and other annotations on the genome browser
+
+
+30/05/24
+
+- Need to take a look at the different classes (loss, gain, neutral) in the aneuploidy CIN sets
+- Determine if anything needs to be done about potential class imbalance
+
+- Need to read up on the different satellites and verify that the ones that have been selected for are indeed pericentromeric 
+- Which chromosomes they are found on and to what extent
+- Whether the chromosomes that lack the satellite repeats still have pericentromeres
+ 
+- Looking to integrate the beta and gamma satellites into the range for the pericentromeres
+- When combining only adjacent ranges, this comes out to over 300 different pericentromeric sequences across all chromosomes
+- This is too many for the model
+- Thinking about combining all of these satellite regions that are separated by less than the main active HOR (Higher-Order Repeat) region 
+- The HOR regions are part of the alpha satellites which bind to the kinetochores and are therefore labelled as centromeric regions
+- Need to find the distance for these HOR regions for each of the chromosomes
+
+- Need to find a way to define the cnvs in term of these regions
+
+- need to separate the pericentromeric regions from active ribosomal gene regions
+- Can't just combine HSat regions that don't have an active HOR region between them
+- This is because there are some that have active gene regions within them 
+- This is mainly seen in chromosome 13, 14, 15, 21, 22 & Y
+
+- should not include censat or ct regions in the ranges as they tend to contain gene coding regions 
+
+- Dilemma/Trade-off for defining the pericentromeric regions of use: 
+	- When defining the regions in terms of adjacent HSat regions, end up with too many target features (> 300) which would increase the complexity of the model by 2x the number of additional target features
+	- When combining the HSat ranges based on their location up/down-stream of the centromere (AlphaSat regions), this reduces the number of pericentromeric regions (and therefore target features) but the defined regions are less specific to heterochromatic regions and incorporate other genomic regions such as rDNA genes as well as transition regions and other centromeric satellites which show the presence of protein coding genes
+
+- For each chromosome, thinking of selecting the longest contiguous pericentromeric region defined in terms of adjacent gbh regions which can be gapped by centromeric transition (ct) regions and any additional pericentromeric ranges that are beyond a certain threshold
+- Thereby minimising the amount of rDNA & protein coding regions while ensuring the acquisition of the main pericentromeric regions from each chromosome
