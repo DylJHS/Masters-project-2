@@ -21,13 +21,6 @@ Import the data
 ```{r}
 ori_segmnt_cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
 maps <- import("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/censat.bb")
-all_segs <- data.frame(maps)
-# all_segs <- data.frame(
-#   seqnames = as.factor(maps$seqnames),
-#   start = as.numeric(maps$start),
-#   end = as.numeric(maps$end),
-#   width = as.numeric(maps$width),
-#   name = as.character(maps$name))
 ```
 
 I. HSat exclusive ranges
@@ -207,7 +200,11 @@ IV. Alternative range 4: Create the pericentromeric regions by combining the adj
 ```{r}
 # from the T2T data select the ranges for the annotations of satellites that correspond to pericentromeric sats 
 cgbh_segs <- all_segs %>% 
-  filter((grepl("hsat", name)) | (grepl("gsat", name)) | (grepl("bsat", name)) | (grepl("ct", name)) | (grepl("censat", name))) %>% 
+  filter((grepl("hsat", name)) | 
+           (grepl("gsat", name)) | 
+           (grepl("bsat", name)) | 
+           (grepl("ct", name)) | 
+           (grepl("censat", name))) %>% 
   select(c("seqnames","start", "end", "width", "name")) %>% 
   arrange(seqnames, start)
 
@@ -255,9 +252,33 @@ adj_cgbh <- cgbh_subset %>%
 
 
 # Select the longest range from each chromosome and the regions that are greater than 1Mb in length
+# final_cgbh <- adj_cgbh %>% 
+#   group_by(seqnames) %>% 
+#   mutate(pass = (width == max(width)) | (width >= 1000000)) %>% 
+#   filter(pass) %>% 
+#   mutate(index = cumsum(pass),
+#          peri_id = ifelse(n()>1, 
+#                           paste0("peri_",substring(as.character(seqnames), 4, nchar(as.character(seqnames))), "_",index),
+#                           paste0("peri_",substring(as.character(seqnames), 4, nchar(as.character(seqnames))))
+#                           )
+#          ) %>% 
+#    select(-c("pass","name"))
+
 final_cgbh <- adj_cgbh %>% 
-  group_by(seqnames) %>% 
-  filter((width == max(width)) | (width >= 1000000))
+  group_by(seqnames) %>%
+  filter((width == max(width)) | (width >= 1000000)) %>%
+  mutate(
+    peri_id = case_when(
+      n() > 1 ~ paste0("peri_", substring(as.character(seqnames), 4, nchar(as.character(seqnames))), "_", row_number()),
+      TRUE ~ paste0("peri_", substring(as.character(seqnames), 4, nchar(as.character(seqnames))))
+      )
+    ) %>% 
+  rename(seqnames = "chromosome") %>% 
+  select(peri_id, everything())
+  
+print(final_cgbh)
+
+write.csv(final_cgbh,"/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/pericentro_meta.csv")
 ```
 
 

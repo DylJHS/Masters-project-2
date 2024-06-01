@@ -1913,3 +1913,21 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 
 - For each chromosome, thinking of selecting the longest contiguous pericentromeric region defined in terms of adjacent gbh regions which can be gapped by centromeric transition (ct) regions and any additional pericentromeric ranges that are beyond a certain threshold
 - Thereby minimising the amount of rDNA & protein coding regions while ensuring the acquisition of the main pericentromeric regions from each chromosome
+
+31/05/24
+
+
+- Need to edit the pericentromeric ranges so that they do not start or end with a non-HSat region
+- neeed to groupby more than just the seqnames
+
+- Grouping the segments by chromosome and adjacency and then removing the non-HSat regions at the beginning and end of the combined regions in order to ensure that the resuling pericentromeric region is mostly HSat related
+
+the above yields 27 pericentromeric regions from 1 different chromosomes. The chromosomes that do not have any pericentromeric regions assigned to them include chromosomes 6,11, 12, 18 & 19, which seems to add up with what is seen in the genome viewer as well as what has been reported by Altmose (2022). The chromosomes which display more than a single elongated pericentromeric region include chromosomes:
+- 13 with 3
+- 15 with 2
+- 16 with 2
+- 21 with 2
+- 22 with 4 
+- Y with 2
+
+- Now need to define the cnvs for each sample in terms of these regions
