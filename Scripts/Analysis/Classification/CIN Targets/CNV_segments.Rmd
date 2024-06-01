@@ -20,7 +20,7 @@ library(tidyverse)
 Import the data
 ```{r}
 ori_segmnt_cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
-maps <- import("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/censat.bb")
+all_segs <- import("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Raw_Data/Other/censat.bb") %>% as.data.frame()
 ```
 
 I. HSat exclusive ranges
@@ -59,7 +59,7 @@ combined_peri <- combined_peri %>%
 ```
 
 
-Conclusion: Flawed with too many varibles (target features)
+Conclusion: Flawed with too many variables (target features)
 
 
 
@@ -104,7 +104,7 @@ comb_gbh <- comb_gbh %>%
   select(-c("combined_group"))
 ```
 
-
+Conclusion: Flawed with too many variables (target features)
 
 
 III. Alternative range 3:create the pericentromeric regions by combining the adjacent gbh (gamma, beta, HSat satellite) regions which are not separated by the active HOR region from the same chromosome. 
@@ -194,7 +194,7 @@ for (chr in chroms) {
 Conclusion: Flawed due to the pericentromeric regions including areas of protein coding genes, rDNA as well as other satellites that are not pericentromeric in nature
 
 
-
+CHOSEN METHOD
 IV. Alternative range 4: Create the pericentromeric regions by combining the adjacent gbh (gamma, beta, HSat satellite) regions which can be gaped by centromeric transition (ct) regions and selecting the longest contiguous pericentromeric region as well as any additional pericentromeric ranges that are beyond a certain threshold
 
 ```{r}
@@ -244,41 +244,26 @@ adj_cgbh <- cgbh_subset %>%
          last_hsat = rev(cummax(rev(grepl("hsat", name))))) %>% 
   filter((first_hsat == 1) & (last_hsat == 1)) %>%
   select(-c("first_hsat","last_hsat")) %>%
-  summarise(start = dplyr::first(start),
-            end = last(end),
-            width = sum(width),
+  summarise(start_bp = dplyr::first(start),
+            end_bp = last(end),
+            width_bp = sum(width),
             name = paste(name, collapse = ", ")) %>%
   select(-c("combined_group"))
 
-
-# Select the longest range from each chromosome and the regions that are greater than 1Mb in length
-# final_cgbh <- adj_cgbh %>% 
-#   group_by(seqnames) %>% 
-#   mutate(pass = (width == max(width)) | (width >= 1000000)) %>% 
-#   filter(pass) %>% 
-#   mutate(index = cumsum(pass),
-#          peri_id = ifelse(n()>1, 
-#                           paste0("peri_",substring(as.character(seqnames), 4, nchar(as.character(seqnames))), "_",index),
-#                           paste0("peri_",substring(as.character(seqnames), 4, nchar(as.character(seqnames))))
-#                           )
-#          ) %>% 
-#    select(-c("pass","name"))
-
 final_cgbh <- adj_cgbh %>% 
   group_by(seqnames) %>%
-  filter((width == max(width)) | (width >= 1000000)) %>%
+  # filter((width_bp == max(width_bp)) | (width_bp >= 1000000)) %>%
   mutate(
     peri_id = case_when(
       n() > 1 ~ paste0("peri_", substring(as.character(seqnames), 4, nchar(as.character(seqnames))), "_", row_number()),
-      TRUE ~ paste0("peri_", substring(as.character(seqnames), 4, nchar(as.character(seqnames))))
-      )
+      TRUE ~ paste0("peri_", substring(as.character(seqnames), 4, nchar(as.character(seqnames))))),
+      seqnames = substring(as.character(seqnames), 4, nchar(as.character(seqnames)))
     ) %>% 
   rename(seqnames = "chromosome") %>% 
-  select(peri_id, everything())
+  select(peri_id,chromosome, everything())
   
 print(final_cgbh)
 
-write.csv(final_cgbh,"/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/pericentro_meta.csv")
 ```
 
 
@@ -290,6 +275,47 @@ Conclusion: the above yields 27 pericentromeric regions from 1 different chromos
 - 21 with 2
 - 22 with 4 
 - Y with 2
+
+
+
+V. Reconfigure the segmented copy number data in terms of the newly defined pericentromeric data
+```{r}
+cnv_long <- data.frame()
+for (chrm in unique(ori_segmnt_cnv$chr)){
+  if (!chrm %in% final_cgbh$chromosome){
+    next
+  } else {
+    check_sub <- final_cgbh %>% 
+      filter(chromosome == chrm)
+    seg_sub <- ori_segmnt_cnv %>%
+      filter(chr == chrm) %>%
+      expand_grid(check_sub) %>%
+      filter(
+        (start >= start_bp & start < end_bp) |
+          (end > start_bp & end <= end_bp) |
+          (start <= start_bp & end >= end_bp)
+      ) %>%
+      mutate(
+        overlap_start = pmax(start, start_bp),
+        overlap_end = pmin(end, end_bp),
+        overlap_length = overlap_end - overlap_start,
+        check_sub_length = end_bp - start_bp,
+        overlap_proportion = overlap_length / check_sub_length
+      ) %>%
+      group_by(peri_id, sampleID) %>% 
+      summarise(
+        cnv = sum(value * overlap_proportion) / sum(overlap_proportion),
+        .groups = 'drop'  # This option removes the grouping structure after summarisation
+      ) %>% 
+      select(sampleID, peri_id, cnv)
+  }
+  cnv_long <- rbind(cnv_long, seg_sub)
+}
+
+cnv_reformat <- pivot_wider(cnv_long, names_from = peri_id, values_from = cnv)
+cnv_reformat[is.na(cnv_reformat)] <- 0
+
+```
 
 
 

@@ -1534,12 +1534,12 @@ At each step in the iteration:
 28/04/24 
 
 - Converting the chromosome arm CNVs into the correct format (hot encoding)
-- hot encoding the data may be a better method for logistic regression than maintining the numerical values
-- But mainting the numerical values (-1,0,1) embeds the underlying relationship between the categories and may be beneficial for RFs and GBMs
+- hot encoding the data may be a better method for logistic regression than maintaining the numerical values
+- But maintaining the numerical values (-1,0,1) embeds the underlying relationship between the categories and may be beneficial for RFs and GBMs
 
 - Remember that from your presentation last week that it was mentioned that i had a lot of mitotic genes in the over/under expressed genes in the volcano plot
-- Look more into the gnees that are shown in your plots
-- Show the individual clusters and tehir makeup in a plot format as well
+- Look more into the genes that are shown in your plots
+- Show the individual clusters and their makeup in a plot format as well
  
 - Plotting the mds of the chromosome arm-level aneuploidies does not reveal anything too significant
 - Will add in the Signature scores to see if they make a difference
@@ -1566,15 +1566,15 @@ At each step in the iteration:
 
 01/05/24
 
-- the RNAseq data should also be mean centrered using the mean of the each gene across the full sample set (training set)
-- Mean centering the log values is the equivalent of calculating the log fold change between the value and the mean value
-- Ultametly I should iterate over different input methods (types of normalisation if any) when runnign the model to see which method performs best (cross validation)
+- the RNAseq data should also be mean centred using the mean of the each gene across the full sample set (training set)
+- Mean entering the log values is the equivalent of calculating the log fold change between the value and the mean value
+- Ultimately I should iterate over different input methods (types of normalisation if any) when running the model to see which method performs best (cross validation)
 - First need to actually implement the model
  
 
 02/05/24
 
-- Genreaated theh diiffernet types of expression inputs for the model to try in cross validation
+- Generated the different types of expression inputs for the model to try in cross validation
 - The different expression input sets that are finalised do not use clustering (dimensionality reduction) 
 - Need to implement the dimensionality reduction method as well for all the different types (Expected counts, TPM, log transformed & library size scaled) 
 
@@ -1628,14 +1628,14 @@ At each step in the iteration:
    - eta, or learning rate parameter
    - max tree depth
 
-- The best form of the RNAseq data seems to be the log transformed expected count data without scalling
+- The best form of the RNAseq data seems to be the log transformed expected count data without scaling
 - But need to perform the cross validation in combo with the other (hyper)parameters in order to determine for sure
 
 
 11/05/24
 
 - Thinking about a 10 fold cross validation for the GBM model training
-- Need to figure out how to implement the model for multioutput with xgboost
+- Need to figure out how to implement the model for multi-output with xgboost
 
  
 
@@ -1643,7 +1643,7 @@ At each step in the iteration:
 
 - Likely going to need to implement a type of ensemble, chained or stacked model 
 - For each of the different target types (continuous or categorical)
-- Check Kaggle competitions and mutlioutput sklearn packages for a solution
+- Check Kaggle competitions and multi-output sklearn packages for a solution
  
 - Would be nice to add the metrics that are assessed during the loops to a df and extract it in excel
 
@@ -1791,7 +1791,7 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 - Using multiple jobs via an array instead of the MP
 - But need to change the tuning configuration
 
-- Start by tuning just the detph, and then the rest
+- Start by tuning just the depth, and then the rest
 
 - also breaking out the rna set creation from the gbm model tuning
 - the soi specific rna sets are created in a separate script and then accessed by the individual job scripts 
@@ -1918,7 +1918,7 @@ Tired to run the multiprocessing and cross validation scripts on the hpc
 
 
 - Need to edit the pericentromeric ranges so that they do not start or end with a non-HSat region
-- neeed to groupby more than just the seqnames
+- need to group by more than just the seqnames
 
 - Grouping the segments by chromosome and adjacency and then removing the non-HSat regions at the beginning and end of the combined regions in order to ensure that the resuling pericentromeric region is mostly HSat related
 
@@ -1931,3 +1931,36 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Y with 2
 
 - Now need to define the cnvs for each sample in terms of these regions
+
+
+01/06/24
+
+- Defined the pericentromeric regions of interest for each chromosome based on the T2T-CHM13v2 genome
+- using the longest contiguous satellite repeat range that starts and ends in HSat but can be gapped by other types of satellites excluding alpha satellites (HOR, monomeric) 
+- also using any additional ranges that meet the criteria above and exceed 1Mb in length
+
+- Created the csv (metadata) file with the following information on the pericentromeric regions:
+	- Peri_id: a unique pericentromeric identifier 
+	- Chromosome: the chromosome
+	- Start: starting bp
+	- End: ending bp 
+	- width: bp width
+	- satellites: names of all the specific satellites within each region  
+
+- Wondering about chromosome 23 in the tcga samples
+- Does this represent chromosome X or X and/or Y 
+- Should the chromosome information for that one be dropped? 
+
+- Reconfigured the segmented cnv data into pericentromeric cnvs with the following approach: 
+	- Identify regions corresponding to pericentromeric satellites (HSat, GSat, BSat, CT, CenSat) from the T2T data.
+	- Combine adjacent regions to create contiguous pericentromeric regions.
+	- Select the longest contiguous pericentromeric region and any additional regions beyond a 1Mb threshold.
+	- Reconfigure the segmented copy number data based on the newly defined pericentromeric regions.
+	- Calculate copy number variation (CNV) for each sample within the pericentromeric regions by proportionally allocating values based on overlap with segment boundaries.
+	- Summarise CNV data in a wide format, with each pericentromeric region represented as a column and each sample as a row.
+
+- This yielded an additional 15 target pericentromeric features which is lower than what I expected
+- If I do not filter the data taking only the longest pericentromeric range & >1Mb segments, then it results in a total of 32 pericentromeric target features, which still might be manageable
+
+- Need to add these peri_cnvs to the full CIN data 
+- And then train the model on the data
