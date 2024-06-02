@@ -93,7 +93,7 @@ final_cgbh <- adj_cgbh %>%
   
 print(final_cgbh)
 
-write.csv(final_cgbh,"/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/pericentro_meta.csv")
+# write.csv(final_cgbh,"/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Other/pericentro_meta.csv", row.names = FALSE)
 ```
 
 
@@ -134,7 +134,7 @@ for (chrm in unique(ori_segmnt_cnv$chr)){
       ) %>%
       group_by(peri_id, sampleID) %>% 
       summarise(
-        cnv = sum(value * overlap_proportion) / sum(overlap_proportion),
+        cnv = round(sum(value * overlap_proportion) / sum(overlap_proportion),4),
         .groups = 'drop'  # This option removes the grouping structure after summarisation
       ) %>% 
       select(sampleID, peri_id, cnv)
@@ -145,5 +145,5 @@ for (chrm in unique(ori_segmnt_cnv$chr)){
 cnv_reformat <- pivot_wider(cnv_long, names_from = peri_id, values_from = cnv)
 cnv_reformat[is.na(cnv_reformat)] <- 0
 
-write.csv(cnv_reformat, "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/CIN_Features/CNV_Data/TCGA_pericentro_cnv.csv")
+# write.csv(cnv_reformat, "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/CIN_Features/CNV_Data/TCGA_pericentro_cnv.csv", row.names = FALSE)
 ```

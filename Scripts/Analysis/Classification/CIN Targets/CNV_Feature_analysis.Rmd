@@ -37,6 +37,8 @@ Import data
 ```{r}
 ori_segmnt_cnv <- read_tsv("Data/CIN_Features/CNV_Data/Chrom_seg_CNV.txt")
 ori_arm_cnv <- read_tsv("Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt")
+peri_cnv <- read.csv("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/CIN_Features/CNV_Data/TCGA_pericentro_cnv.csv") %>%
+  column_to_rownames("sampleID") 
 ```
 
 ARM-LEVEL ANEUPLOIDIES
@@ -65,6 +67,50 @@ mds <- cmdscale(dist)
 mds_df <- as.data.frame(mds) %>% 
   dplyr::mutate(cancer_type = extract_element(rownames(cnvs_arm), 2),
          sample_type = extract_element(rownames(cnvs_arm), 4),
+         synergy_type = paste(cancer_type, sample_type, sep = "-"))
+
+# Create the plots of the MDS.
+sample_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2",
+  color = "sample_type", # Colour based on the sample type
+  size = 1,
+  repel = TRUE
+)
+
+cancer_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2", 
+  color = "cancer_type", # Colour based on the cancer type
+  size = 1,
+  repel = TRUE) + theme(legend.position = "none")
+
+
+synergy_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2", 
+          color = "cancer_type", # Colour based on the synergy between the cancer and sample type
+          shape = "sample_type",
+          size = 1,
+          repel = TRUE) +
+  theme(legend.position = "none")
+  # coord_cartesian(xlim = c(-35, 20),
+  #                 ylim = c(-25,25))
+```
+
+The plots don't indicate to any means of separating the data via the arm aneuploidies
+
+
+
+PERICENTROMERIC ANEUPLOIDIES
+
+Visualisations of the relationships
+
+```{r}
+dist <- dist(peri_cnv)
+dist_matrix <- as.matrix(dist)
+
+# Produce the MDS object.
+mds <- cmdscale(dist)
+
+# Convert the MDS object to a dataframe with additional features
+mds_df <- as.data.frame(mds) %>% 
+  dplyr::mutate(cancer_type = extract_element(rownames(peri_cnv), 2),
+         sample_type = extract_element(rownames(peri_cnv), 4),
          synergy_type = paste(cancer_type, sample_type, sep = "-"))
 
 # Create the plots of the MDS.
