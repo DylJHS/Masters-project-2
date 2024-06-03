@@ -1964,3 +1964,15 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 
 - Need to add these peri_cnvs to the full CIN data 
 - And then train the model on the data
+
+02/06/24
+
+- Merging the pericentromeric data to the other CIN data 
+- Formatting the pericentromeric cnvs to 4 decimal places
+- The pericentromeric CNV data is not thresholded (-1,0,1) but in a raw format that is the same as the original segmented data
+- The range of the cnvs in the pericentromeric data goes from -1.9 to 2.8
+- Plotting the mds of the samples in terms of the pericentromeric cnvs, nothing in particular that stood out
+
+- Completed the pericentromeric features hyperparamter script tuning for the hpc 
+- Initialise the run for the depth hyperparameters
+- Will tune for the eta tomorrow with the gamma as well if needed (depth is greater than 1) 

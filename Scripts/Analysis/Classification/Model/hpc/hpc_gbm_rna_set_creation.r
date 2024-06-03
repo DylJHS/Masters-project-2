@@ -5,10 +5,7 @@
 
 library(dplyr)
 library(readr)
-library(knitr)
-library(factoextra)
 library(data.table)
-library(psych)
 library(limma)
 library(edgeR)
 library(tidyverse)
