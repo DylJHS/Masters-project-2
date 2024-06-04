@@ -1987,3 +1987,19 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - I may have to retrain the model due to a few issues:
    - The classes in the arm level aneuploidy features are not balanced 
    - The organisaiton of the samples when making the split may be biased, with certain cancer types being grouped in certain locaitons making the model prone to training on cdertain types while completely missing others
+ 
+
+04/06/24
+
+- Assessing the class imbalance in the data, specifically the arm level aneuploidies which have to be categorical (no continuous numerical value)
+- Will likely have to deal with the imbalance using weights for each of the classes
+- Higher weights for the under-sampled classes (1 & -1) vs the dominant class (0) 
+
+ 
+- Also need to check that the order of the samples is not resulting in any bias
+- And for good measure, should likely create the test and train set in a random fashion using seed(99) that is kept for all scripts so that the partion is the same
+ 
+- Make sure that the scripts are handling NA tss codes without labelling them as na()
+
+- Running the hpc tuning on all regression numerical data (HRD scores & pericnvs) for the updated data (split between train and test)
+- Will need to figure out the weights for the classes before I can tune the aneuploidy arm factors

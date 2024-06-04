@@ -5,11 +5,10 @@ library(xgboost)
 library(caret)
 library(caTools)
 
+setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
-args <- commandArgs(trailingOnly = TRUE)
-index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
+rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 
-rna_data_path <- "../../../../data/mRNA/gbm_input/Train/train_"
 
 # RNA SOI SETS
 # Expected Counts
@@ -85,11 +84,11 @@ log_scld_tpm <- read.csv(
 )
 
 # HRD scores
-ori_hrd <- read_tsv("../../../../data/CIN/TCGA.HRD_withSampleID.txt")
+ori_hrd <- read_tsv("Data/CIN_Features/TCGA.HRD_withSampleID.txt")
 
 # Pericentromeric CNVs
-peri_cnv <- read.csv("../../../../data/CIN/TCGA_pericentro_cnv_hpc.csv")
-cat("\n pericentromeric data: \n")
+peri_cnv <- read.csv("Data/CIN_Features/CNV_Data/TCGA_pericentro_cnv_hpc.csv")
+cat("\n\n pericentromeric data: \n")
 print(head(peri_cnv[, 1:10]))
 
 cat("\n\n All dfs loaded \n")
@@ -99,7 +98,16 @@ first_hrd <- t_hrd
 colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
-  rename(loh_hrd = "hrd-loh")
+  rename(loh_hrd = "hrd-loh") %>%
+  mutate(new = str_replace_all(rownames(.), "-", "\\."))
+
+rownames(hrd) <- hrd$new
+hrd <- hrd %>%
+  select(-new)
+
+cat("\n\n hrd data: \n")
+print(head(hrd))
+
 rm(t_hrd)
 rm(first_hrd)
 
@@ -111,6 +119,10 @@ full_cin <- merge(
 ) %>%
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
+
+cat("\n\n full cin data: \n")
+print(head(full_cin))
+
 rm(hrd)
 rm(peri_cnv)
 
@@ -147,7 +159,7 @@ for (i in 1:length(rna_list)) {
   cat(paste0("\t", name, "\n"))
 
   full_df <- merge(rna, full_cin, by = "row.names")
-  y <- as.integer(full_df[[feature]])
+  y <- as.numeric(full_df[[feature]])
   X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 
   xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
