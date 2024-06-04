@@ -1,9 +1,5 @@
 library(dplyr)
 library(readr)
-library(mltools)
-library(knitr)
-library(factoextra)
-library(psych)
 library(tidyverse)
 library(xgboost)
 library(caret)
@@ -17,20 +13,20 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 # RNA SOI SETS
 # Expected Counts
-exp_set <- read.csv("exp_soi.csv", row.names = 1)[1:tuning_samples,]
+exp_set <- read.csv("exp_soi.csv", row.names = 1)[1:tuning_samples, ]
 cat("\n Exp Count df: \n")
 print(head(exp_set[, 1:10]))
-scld_exp_set <- read.csv("scld_exp_soi.csv", row.names = 1)[1:tuning_samples,]
-log_exp <- read.csv("log_exp_soi.csv", row.names = 1)[1:tuning_samples,]
-log_scld_exp <- read.csv("log_scld_exp_soi.csv", row.names = 1)[1:tuning_samples,]
+scld_exp_set <- read.csv("scld_exp_soi.csv", row.names = 1)[1:tuning_samples, ]
+log_exp <- read.csv("log_exp_soi.csv", row.names = 1)[1:tuning_samples, ]
+log_scld_exp <- read.csv("log_scld_exp_soi.csv", row.names = 1)[1:tuning_samples, ]
 
 # Transcripts Per Million
-tpm_set <- read.csv("tpm_soi.csv", row.names = 1)[1:tuning_samples,]
+tpm_set <- read.csv("tpm_soi.csv", row.names = 1)[1:tuning_samples, ]
 cat("\n\n TPM df: \n")
 print(head(tpm_set[, 1:10]))
-scld_tpm_set <- read.csv("scld_tpm_soi.csv", row.names = 1)[1:tuning_samples,]
-log_tpm <- read.csv("log_tpm_soi.csv", row.names = 1)[1:tuning_samples,]
-log_scld_tpm <- read.csv("log_scld_tpm_soi.csv", row.names = 1)[1:tuning_samples,]
+scld_tpm_set <- read.csv("scld_tpm_soi.csv", row.names = 1)[1:tuning_samples, ]
+log_tpm <- read.csv("log_tpm_soi.csv", row.names = 1)[1:tuning_samples, ]
+log_scld_tpm <- read.csv("log_scld_tpm_soi.csv", row.names = 1)[1:tuning_samples, ]
 
 
 # HRD scores
@@ -88,7 +84,7 @@ aneu_reg_metrics_df <- data.frame(
 )
 
 rna_list <- list(
-  # transcripts_per_million = tpm_set, 
+  # transcripts_per_million = tpm_set,
   # scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
   log_scalled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm,
@@ -105,24 +101,24 @@ for (i in 1:length(rna_list)) {
 
   full_df <- merge(rna, full_cin, by = "row.names")
   y <- as.integer(full_df[[feature]])
-  X <- full_df %>% select(-c("Row.names",colnames(full_cin)))
+  X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 
   xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
   grid <- expand.grid(
     lr = seq(0.01, 0.25, 0.05),
     gam = seq(0, 0.2, 0.07),
-    depth = c(1, 2)
+    depth = seq(1, 2, 2)
   )
 
 
   for (j in 1:nrow(grid)) { # nolint
     cat(paste0(
-      "\t\t eta: ", grid$lr[j], 
-      "\t\t gamma: ", grid$gam[j], 
-      "\t\t depth: ", grid$depth[j], 
-      "\n")
-      )
+      "\t\t eta: ", grid$lr[j],
+      "\t\t gamma: ", grid$gam[j],
+      "\t\t depth: ", grid$depth[j],
+      "\n"
+    ))
 
     m_xgb_untuned <- xgb.cv(
       data = xgb_data,
@@ -159,4 +155,3 @@ write.csv(
   )
 )
 cat("\n Completed processing for index: ", index, "\n")
-
