@@ -1,19 +1,16 @@
-"""
-Creation of the RNA sets in their different forms 
-of the gbm hyperparameter tuning using array task
-in hpc such that each task can just load the data instead of 
-having to create it from scratch.
+# """
+# Creation of the RNA sets in their different forms 
+# of the gbm hyperparameter tuning using array task
+# in hpc such that each task can just load the data instead of 
+# having to create it from scratch.
 
-"""
+# """
 
 
 
 library(dplyr)
 library(readr)
-library(knitr)
-library(factoextra)
 library(data.table)
-library(psych)
 library(limma)
 library(edgeR)
 library(tidyverse)

@@ -1976,3 +1976,14 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Completed the pericentromeric features hyperparamter script tuning for the hpc 
 - Initialise the run for the depth hyperparameters
 - Will tune for the eta tomorrow with the gamma as well if needed (depth is greater than 1) 
+
+03/05/24
+
+- Running the pericentromeric feature tuning
+- The best depth for each of the features came out to 1
+- The best RNA data type seems to be more variable with 5 in contention
+- Running for the learning rate 
+
+- I may have to retrain the model due to a few issues:
+   - The classes in the arm level aneuploidy features are not balanced 
+   - The organisaiton of the samples when making the split may be biased, with certain cancer types being grouped in certain locaitons making the model prone to training on cdertain types while completely missing others

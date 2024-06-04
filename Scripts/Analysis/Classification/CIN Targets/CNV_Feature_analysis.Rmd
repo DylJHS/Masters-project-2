@@ -14,11 +14,10 @@ knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internsh
 ```{r}
 library(dplyr)
 library(mltools)
-library(knitr)
+library(Hmisc)
 library(tidyverse)
 library(data.table)
 library(ggpubr)
-library(psych)
 ```
 
 Re-usable functions
@@ -53,6 +52,22 @@ cnvs_arm <- cvn_arm %>%
   select(-c("Type", "Aneuploidy Score"))
   
 ```
+
+Get a sense of the data distribution for class imbalance
+```{r}
+
+old <- data.frame(Var1 = c(-1,0,1))
+for (i in colnames(cnvs_arm)){
+  d <- as.data.frame(table(cnvs_arm[[i]])) 
+  print(d)
+  old <- merge(old, d, by = "Var1")
+}
+
+```
+
+
+
+
 
 Visualisations of the relationships
 
@@ -93,8 +108,6 @@ synergy_mds <- ggpubr::ggscatter(mds_df, x = "V1", y = "V2",
 ```
 
 The plots don't indicate to any means of separating the data via the arm aneuploidies
-
-
 
 PERICENTROMERIC ANEUPLOIDIES
 
