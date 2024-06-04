@@ -27,7 +27,7 @@ library(ggpubr)
 # REUSABLE FUNCTIONS
 
 extract_element <- function(strings, index) {
-  # Split each string by "." and extract the third element
+  # Split each string by "." and extract the element at the indexed position
   element_list <- sapply(stringr::str_split(strings, "\\."),
                          function(x) x[index])
   return(element_list)
