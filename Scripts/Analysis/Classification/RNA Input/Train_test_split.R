@@ -16,30 +16,28 @@ rna_list <- c(
   "scld_exp_soi.csv"
 )
 
-for (i in rna_list) {
-  set.seed(99)
+# Get the sample IDs from the first data frame
+set <- read.csv(paste0(path, "Full/", rna_list[1]))
+all_sample_ids <- set[, 1]
 
-  set <- read.csv(
-    paste0(path,"Full/", i)
-  )
+# Calculate 25% of the total samples
+num_samples_to_select <- round(0.25 * length(all_sample_ids))
 
-  # Get the total number of rows
-  total_rows <- nrow(set)
+# Get a random sample of sample IDs
+set.seed(99)
+random_sample_ids <- sample(
+  all_sample_ids, num_samples_to_select, replace = FALSE
+)
 
-  # Calculate 70% of the total rows
-  num_rows_to_select <- round(0.25 * total_rows)
+for (file in rna_list) {
+  set <- read.csv(paste0(path, "Full/", file))
 
-  # Get a random sample of row indices
-  random_indices <- sample(1:total_rows, num_rows_to_select, replace = FALSE)
+  train_set <- set[!set[, 1] %in% random_sample_ids, ]
+  test_set <- set[set[, 1] %in% random_sample_ids, ]
 
-  train_set <- set %>%
-    filter(!row_number() %in% random_indices)
-
-  test_set <- set %>%
-    filter(row_number() %in% random_indices)
-
-  test_name <- paste0(path, "test", "_", i)
-  train_name <- paste0(path, "train", "_", i)
+  test_name <- paste0(path, "test", "_", file)
+  train_name <- paste0(path, "train", "_", file)
+  print(dim(train_set))
 
   # write.csv(
   #   test_set,
@@ -52,5 +50,4 @@ for (i in rna_list) {
   #   train_name,
   #   row.names = FALSE
   # )
-  
 }
