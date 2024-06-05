@@ -9,7 +9,7 @@ library(caTools)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
-rna_data_path <- "../../../../data/mRNA/gbm_input/Train/train_"
+rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
 # RNA SOI SETS
 # Expected Counts
@@ -21,8 +21,9 @@ exp_set <- read.csv(
   row.names = 1
 )
 
-cat("\n Exp Count df: \n")
-print(head(exp_set[, 1:10]))
+cat("\n Exp Count df: \n\n")
+cat(sprintf("   %s", head(colnames(exp_set), 10)), "\n", sep = "")
+cat(sprintf("Dimensions: %d rows, %d columns\n\n", nrow(exp_set), ncol(exp_set)), "\n")
 
 scld_exp_set <- read.csv(
   paste0(
@@ -57,8 +58,24 @@ tpm_set <- read.csv(
   row.names = 1
 )
 
-cat("\n\n TPM df: \n")
-print(head(tpm_set[, 1:10]))
+cat("\n\n TPM df: \n\n")
+cat(
+  sprintf(
+    "   %s",
+    head(colnames(tpm_set), 10)
+  ),
+  "\n",
+  sep = ""
+)
+
+cat(
+  sprintf(
+    "Dimensions: %d rows, %d columns\n\n",
+    nrow(tpm_set),
+    ncol(tpm_set)
+  ),
+  "\n\n"
+)
 
 scld_tpm_set <- read.csv(
   paste0(
@@ -85,10 +102,10 @@ log_scld_tpm <- read.csv(
 )
 
 # HRD scores
-ori_hrd <- read_tsv("../../../../data/CIN/TCGA.HRD_withSampleID.txt")
+ori_hrd <- read_tsv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/TCGA.HRD_withSampleID.txt")
 
 # Pericentromeric CNVs
-peri_cnv <- read.csv("../../../../data/CIN/TCGA_pericentro_cnv_hpc.csv")
+peri_cnv <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/TCGA_pericentro_cnv_hpc.csv")
 cat("\n pericentromeric data: \n")
 print(head(peri_cnv[, 1:10]))
 
@@ -99,7 +116,17 @@ first_hrd <- t_hrd
 colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
-  rename(loh_hrd = "hrd-loh")
+  rename(loh_hrd = "hrd-loh") %>%
+  mutate(new = str_replace_all(rownames(.), "-", "\\.")) %>%
+  select(-"HRD")
+
+rownames(hrd) <- hrd$new
+hrd <- hrd %>%
+  select(-new)
+
+cat("\n\n hrd data: \n")
+print(head(hrd))
+
 rm(t_hrd)
 rm(first_hrd)
 
@@ -111,13 +138,17 @@ full_cin <- merge(
 ) %>%
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
+
+cat("\n\n full cin data: \n")
+print(head(full_cin))
+
 rm(hrd)
 rm(peri_cnv)
 
 aneu_reg_feature_list <- colnames(full_cin)
 
 feature <- aneu_reg_feature_list[[index]]
-cat(paste0("\n feature:", feature, "\n"))
+cat(paste0("\n\n feature:", feature, "\n"))
 
 # MODELLING
 
@@ -147,17 +178,16 @@ for (i in 1:length(rna_list)) {
   cat(paste0("\t", name, "\n"))
 
   full_df <- merge(rna, full_cin, by = "row.names")
-  y <- as.integer(full_df[[feature]])
+  y <- as.numeric(full_df[[feature]])
   X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 
   xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
   grid <- expand.grid(
-    lr = seq(0.05, 0.2, 0.05),
+    lr = seq(0.025, 0.1, 0.025),
     gam = seq(0, 0.3, 0.2),
-    depth = seq(1, 3, 1)
+    depth = seq(4, 6, 1)
   )
-
 
   for (j in 1:nrow(grid)) { # nolint
     cat(paste0(
@@ -184,7 +214,6 @@ for (i in 1:length(rna_list)) {
       m_xgb_untuned$best_iteration
     ]
 
-
     aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
       Feature = feature,
       RNA_Set = name,
@@ -195,11 +224,17 @@ for (i in 1:length(rna_list)) {
     ))
   }
 }
+
+name <- paste0(
+ "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_",
+  feature, "_", Sys.time(), ".csv"
+) %>%
+  str_replace_all(" ", "_") %>%
+  str_replace_all(":", "_")
+
 write.csv(
   aneu_reg_metrics_df,
-  paste0(
-    "output/regression/aneu_reg_xgb_metrics_params_", feature, "_", Sys.time(), ".csv"
-  ),
+  file = name,
   row.names = FALSE
 )
 cat("\n Completed processing for index: ", index, "\n")
