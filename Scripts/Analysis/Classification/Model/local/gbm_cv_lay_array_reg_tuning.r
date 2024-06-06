@@ -128,9 +128,6 @@ rm(peri_cnv)
 
 aneu_reg_feature_list <- colnames(full_cin)
 
-feature <- aneu_reg_feature_list[[index]]
-cat(paste0("\n feature:", feature, "\n"))
-
 # MODELLING
 
 aneu_reg_metrics_df <- data.frame(
@@ -162,71 +159,73 @@ selected_combination <- combinations[index, ]
 selected_feature <- selected_combination$feature
 selected_rna_set <- selected_combination$RNA_Set
 
-cat(paste0("Running model for feature: ", selected_feature, " and RNA set: ", selected_rna_set, "\n"))
+cat(paste0("\n\n Running model for feature: ", selected_feature, " and RNA set: ", selected_rna_set, "\n"))
 
 # Now select the data based on these choices
 rna_data <- rna_list[[selected_rna_set]]
+cat("\n\n RNA data: \n")
 print(head(rna_data[, 1:10]))
 
-# for (i in 1:length(rna_list)) {
-#   rna <- rna_list[[i]]
-#   name <- names(rna_list)[i]
-#   cat(paste0("\t", name, "\n"))
 
-  full_df <- merge(rna, full_cin, by = "row.names")
-  y <- as.numeric(full_df[[feature]])
-  X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
+full_df <- merge(rna_data, full_cin, by = "row.names")
+y <- as.numeric(full_df[[selected_feature]])
+X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 
-  xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
+xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
-  grid <- expand.grid(
-    lr = seq(0.05, 0.2, 0.05),
-    gam = seq(0, 0.3, 0.2),
-    depth = seq(1, 3, 1)
+grid <- expand.grid(
+  lr = seq(0.05, 0.2, 0.05),
+  gam = seq(0, 0.3, 0.2),
+  depth = seq(1, 3, 1)
+)
+
+
+for (j in 1:nrow(grid)) { # nolint
+  cat("\n", paste0(
+    "\t\t eta: ", grid$lr[j],
+    "\t\t gamma: ", grid$gam[j],
+    "\t\t depth: ", grid$depth[j],
+    "\n"
+  ))
+
+  m_xgb_untuned <- xgb.cv(
+    data = xgb_data,
+    nrounds = 5000,
+    objective = "reg:squarederror",
+    eval_metric = "rmse",
+    early_stopping_rounds = 50,
+    nfold = 3,
+    max_depth = grid$depth[j],
+    eta = grid$lr[j],
+    gamma = grid$gam[j],
+    verbose = 0
   )
 
-
-  for (j in 1:nrow(grid)) { # nolint
-    cat(paste0(
-      "\t\t eta: ", grid$lr[j],
-      "\t\t gamma: ", grid$gam[j],
-      "\t\t depth: ", grid$depth[j],
-      "\n"
-    ))
-
-    m_xgb_untuned <- xgb.cv(
-      data = xgb_data,
-      nrounds = 5000,
-      objective = "reg:squarederror",
-      eval_metric = "rmse",
-      early_stopping_rounds = 50,
-      nfold = 3,
-      max_depth = grid$depth[j],
-      eta = grid$lr[j],
-      gamma = grid$gam[j],
-      verbose = 0
-    )
-
-    best_rmse <- m_xgb_untuned$evaluation_log$test_rmse_mean[
-      m_xgb_untuned$best_iteration
-    ]
+  best_rmse <- m_xgb_untuned$evaluation_log$test_rmse_mean[
+    m_xgb_untuned$best_iteration
+  ]
 
 
-    aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
-      Feature = feature,
-      RNA_Set = name,
-      Depth = grid$depth[j],
-      Learning_Rate = grid$lr[j],
-      Gamma = grid$gam[j],
-      RMSE = best_rmse
-    ))
-  }
+  aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+    Feature = selected_feature,
+    RNA_Set = selected_rna_set,
+    Depth = grid$depth[j],
+    Learning_Rate = grid$lr[j],
+    Gamma = grid$gam[j],
+    RMSE = best_rmse
+  ))
 }
+
+
+name <- paste0(
+  "output/regression/aneu_reg_xgb_metrics_params_", selected_feature, "_", Sys.time(), ".csv"
+)  %>%
+str_replace_all(" ", "_") %>%
+str_replace_all(":", "_")
+
 write.csv(
-  aneu_reg_metrics_df,
-  paste0(
-    "output/regression/aneu_reg_xgb_metrics_params_", feature, "_", Sys.time(), ".csv"
-  ),
-  row.names = FALSE
+aneu_reg_metrics_df,
+file = name,
+row.names = FALSE
 )
 cat("\n Completed processing for index: ", index, "\n")

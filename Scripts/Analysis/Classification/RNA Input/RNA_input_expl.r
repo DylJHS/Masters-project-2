@@ -22,7 +22,7 @@ meta <- left_join(
 )
 
 example_set <- read.csv(
-  "Data/RNA_Data/log_scld_tpm_soi.csv"
+  "Data/RNA_Data/Model_Input/Full/log_scld_tpm_soi.csv"
 ) %>%
   select("X") %>%
   mutate(other = vapply(
@@ -34,28 +34,42 @@ example_set <- read.csv(
 example_set <- example_set %>%
   mutate(abbrvs = ifelse(is.na(abbrvs), tss_meta$BCR[is.na(tss_meta$TSS.Code)], abbrvs))
 
-
-# Get the total number of rows in example_set
-total_rows <- nrow(example_set)
-
-# Calculate 70% of the total rows
-num_rows_to_select <- round(0.25 * total_rows)
-
-# Get a random sample of row indices
-set.seed(99)
-random_indices <- sample(1:total_rows, num_rows_to_select)
-
-combined_table <- example_set %>%
-  select("abbrvs") %>%
-  mutate(group = ifelse(!row_number() %in% random_indices, "Train", "Test")) %>%
-  group_by(group, abbrvs) %>%
-  summarise(Count = n(), .groups = "drop") %>%
-  group_by(group) %>%
-  mutate(Countp = round(Count / sum(Count), 3)) %>%
-  ungroup()
+# ordered <- example_set %>%
+#   select("abbrvs") %>%
+#   mutate(group = ifelse(row_number() < 8000, "Train", "Test")) %>%
+#   group_by(group, abbrvs) %>%
+#   summarise(Count = n(), .groups = "drop") %>%
+#   group_by(group) %>%
+#   mutate(Countp = round(Count / sum(Count), 3)) %>%
+#   ungroup()
+# 
+# 
+# plt <- ggplot(ordered, aes(fill = group, x = abbrvs, y = Count)) +
+#   geom_bar(stat = "identity")
+# ggsave("ordered_sample_dist.pdf", width = 15, height = 5)
 
 
-plt2 <- ggplot(combined_table, aes(fill = group, x = abbrvs, y = Count)) +
-  geom_bar(stat = "identity")
-ggsave("sample_dist.pdf", width = 50, height = 10)
+# # Get the total number of rows in example_set
+# total_rows <- nrow(example_set)
+# 
+# # Calculate 70% of the total rows
+# num_rows_to_select <- round(0.25 * total_rows)
+# 
+# # Get a random sample of row indices
+# set.seed(99)
+# random_indices <- sample(1:total_rows, num_rows_to_select)
+# 
+# combined_table <- example_set %>%
+#   select("abbrvs") %>%
+#   mutate(group = ifelse(!row_number() %in% random_indices, "Train", "Test")) %>%
+#   group_by(group, abbrvs) %>%
+#   summarise(Count = n(), .groups = "drop") %>%
+#   group_by(group) %>%
+#   mutate(Countp = round(Count / sum(Count), 3)) %>%
+#   ungroup()
+# 
+# 
+# plt2 <- ggplot(combined_table, aes(fill = group, x = abbrvs, y = Count)) +
+#   geom_bar(stat = "identity")
+# ggsave("sample_dist.pdf", width = 15, height = 5)
 
