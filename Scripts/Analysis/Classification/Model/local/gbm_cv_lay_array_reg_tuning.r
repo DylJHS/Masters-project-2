@@ -87,9 +87,14 @@ log_scld_tpm <- read.csv(
 ori_hrd <- read_tsv("Data/CIN_Features/TCGA.HRD_withSampleID.txt")
 
 # Pericentromeric CNVs
-peri_cnv <- read.csv("Data/CIN_Features/CNV_Data/TCGA_pericentro_cnv_hpc.csv")
+peri_cnv <- read.csv(
+  "Data/CIN_Features/CNV_Data/lim_alpha_incl_TCGA_pericentro_cnv.csv"
+) %>%
+  mutate_all(~replace(., is.na(.), 0)) %>%
+  mutate(sampleID = gsub("-", ".", sampleID))
+
 cat("\n\n pericentromeric data: \n")
-print(head(peri_cnv[, 1:10]))
+print(head(peri_cnv[, 1:5]))
 
 cat("\n\n All dfs loaded \n")
 
@@ -120,8 +125,12 @@ full_cin <- merge(
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
 
+
+full_cin <- full_cin[, 4:length(colnames(full_cin))]
+cat("\n\n All feature names: ", colnames(full_cin), "\n")
+
 cat("\n\n full cin data: \n")
-print(head(full_cin))
+print(head(full_cin[, 1:5]))
 
 rm(hrd)
 rm(peri_cnv)
@@ -152,7 +161,11 @@ rna_list <- list(
 rna_names <- names(rna_list)
 
 combinations <- expand.grid(feature=aneu_reg_feature_list, RNA_Set=rna_names, stringsAsFactors=FALSE)
+cat("\n\n All combinations: ")
+print(combinations)
+
 total_combinations <- nrow(combinations)
+cat("\n\n Number fo total combinations: ", total_combinations)
 
 # Select the specific feature and RNA set based on the SLURM task ID
 selected_combination <- combinations[index, ]
@@ -164,19 +177,24 @@ cat(paste0("\n\n Running model for feature: ", selected_feature, " and RNA set: 
 # Now select the data based on these choices
 rna_data <- rna_list[[selected_rna_set]]
 cat("\n\n RNA data: \n")
-print(head(rna_data[, 1:10]))
+print(head(rna_data[, 1:5]))
 
 
 full_df <- merge(rna_data, full_cin, by = "row.names")
+cat("\n\n full_df: \n")
+print(head(full_df[, 1:5]))
+
 y <- as.numeric(full_df[[selected_feature]])
 X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
+cat("\n\n Predicotrs: \n")
+print(head(X[, 1:5]))
 
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  lr = seq(0.05, 0.2, 0.05),
+  lr = seq(0.025, 0.1, 0.05),
   gam = seq(0, 0.3, 0.2),
-  depth = seq(1, 3, 1)
+  depth = seq(1, 6, 1)
 )
 
 
@@ -217,15 +235,15 @@ for (j in 1:nrow(grid)) { # nolint
 }
 
 
-name <- paste0(
-  "output/regression/aneu_reg_xgb_metrics_params_", selected_feature, "_", Sys.time(), ".csv"
-)  %>%
+datetime <- Sys.time() %>%
 str_replace_all(" ", "_") %>%
 str_replace_all(":", "_")
 
-write.csv(
-aneu_reg_metrics_df,
-file = name,
-row.names = FALSE
-)
+name <- paste0(
+"/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_", selected_feature, "_", selected_rna_set, "_", datetime, ".csv"
+) %>%
+str_replace_all(" ", "_") %>%
+str_replace_all(":", "_")
+
+
 cat("\n Completed processing for index: ", index, "\n")

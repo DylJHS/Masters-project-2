@@ -2003,3 +2003,22 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 
 - Running the hpc tuning on all regression numerical data (HRD scores & pericnvs) for the updated data (split between train and test)
 - Will need to figure out the weights for the classes before I can tune the aneuploidy arm factors
+
+
+06/06/24
+
+- edits to the pericentromeric script for the cnv mapping
+- Checking on the number of cnv segments that are contributing to the weighted mean calculation by pericentromeric region and sample
+- most >96% only have a single cnv contributing to the combined value
+
+- Meeting with Aditya and Aniek: 
+- Maybe be good to increase the pericentromeric regions to incorporate the inactive alpha satellite repeats as well 
+- For Marit's plots, get the number of samples that show an increase/decrease in the expression of the genes
+- Go for the stacked layer model in order to get the insights into the relationship between the target features as well as the genes
+
+- Rerunning hte pericentromeric script to include alpha satellite repeats but exclude the active ones (true centromere) 
+- The number of features comes out to 25 when limitinng based on gene length and 35 when disregarding this filter
+- The number of relevant (mapped) features in the TCGA data comes out to 14 using the limited-length alpha included configuration
+- The number of relevant (mapped) features in the TCGA data comes out to 22 using the unlimited alpha included configuration
+
+
