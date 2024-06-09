@@ -87,8 +87,7 @@ log_scld_tpm <- read.csv(
 ori_hrd <- read_tsv("Data/CIN_Features/TCGA.HRD_withSampleID.txt")
 
 # Pericentromeric CNVs
-peri_cnv <- read.csv(
-  "Data/CIN_Features/CNV_Data/lim_alpha_incl_TCGA_pericentro_cnv.csv"
+peri_cnv <- read.csv("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/CIN_Features/CNV_Data/lim_alpha_incl_TCGA_pericentro.csv"
 ) %>%
   mutate_all(~replace(., is.na(.), 0)) %>%
   mutate(sampleID = gsub("-", ".", sampleID))
@@ -126,7 +125,7 @@ full_cin <- merge(
   column_to_rownames("Row.names")
 
 
-full_cin <- full_cin[, 4:length(colnames(full_cin))]
+
 cat("\n\n All feature names: ", colnames(full_cin), "\n")
 
 cat("\n\n full cin data: \n")
@@ -192,8 +191,8 @@ print(head(X[, 1:5]))
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  lr = seq(0.025, 0.1, 0.05),
-  gam = seq(0, 0.3, 0.2),
+  lr = seq(0.025, 0.1, 0.5),
+  gam = seq(0.2, 0.3, 0.2),
   depth = seq(1, 6, 1)
 )
 
@@ -216,12 +215,13 @@ for (j in 1:nrow(grid)) { # nolint
     max_depth = grid$depth[j],
     eta = grid$lr[j],
     gamma = grid$gam[j],
-    verbose = 0
+    verbose = 1
   )
 
   best_rmse <- m_xgb_untuned$evaluation_log$test_rmse_mean[
     m_xgb_untuned$best_iteration
   ]
+  print(best_rmse)
 
 
   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(

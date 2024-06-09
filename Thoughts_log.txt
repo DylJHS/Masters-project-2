@@ -2022,3 +2022,13 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - The number of relevant (mapped) features in the TCGA data comes out to 22 using the unlimited alpha included configuration
 
 
+07/06/24
+
+- Re-running the hyper-parameter tuning for the pericentromeric features defined using the length-limited alpha included configuration
+
+- Once the hpc is done running, need to remove the pericentromeric cnv hyperparameter files from the previous pericentromeric regions (defined without the alpha sat regions)
+
+- Continuing the analysis for Marit's data
+ 
+- Finished the volcano plots using the full 20 genes as well as the one that looks at the differential expreessioon and compares between and with other oncogenes
+- Need to write up a bried methods section for how the analyses are performed and some of the facts/concerns about the plots or the analysis that might be useful for Marit to know
