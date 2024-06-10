@@ -9,7 +9,11 @@ library(caTools)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
-cat("Index: ", index , "\n\n")
+# Default parameters
+trees <- 50
+depth <- 5
+
+cat("Index: ", index, "\n\n")
 
 rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
@@ -95,7 +99,7 @@ ori_hrd <- read_tsv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/TCGA.HRD_withS
 peri_cnv <- read.csv(
   "/hpc/shared/prekovic/dhaynessimmons/data/CIN/lim_alpha_incl_TCGA_pericentro_cnv.csv"
 ) %>%
-  mutate_all(~replace(., is.na(.), 0)) %>%
+  mutate_all(~ replace(., is.na(.), 0)) %>%
   mutate(sampleID = gsub("-", ".", sampleID))
 
 cat("\n pericentromeric data: \n")
@@ -131,7 +135,7 @@ full_cin <- merge(
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
 
-full_cin <- full_cin[, 4:length(colnames(full_cin))]
+
 cat("\n\n All feature names: ", colnames(full_cin), "\n")
 
 cat("\n\n full cin data: \n")
@@ -146,8 +150,10 @@ aneu_reg_feature_list <- colnames(full_cin)
 
 aneu_reg_metrics_df <- data.frame(
   RNA_Set = character(),
+  Trees = numeric(),
   Feature = character(),
   Depth = numeric(),
+  Child_weight = numeric(),
   Learning_Rate = numeric(),
   Gamma = numeric(),
   RMSE = numeric()
@@ -157,15 +163,15 @@ rna_list <- list(
   transcripts_per_million = tpm_set,
   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
   log_scalled_transcripts_per_million = log_scld_tpm,
-  log_transcripts_per_million = log_tpm,
-  expected_counts = exp_set,
-  scalled_expected_counts = scld_exp_set,
-  log_expected_counts = log_exp,
+  # log_transcripts_per_million = log_tpm,
+  # expected_counts = exp_set
+  # scalled_expected_counts = scld_exp_set,
+  # log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
 
-combinations <- expand.grid(feature=aneu_reg_feature_list, RNA_Set=rna_names, stringsAsFactors=FALSE)
+combinations <- expand.grid(feature = aneu_reg_feature_list, RNA_Set = rna_names, stringsAsFactors = FALSE)
 cat("\n\n All combinations: ")
 print(combinations)
 
@@ -192,29 +198,33 @@ X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  lr = seq(0.025, 0.1, 0.05),
-  gam = seq(0, 0.3, 0.2),
-  depth = seq(1, 6, 1)
+  lr = seq(0.25, 0.29, 0.2),
+  gam = seq(0, 0.15, 0.2),
+  child_weight = seq(0.3, 2.1, 0.3)
 )
 
 for (j in 1:nrow(grid)) { # nolint
   cat(paste0(
     "\t\t eta: ", grid$lr[j],
     "\t\t gamma: ", grid$gam[j],
-    "\t\t depth: ", grid$depth[j],
+    "\t\t depth: ", depth,
+    "\t\t trees: ", trees,
+    "\t\t child_weight: ", grid$child_weight[j],
     "\n"
   ))
 
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
-    nrounds = 5000,
+    nrounds = 10000,
     objective = "reg:squarederror",
     eval_metric = "rmse",
     early_stopping_rounds = 50,
-    nfold = 3,
-    max_depth = grid$depth[j],
+    nfold = 10,
+    max_depth = depth,
     eta = grid$lr[j],
     gamma = grid$gam[j],
+    min_child_weight = grid$child_weight[j],
+    n_estimators = trees,
     verbose = 0
   )
 
@@ -225,7 +235,9 @@ for (j in 1:nrow(grid)) { # nolint
   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
     Feature = selected_feature,
     RNA_Set = selected_rna_set,
-    Depth = grid$depth[j],
+    Trees = trees,
+    Depth = depth,
+    Child_weight = grid$child_weight[j],
     Learning_Rate = grid$lr[j],
     Gamma = grid$gam[j],
     RMSE = best_rmse
@@ -236,13 +248,14 @@ datetime <- Sys.time() %>%
   str_replace_all("[ :.]", "_")
 
 name <- paste0(
-"/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_", selected_feature, "_", selected_rna_set, "_", datetime, ".csv"
+  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_", selected_feature, "_", selected_rna_set, "_", datetime, ".csv"
 ) %>%
   str_replace_all("[ :]", "_")
 
 write.csv(
-aneu_reg_metrics_df,
-file = name,
-row.names = FALSE
+  aneu_reg_metrics_df,
+  file = name,
+  row.names = FALSE
 )
+
 cat("\n Completed processing for index: ", index, "\n")

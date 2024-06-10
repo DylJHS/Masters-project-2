@@ -32,7 +32,7 @@ Create the pericentromeric regions by combining the adjacent gbh (gamma, beta, H
 cgbh_segs <- all_segs %>% 
   filter(!(grepl("^hor.*L\\)$", name)) &
            !(grepl("rDNA", name))) %>% 
-  select(c("seqnames","start", "end", "width", "name")) %>% 
+  dplyr::select(c("seqnames","start", "end", "width", "name")) %>% 
   arrange(seqnames, start)
 
 # Combine the adjacent ranges
@@ -42,7 +42,7 @@ comb_cgbh <- cgbh_segs %>%
   mutate(end_next = lead(start),
          combined = ifelse(end == end_next & !is.na(end_next), TRUE, FALSE),
          combined_group = 0) %>% 
-  select(-"end_next") %>% 
+  dplyr::select(-"end_next") %>% 
   arrange(seqnames, start )
 
 cgbh_subset <- comb_cgbh %>%
@@ -50,7 +50,7 @@ cgbh_subset <- comb_cgbh %>%
   mutate(first_hsat = cummax(grepl("hsat", name)),
          last_hsat = rev(cummax(rev(grepl("hsat", name))))) %>%
   filter((first_hsat == 1) & (last_hsat == 1)) %>%
-  select(-c("first_hsat","last_hsat")) %>%
+  dplyr::select(-c("first_hsat","last_hsat")) %>%
   ungroup()
 
 for (i in 2:nrow(cgbh_subset)) {
@@ -67,12 +67,12 @@ adj_cgbh <- cgbh_subset %>%
   mutate(first_hsat = cummax(grepl("hsat", name)),
          last_hsat = rev(cummax(rev(grepl("hsat", name))))) %>% 
   filter((first_hsat == 1) & (last_hsat == 1)) %>%
-  select(-c("first_hsat","last_hsat")) %>%
+  dplyr::select(-c("first_hsat","last_hsat")) %>%
   summarise(start_bp = dplyr::first(start),
             end_bp = last(end),
             width_Mb = round(sum(width)/(1E6),4),
             name = paste(name, collapse = ", ")) %>%
-  select(-c("combined_group"))
+  dplyr::select(-c("combined_group"))
 
 final_cgbh <- adj_cgbh %>% 
   group_by(seqnames) %>%
@@ -84,7 +84,7 @@ final_cgbh <- adj_cgbh %>%
       seqnames = substring(as.character(seqnames), 4, nchar(as.character(seqnames)))
     ) %>% 
   rename(seqnames = "chromosome") %>% 
-  select(peri_id,chromosome, everything())
+  dplyr::select(peri_id,chromosome, everything())
   
 print(final_cgbh)
 
@@ -161,7 +161,7 @@ for (chrm in unique(ori_segmnt_cnv$chr)){ # Loop over the chromosomes that have 
         mean_overlap = mean(overlap_proportion),
         .groups = 'drop'  # This option removes the grouping structure after summation
       ) %>% 
-      select(sampleID, peri_id, cnv, mean_overlap ,overlap_segs)
+      dplyr::select(sampleID, peri_id, cnv, mean_overlap ,overlap_segs)
   }
   cnv_long <- rbind(cnv_long, seg_sub)
 }
@@ -185,7 +185,7 @@ across all samples (rows)
 ```{r}
 
 cnv_reformat <- pivot_wider(cnv_long %>% 
-                              select(sampleID, peri_id, cnv),
+                              dplyr::select(sampleID, peri_id, cnv),
                             names_from = peri_id, values_from = cnv)
 cnv_reformat[is.na(cnv_reformat)] <- 0
   
