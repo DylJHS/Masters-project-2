@@ -2032,3 +2032,22 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
  
 - Finished the volcano plots using the full 20 genes as well as the one that looks at the differential expreessioon and compares between and with other oncogenes
 - Need to write up a bried methods section for how the analyses are performed and some of the facts/concerns about the plots or the analysis that might be useful for Marit to know
+08/06/24
+
+- Rerunnig the hyperparameter tuning
+- Using the sets that fit the regression features the best from the previous output from the run (see the hyperparameters xls file)
+
+- Using 10 fold cross validatioon with 50 round early stopage 
+- Tuning the n_estimator which is a hyperparameter that tunes the number of trees in the models ranging from (50-350)
+- Then tuning the max_depth with the depth ranging from 2-12
+
+
+09/06/24
+
+- The number of trees does not seem to greatly increase the performance, therefore selecting the n_estimators = 50 for all regression based models
+- The performance of the models do not improve beyond a max depth of 5, therefore setting the max depth for all models to 5
+
+- Tuning the learning rate (eta) using a range from 0.02 to 0.1 at increments of 0.02
+
+- For the multiclass imbalanced class problem, I will have to use the sklearn compute class weight function in order to set the weights for the individual 3 classes 
+- This only applies to the categorical aneuploidy models
