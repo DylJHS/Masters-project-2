@@ -10,6 +10,12 @@ setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Gro
 rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 index <- 3
 
+# Default parameters
+trees <- 50
+depth <- 5
+min_child <- 2
+lr <- 0.03
+
 # RNA SOI SETS
 # Expected Counts
 exp_set <- read.csv(
@@ -140,8 +146,10 @@ aneu_reg_feature_list <- colnames(full_cin)
 
 aneu_reg_metrics_df <- data.frame(
   RNA_Set = character(),
+  Trees = numeric(),
   Feature = character(),
   Depth = numeric(),
+  Child_weight = numeric(),
   Learning_Rate = numeric(),
   Gamma = numeric(),
   RMSE = numeric()
@@ -151,10 +159,10 @@ rna_list <- list(
   transcripts_per_million = tpm_set,
   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
   log_scalled_transcripts_per_million = log_scld_tpm,
-  log_transcripts_per_million = log_tpm,
-  expected_counts = exp_set,
-  scalled_expected_counts = scld_exp_set,
-  log_expected_counts = log_exp,
+  # log_transcripts_per_million = log_tpm,
+  # expected_counts = exp_set,
+  # scalled_expected_counts = scld_exp_set,
+  # log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
@@ -191,15 +199,13 @@ print(head(X[, 1:5]))
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  lr = seq(0.025, 0.1, 0.5),
-  gam = seq(0.2, 0.3, 0.2),
-  depth = seq(1, 6, 1)
+  gam = seq(0.9, 1.3, 0.2)
 )
 
 
 for (j in 1:nrow(grid)) { # nolint
   cat("\n", paste0(
-    "\t\t eta: ", grid$lr[j],
+    "\t\t eta: ", lr,
     "\t\t gamma: ", grid$gam[j],
     "\t\t depth: ", grid$depth[j],
     "\n"
@@ -207,13 +213,15 @@ for (j in 1:nrow(grid)) { # nolint
 
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
-    nrounds = 5000,
+    nrounds = 10000,
     objective = "reg:squarederror",
     eval_metric = "rmse",
-    early_stopping_rounds = 50,
-    nfold = 3,
-    max_depth = grid$depth[j],
-    eta = grid$lr[j],
+    early_stopping_rounds = 100,
+    nfold = 10,
+    max_depth = depth,
+    n_estimators = trees,
+    min_child_weight = min_child,
+    eta = lr,
     gamma = grid$gam[j],
     verbose = 1
   )
@@ -225,10 +233,12 @@ for (j in 1:nrow(grid)) { # nolint
 
 
   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+    RNA_Set = selected_rna_set, 
+    Trees = trees,
     Feature = selected_feature,
-    RNA_Set = selected_rna_set,
-    Depth = grid$depth[j],
-    Learning_Rate = grid$lr[j],
+    Depth = depth,
+    Child_weight = min_child,
+    Learning_Rate = lr,
     Gamma = grid$gam[j],
     RMSE = best_rmse
   ))

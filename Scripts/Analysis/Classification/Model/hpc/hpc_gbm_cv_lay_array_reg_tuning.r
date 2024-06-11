@@ -12,6 +12,7 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 # Default parameters
 trees <- 50
 depth <- 5
+min_child <- 1
 
 cat("Index: ", index, "\n\n")
 
@@ -198,9 +199,8 @@ X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  lr = seq(0.25, 0.29, 0.2),
-  gam = seq(0, 0.15, 0.2),
-  child_weight = seq(0.3, 2.1, 0.3)
+  lr = seq(0.3, 0.4, 0.2),
+  gam = seq(0, 3, 0.5)
 )
 
 for (j in 1:nrow(grid)) { # nolint
@@ -209,7 +209,7 @@ for (j in 1:nrow(grid)) { # nolint
     "\t\t gamma: ", grid$gam[j],
     "\t\t depth: ", depth,
     "\t\t trees: ", trees,
-    "\t\t child_weight: ", grid$child_weight[j],
+    "\t\t child_weight: ", min_child,
     "\n"
   ))
 
@@ -223,7 +223,7 @@ for (j in 1:nrow(grid)) { # nolint
     max_depth = depth,
     eta = grid$lr[j],
     gamma = grid$gam[j],
-    min_child_weight = grid$child_weight[j],
+    min_child_weight = min_child,
     n_estimators = trees,
     verbose = 0
   )
@@ -237,7 +237,7 @@ for (j in 1:nrow(grid)) { # nolint
     RNA_Set = selected_rna_set,
     Trees = trees,
     Depth = depth,
-    Child_weight = grid$child_weight[j],
+    Child_weight = min_child,
     Learning_Rate = grid$lr[j],
     Gamma = grid$gam[j],
     RMSE = best_rmse

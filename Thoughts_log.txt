@@ -2051,3 +2051,14 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 
 - For the multiclass imbalanced class problem, I will have to use the sklearn compute class weight function in order to set the weights for the individual 3 classes 
 - This only applies to the categorical aneuploidy models
+
+
+10/06/24
+
+- Making a short report for the analysis for Marit
+
+- Tuning the min_child_weight
+- the best performing models use the default value for min_child_weight of 1
+
+- Finished the graphs for Marit's analysis
+- Still need to get the absolute number of samples/idividuals that show a significant increase/decrease in expression in one or more of the heterochromatin genes by tissue/cancer
