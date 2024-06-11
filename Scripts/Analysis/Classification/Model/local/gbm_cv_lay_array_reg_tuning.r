@@ -11,9 +11,9 @@ rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 index <- 3
 
 # Default parameters
-trees <- 50
+# trees <- 50
 depth <- 5
-min_child <- 2
+min_child <- 1
 lr <- 0.03
 
 # RNA SOI SETS
@@ -152,7 +152,8 @@ aneu_reg_metrics_df <- data.frame(
   Child_weight = numeric(),
   Learning_Rate = numeric(),
   Gamma = numeric(),
-  RMSE = numeric()
+  Trained_RMSE = numeric(),
+  Test_RMSE = numeric()
 )
 
 rna_list <- list(
@@ -199,48 +200,73 @@ print(head(X[, 1:5]))
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  gam = seq(0.9, 1.3, 0.2)
+  gam = seq(0.0, 0.3, 0.5),
+  trees = seq(20, 500, 10)
 )
 
 
 for (j in 1:nrow(grid)) { # nolint
   cat("\n", paste0(
     "\t\t eta: ", lr,
+    "\t\t Trees: ", grid$trees[j],
     "\t\t gamma: ", grid$gam[j],
-    "\t\t depth: ", grid$depth[j],
+    "\t\t depth: ", depth,
     "\n"
   ))
 
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
-    nrounds = 10000,
     objective = "reg:squarederror",
     eval_metric = "rmse",
-    early_stopping_rounds = 100,
+    # early_stopping_rounds = 10,
     nfold = 10,
     max_depth = depth,
-    n_estimators = trees,
+    nrounds = grid$trees[j],
     min_child_weight = min_child,
     eta = lr,
     gamma = grid$gam[j],
     verbose = 1
   )
 
-  best_rmse <- m_xgb_untuned$evaluation_log$test_rmse_mean[
-    m_xgb_untuned$best_iteration
-  ]
-  print(best_rmse)
+  # First, check if best_iteration is valid
+  if (is.null(m_xgb_untuned$best_iteration) || m_xgb_untuned$best_iteration < 1) {
+    cat("Warning: No valid best_iteration found. Using last iteration values instead.\n")
+    # Use the last iteration if best_iteration is not valid
+    best_iteration <- nrow(m_xgb_untuned$evaluation_log)
+  } else {
+    # Ensure that the best_iteration does not exceed the number of rows logged
+    if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
+      cat("Warning: best_iteration exceeds the number of rows in evaluation_log. Adjusting to maximum available.\n")
+      best_iteration <- nrow(m_xgb_untuned$evaluation_log)
+    } else {
+      best_iteration <- m_xgb_untuned$best_iteration
+    }
+  }
+  
+  # Accessing the RMSE values safely
+  best_rmse_trained <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$train_rmse_mean[best_iteration]
+  } else {
+    NA  # Or appropriate default/error value
+  }
+  
+  best_rmse_test <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$test_rmse_mean[best_iteration]
+  } else {
+    NA  # Or appropriate default/error value
+  }
 
 
   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
     RNA_Set = selected_rna_set, 
-    Trees = trees,
+    Trees = grid$trees[j],
     Feature = selected_feature,
     Depth = depth,
     Child_weight = min_child,
     Learning_Rate = lr,
     Gamma = grid$gam[j],
-    RMSE = best_rmse
+    Trained_RMSE = best_rmse_trained,
+    Test_RMSE = best_rmse_test
   ))
 }
 
