@@ -1,9 +1,9 @@
-<!-- ---
+---
 title: "TCGA_CNV_FEATURES"
 format: html
 editor: visual
 Notes: This script is intended to do some exploration Arm level aneuploidies in the TCGA PanCan datasets.
---- -->
+---
 
 ```{r setup, include=FALSE}
 knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
@@ -45,22 +45,67 @@ cvn_arm <- ori_arm_cnv %>% replace(is.na(.), 0)
 # Re-organise the columns 
 cnvs_arm <- cvn_arm %>%
   column_to_rownames("Sample") %>% 
-  select(-c("Type", "Aneuploidy Score"))
+  select(-"Aneuploidy Score")
   
 ```
 
 Get a sense of the data distribution for class imbalance
 ```{r}
 
-old <- data.frame(Var1 = c(-1,0,1))
-for (i in colnames(cnvs_arm)){
-  d <- as.data.frame(table(cnvs_arm[[i]])) 
-  print(d)
-  old <- merge(old, d, by = "Var1")
-}
+old <- data.frame(loss = numeric(),
+                  gain = numeric(),
+                  normal = numeric())
+freq <- cnvs_arm %>% 
+  as.data.frame() %>% 
+  gather(key = "arm", value = "freq", -Type) %>% 
+  group_by(Type, arm) %>%
+  count(freq)%>%
+  as.data.frame() %>%
+  spread(key = freq, value = n) %>%
+  replace(is.na(.), 0)
 
-print(old)
+freq_percents <- freq %>%
+  mutate_at(vars(-c("arm", "Type")), as.numeric) %>%  
+  mutate(total = rowSums(select(., -c("arm", "Type")))) %>%  
+  mutate_at(vars(-arm,-Type, -total), funs(round(. / total*100,2))) %>%
+  select(-total)  
+
+stacked_plot <- freq_percents %>%
+  rename("Loss" = "-1",
+         "Normal" = "0",
+         "Gain" = "1") %>%
+  gather(key = "Aneuploidy", value = "Percent", -c("arm", "Type"))%>%
+  mutate(Aneuploidy = factor(Aneuploidy, levels = c("Loss", "Normal", "Gain"))) %>%
+  ggplot(aes(x = arm,
+             y = Percent,
+             fill = Aneuploidy
+               )) +
+  geom_bar(stat = "identity") +
+  labs(title = "Distribution of Arm Aneuploidies",
+       subtitle = "Shown by Cancer Type",
+       x = "Chromosome Arm",
+       y = "Percentage") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+   scale_fill_brewer(palette = "Set2") +
+  facet_wrap(~Type, scales = "free_x", ncol = 2)
+# 
+# print(stacked_plot)
+
+#save to png
+ggsave("Plots/Cancer_Type_Arm_Aneuploidies_Distribution.pdf", stacked_plot, width = 15, height = 40)
+# 
 ```
+
+Find the weights for the classes for each of the arms
+```{r}
+arm_weights <- freq %>%
+  mutate(total = rowSums(select(., -arm))) %>%  
+  mutate_at(vars(-arm, -total), funs(round(. / total,2))) %>%
+  select(-total) 
+
+```
+
 
 
 

@@ -11,12 +11,6 @@ rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 index <- 3
 depth <- 5
 min_child <- 1
-lr <- 0.03
-
-# Default parameters
-# trees <- 50
-depth <- 5
-min_child <- 1
 lr <- 0.3
 
 # RNA SOI SETS
@@ -92,60 +86,29 @@ log_scld_tpm <- read.csv(
   row.names = 1
 )
 
-# HRD scores
-ori_hrd <- read_tsv("Data/CIN_Features/TCGA.HRD_withSampleID.txt")
+# Arm Level Aneuploidies
+# Load the data
+chr_cnv <- read_tsv(
+  "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+)%>% 
+  replace(is.na(.), 0) %>%
+  select(-c("Type", "Aneuploidy Score")) %>%
+  mutate(Sample = str_replace_all(Sample, "-", "\\.")) %>% 
+  column_to_rownames("Sample") %>%
+  mutate_all(~ replace(., . == 1, 2)) %>% 
+  mutate_all(~ replace(., . == 0, 1)) %>% 
+  mutate_all(~ replace(., . == -1, 0))
 
-# Pericentromeric CNVs
-peri_cnv <- read.csv("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/CIN_Features/CNV_Data/lim_alpha_incl_TCGA_pericentro.csv") %>%
-  mutate_all(~ replace(., is.na(.), 0)) %>%
-  mutate(sampleID = gsub("-", ".", sampleID))
-
-cat("\n\n pericentromeric data: \n")
-print(head(peri_cnv[, 1:5]))
+cat("\n\n arm level data: \n")
+print(head(chr_cnv[, 1:5]))
 
 cat("\n\n All dfs loaded \n")
 
-t_hrd <- as.data.frame(t(ori_hrd))
-first_hrd <- t_hrd
-colnames(first_hrd) <- t_hrd[1, ]
-hrd <- as.data.frame(first_hrd[-1, ]) %>%
-  mutate_all(as.numeric) %>%
-  rename(loh_hrd = "hrd-loh") %>%
-  mutate(new = str_replace_all(rownames(.), "-", "\\.")) %>%
-  select(-"HRD")
-
-rownames(hrd) <- hrd$new
-hrd <- hrd %>%
-  select(-new)
-
-cat("\n\n hrd data: \n")
-print(head(hrd))
-
-rm(t_hrd)
-rm(first_hrd)
-
-full_cin <- merge(
-  hrd,
-  peri_cnv,
-  by.x = "row.names",
-  by.y = "sampleID"
-) %>%
-  mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
-  column_to_rownames("Row.names")
-
-cat("\n\n All feature names: ", colnames(full_cin), "\n")
-
-cat("\n\n full cin data: \n")
-print(head(full_cin[, 1:5]))
-
-rm(hrd)
-rm(peri_cnv)
-
-aneu_reg_feature_list <- colnames(full_cin)
+aneu_cat_feature_list <- colnames(chr_cnv)
 
 # MODELLING
 
-aneu_reg_metrics_df <- data.frame(
+aneu_cat_metrics_df <- data.frame(
   RNA_Set = character(),
   Trees = numeric(),
   Feature = character(),
@@ -153,24 +116,24 @@ aneu_reg_metrics_df <- data.frame(
   Child_weight = numeric(),
   Learning_Rate = numeric(),
   Gamma = numeric(),
-  Trained_RMSE = numeric(),
-  Test_RMSE = numeric()
+  Trained_Logloss = numeric(),
+  Test_Logloss = numeric()
 )
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
   scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
   log_scalled_transcripts_per_million = log_scld_tpm,
-  # log_transcripts_per_million = log_tpm,
-  # expected_counts = exp_set,
-  # scalled_expected_counts = scld_exp_set,
-  # log_expected_counts = log_exp,
+  log_transcripts_per_million = log_tpm,
+  expected_counts = exp_set,
+  scalled_expected_counts = scld_exp_set,
+  log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
 
 combinations <- expand.grid(
-  feature = aneu_reg_feature_list,
+  feature = aneu_cat_feature_list,
   RNA_Set = rna_names,
   stringsAsFactors = FALSE
 )
@@ -197,16 +160,23 @@ cat(paste0(
 rna_data <- rna_list[[selected_rna_set]]
 cat("\n\n RNA data: \n")
 print(head(rna_data[, 1:5]))
+cat("\n\n R data: \n")
+print(head(rna_data[, 1:5]))
 cat("\n\n")
 
-full_df <- merge(rna_data, full_cin, by = "row.names")
+full_df <- merge(rna_data,
+                 chr_cnv,
+                 by = "row.names")
 cat("\n\n full_df: \n")
 print(head(full_df[, 1:5]))
 
-y <- as.numeric(full_df[[selected_feature]])
-X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
+y <- as.integer(full_df[[selected_feature]])
+X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
 cat("\n\n Predicotrs: \n")
-print(head(X[, 1:5]))
+
+
+# print(head(X[, 1:5]))
+rm(chrm_cnv)
 
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
@@ -228,15 +198,16 @@ for (j in 1:nrow(grid)) { # nolint
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
     nrounds = grid$trees[j],
-    objective = "reg:squarederror",
-    eval_metric = "rmse",
-    early_stopping_rounds = 500,
+    objective = "multi:softmax",
+    eval_metric = "mlogloss",
+    early_stopping_rounds = 100,
     nfold = 2,
     max_depth = depth,
     min_child_weight = min_child,
     eta = lr,
     gamma = grid$gam[j],
-    verbose = 0
+    num_class = 3,
+    verbose = 1
   )
 
   best_iteration <- 0
@@ -263,26 +234,26 @@ for (j in 1:nrow(grid)) { # nolint
     }
   }
 
-  # Accessing the RMSE values safely
-  best_rmse_trained <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_rmse_mean[best_iteration]
+  best_mlogloss_train <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$train_mlogloss_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
-
-  best_rmse_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_rmse_mean[best_iteration]
+  
+  best_mlogloss_test <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$test_mlogloss_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
-
+  
+  
   cat(paste0(
     "The best iteration occurs with tree #: ",
     best_iteration, "\n\n"
   ))
-
-
-  aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+  
+  
+  aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
     RNA_Set = selected_rna_set,
     Trees = grid$trees[j],
     Feature = selected_feature,
@@ -290,8 +261,8 @@ for (j in 1:nrow(grid)) { # nolint
     Child_weight = min_child,
     Learning_Rate = lr,
     Gamma = grid$gam[j],
-    Trained_RMSE = best_rmse_trained,
-    Test_RMSE = best_rmse_test
+    Trained_Logloss = best_mlogloss_train,
+    Test_Logloss = best_mlogloss_test
   ))
 }
 
