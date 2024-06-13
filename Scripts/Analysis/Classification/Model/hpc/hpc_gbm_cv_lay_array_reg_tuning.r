@@ -12,7 +12,7 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 # Default parameters
 depth <- 5
 min_child <- 1
-lr <- 0.3
+lr <- 0.03
 
 cat("Index: ", index, "\n\n")
 
@@ -173,7 +173,12 @@ rna_list <- list(
 )
 rna_names <- names(rna_list)
 
-combinations <- expand.grid(feature = aneu_reg_feature_list, RNA_Set = rna_names, stringsAsFactors = FALSE)
+combinations <- expand.grid(
+  feature = aneu_reg_feature_list,
+  RNA_Set = rna_names,
+  stringsAsFactors = FALSE
+)
+
 cat("\n\n All combinations: ")
 print(combinations)
 
@@ -185,13 +190,18 @@ selected_combination <- combinations[index, ]
 selected_feature <- selected_combination$feature
 selected_rna_set <- selected_combination$RNA_Set
 
-cat(paste0("\n\n Running model for feature: ", selected_feature, " and RNA set: ", selected_rna_set, "\n"))
+cat(paste0(
+  "\n\n Running model for feature: ",
+  selected_feature,
+  " and RNA set: ",
+  selected_rna_set, "\n"
+))
 
 # Now select the data based on these choices
 rna_data <- rna_list[[selected_rna_set]]
 cat("\n\n RNA data: \n")
 print(head(rna_data[, 1:5]))
-
+cat("\n\n")
 
 full_df <- merge(rna_data, full_cin, by = "row.names")
 y <- as.numeric(full_df[[selected_feature]])
@@ -201,7 +211,7 @@ xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
   gam = seq(0, 0.23, 0.3),
-  trees = seq(50, 300, 50)
+  trees = seq(50, 10000, 500)
 )
 
 for (j in 1:nrow(grid)) { # nolint
@@ -219,8 +229,8 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = grid$trees[j],
     objective = "reg:squarederror",
     eval_metric = "rmse",
-    # early_stopping_rounds = 100,
-    nfold = 10,
+    early_stopping_rounds = 250,
+    nfold = 5,
     max_depth = depth,
     eta = lr,
     gamma = grid$gam[j],
@@ -228,7 +238,9 @@ for (j in 1:nrow(grid)) { # nolint
     verbose = 0
   )
 
-   # First, check if best_iteration is valid
+  best_iteration <- 0
+
+  # First, check if best_iteration is valid
   if (is.null(m_xgb_untuned$best_iteration) || m_xgb_untuned$best_iteration < 1) {
     # cat("Best_iteration = last iteration.\n")
     # Use the last iteration if best_iteration is not valid
@@ -236,31 +248,35 @@ for (j in 1:nrow(grid)) { # nolint
   } else {
     # Ensure that the best_iteration does not exceed the number of rows logged
     if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
-      cat("Warning: best_iteration exceeds the number of rows in evaluation_log. Adjusting to maximum available.\n")
+      cat("\n Warning: best_iteration exceeds the number of rows in evaluation_log. Adjusting to maximum available.\n")
       best_iteration <- nrow(m_xgb_untuned$evaluation_log)
     } else {
       best_iteration <- m_xgb_untuned$best_iteration
     }
   }
-  
+
   # Accessing the RMSE values safely
   best_rmse_trained <- if (best_iteration > 0) {
     m_xgb_untuned$evaluation_log$train_rmse_mean[best_iteration]
   } else {
-    NA  # Or appropriate default/error value
+    NA # Or appropriate default/error value
   }
-  
+
   best_rmse_test <- if (best_iteration > 0) {
     m_xgb_untuned$evaluation_log$test_rmse_mean[best_iteration]
   } else {
-    NA  # Or appropriate default/error value
+    NA # Or appropriate default/error value
   }
 
+  cat(paste0(
+    "\n The best iteration occurs with tree #: ",
+    best_iteration, "\n\n"
+  ))
 
   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
     Feature = selected_feature,
     RNA_Set = selected_rna_set,
-    Trees = grid$trees[j],
+    Trees = best_iteration,
     Depth = depth,
     Child_weight = min_child,
     Learning_Rate = lr,
@@ -274,7 +290,10 @@ datetime <- Sys.time() %>%
   str_replace_all("[ :.]", "_")
 
 name <- paste0(
-  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_", selected_feature, "_", selected_rna_set, "_", datetime, ".csv"
+  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_", 
+  selected_feature, "_",
+  selected_rna_set, "_",
+  datetime, ".csv"
 ) %>%
   str_replace_all("[ :]", "_")
 
@@ -284,4 +303,4 @@ write.csv(
   row.names = FALSE
 )
 
-cat("\n Completed processing for index: ", index, "\n")
+cat("\n\n\t\t Completed processing for index: ", index, "\n")

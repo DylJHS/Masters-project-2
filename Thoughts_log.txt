@@ -2061,4 +2061,29 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - the best performing models use the default value for min_child_weight of 1
 
 - Finished the graphs for Marit's analysis
-- Still need to get the absolute number of samples/idividuals that show a significant increase/decrease in expression in one or more of the heterochromatin genes by tissue/cancer
+- Still need to get the absolute number of samples/idividuals that show a significant increase/decrease in expression in one or more of the heterochromatin genes by tissue/cancer11/06/24
+
+- Tuning for Gamma which is the last hyperparameter to tune for in the regression based-base layer models
+
+- For the Learning rate the best models occur on eta 0.02 and 0.04 will therefore select 0.03 
+
+- For the thesis the story should focus on the biological question at hand (The LAD proteins and their contribution to CIN in cancer) and describe the model/pipeline as a tool for answering the question. 
+
+- Try to get the pipeline to flow from the starting genes as input to the Feature importance of the genes as the output
+
+- Plot some the training data over the rounds to see how the model performs/improves over iterations for the regression models and then the categorical models
+
+
+ 12/06/24
+
+- Running the hyperparameter tuning again for the Trees (aka nrounds, n_estimators)
+- This is since the number of trees = nrounds
+- The value to save is not the number of rounds set !
+- The value to save is the best occurring round aka the best iteration
+- This value depends on the nrounds (max number of rounds) and any early stopping that is set
+- For all the previous metrics that I saved I never knew the actual best occurring round i only saved the nrounds that were set
+- For this running, i am using 50-10000 nrounds with an early stopping of 250 rounds and saving the best_iteration (round with best performing model) as the Tree hyperparameter value
+
+- After 13 hours the runnings are encountering errors due to memory allocation, increasing the allocation from 3gb to 6gb 
+- And the runtime is taking a very long time, will therefore decrease the number of folds for the Tree number hyperparamter (nrounds) from 10 to 5 
+- Also increasing the time allocation from 18 to 20 hours

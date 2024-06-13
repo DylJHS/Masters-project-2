@@ -14,7 +14,7 @@ index <- 3
 # trees <- 50
 depth <- 5
 min_child <- 1
-lr <- 0.03
+lr <- 0.3
 
 # RNA SOI SETS
 # Expected Counts
@@ -201,7 +201,7 @@ xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
   gam = seq(0.0, 0.3, 0.5),
-  trees = seq(20, 500, 10)
+  trees = seq(50, 2000, 500)
 )
 
 
@@ -218,15 +218,17 @@ for (j in 1:nrow(grid)) { # nolint
     data = xgb_data,
     objective = "reg:squarederror",
     eval_metric = "rmse",
-    # early_stopping_rounds = 10,
-    nfold = 10,
+    early_stopping_rounds = 500,
+    nfold = 2,
     max_depth = depth,
     nrounds = grid$trees[j],
     min_child_weight = min_child,
     eta = lr,
     gamma = grid$gam[j],
-    verbose = 1
+    verbose = 0
   )
+  
+  best_iteration <- 0
 
   # First, check if best_iteration is valid
   if (is.null(m_xgb_untuned$best_iteration) || m_xgb_untuned$best_iteration < 1) {
@@ -255,6 +257,8 @@ for (j in 1:nrow(grid)) { # nolint
   } else {
     NA  # Or appropriate default/error value
   }
+  
+  print(paste0("The best iteration occurs at: ", best_iteration))
 
 
   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
