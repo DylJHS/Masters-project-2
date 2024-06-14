@@ -2087,3 +2087,16 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - After 13 hours the runnings are encountering errors due to memory allocation, increasing the allocation from 3gb to 6gb 
 - And the runtime is taking a very long time, will therefore decrease the number of folds for the Tree number hyperparamter (nrounds) from 10 to 5 
 - Also increasing the time allocation from 18 to 20 hours
+
+
+ 13/06/24
+
+-  Need to assign the weights to the classes in the categorical models
+
+- Need to estimate the precision and accuracy of the categorical models using AUC 
+- When doing this can use the One vs Rest (OvR) AUC metric, measuring the accuracy of the classification of a class (loss, gain or normal) as the positive class vs the other classes combined as the negative class
+- Or could implement the One vs One (OvO) approach, which measures the accuracy of classifications for each possible pairwise combo (gain vs loss, loss vs normal, gain vs normal) and both ways (classifying gain vs normal is different than classifying normal vs gain) 
+- When using the AUC eval metric with the multi:softprob objective in xgboost, the AUC is calculated using OvR 
+- The AUC in the eval metric is the aggregate of each of the individual class AUC measurements weighing each by its prevalence in the dataset (this is only for the evaluation and not the training, still need to calculate the weights myself for that)
+
+- Tuning the #trees is taking a while 

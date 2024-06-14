@@ -1,0 +1,53 @@
+---
+title: "xgb categorical training & prediction evaluation"
+output: html_document
+date: "2024-06-14"
+Notes: This script is intended to train the chosen versions of the categorical xgboost models on the RNA data and evaluate their performance based on the class AUC metrics.
+---
+
+```{r}
+library(dplyr)
+library(readr)
+library(tidyverse)
+library(xgboost)
+library(caret)
+library(caTools)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+Loading the test variables and data
+```{r}
+rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
+
+log_scld_tpm <- read.csv(
+  paste0(
+    rna_data_path,
+    "log_scld_tpm_soi.csv"
+  ),
+  row.names = 1
+)
+
+depth <- 5
+min_child <- 1
+lr <- 0.3
+
+# Arm Level Aneuploidies
+# Load the data
+chr_cnv <- read_tsv(
+  "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+)%>% 
+  replace(is.na(.), 0) %>%
+  select(-c("Type", "Aneuploidy Score")) %>%
+  mutate(Sample = str_replace_all(Sample, "-", "\\.")) %>% 
+  column_to_rownames("Sample") %>%
+  mutate_all(~ replace(., . == 1, 2)) %>% 
+  mutate_all(~ replace(., . == 0, 1)) %>% 
+  mutate_all(~ replace(., . == -1, 0))
+
+cat("\n\n arm level data: \n")
+print(head(chr_cnv[, 1:5]))
+```
+

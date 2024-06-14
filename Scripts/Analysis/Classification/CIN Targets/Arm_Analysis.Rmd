@@ -50,6 +50,7 @@ cnvs_arm <- cvn_arm %>%
 ```
 
 Get a sense of the data distribution for class imbalance
+
 ```{r}
 
 old <- data.frame(loss = numeric(),
@@ -76,7 +77,7 @@ stacked_plot <- freq_percents %>%
          "Gain" = "1") %>%
   gather(key = "Aneuploidy", value = "Percent", -c("arm", "Type"))%>%
   mutate(Aneuploidy = factor(Aneuploidy, levels = c("Loss", "Normal", "Gain"))) %>%
-  ggplot(aes(x = arm,
+  ggplot(aes(x = factor(arm, levels = c("1p", "1q", "2p", "2q", "3p", "3q", "4p", "4q", "5p", "5q", "6p", "6q", "7p", "7q", "8p", "8q", "9p", "9q", "10p", "10q", "11p", "11q", "12p", "12q", "13 (13q)", "14 (14q)", "15 (15q)", "16p", "16q", "17p", "17q", "18p", "18q", "19p", "19q", "20p", "20q", "21 (21q)", "22 (22q)")),
              y = Percent,
              fill = Aneuploidy
                )) +
@@ -86,18 +87,24 @@ stacked_plot <- freq_percents %>%
        x = "Chromosome Arm",
        y = "Percentage") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(face = "bold"),
+        panel.border = element_rect(fill = "transparent",
+                                    color = "black",
+                                    linewidth = 1.5)
+        ) +
    scale_fill_brewer(palette = "Set2") +
   facet_wrap(~Type, scales = "free_x", ncol = 2)
-# 
-# print(stacked_plot)
 
-#save to png
+stacked_plot
+
+
 ggsave("Plots/Cancer_Type_Arm_Aneuploidies_Distribution.pdf", stacked_plot, width = 15, height = 40)
 # 
 ```
 
 Find the weights for the classes for each of the arms
+
 ```{r}
 arm_weights <- freq %>%
   mutate(total = rowSums(select(., -arm))) %>%  
@@ -105,11 +112,6 @@ arm_weights <- freq %>%
   select(-total) 
 
 ```
-
-
-
-
-
 
 MDS Visualisations of the relationships between the sample/tissue types and the arm aneuploidies
 
@@ -150,4 +152,3 @@ dist_matrix <- as.matrix(dist)
 ```
 
 The plots don't indicate to any means of separating the data via the arm aneuploidies
-

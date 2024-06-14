@@ -1,0 +1,12 @@
+To Do
+
+
+URGENT: 
+- Get the weights for the classes for each arm level 
+- Balance the training data based on the weights for each categorical arm level model 
+- STACK the models
+
+
+- visualise the improvements of the models during running (logos & RMSE reduction over the iterations) for the different hyperparameters
+
+- Visualise the difference in categorical model improvements (both loglooss and AUC) when training on balanced (class weighted) data vs unbalanced. CANNOT USE THE TUNING AUC EVAL METRIC FOR THIS AS THE AUC THAT IS PROVIDED IS WEIGHTED BY THE PREVALENCE OF THE CLASSES will therefore overemphasise the accuracy of predicting no aneuploidies vs aneuploidies
