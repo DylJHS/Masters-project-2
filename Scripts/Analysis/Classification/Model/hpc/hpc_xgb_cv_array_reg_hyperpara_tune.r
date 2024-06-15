@@ -133,15 +133,19 @@ print(head(reg_hyperparam_df))
 selected_combination <- reg_hyperparam_df[index, ]
 selected_feature <- selected_combination$Feature
 selected_rna_set <- selected_combination$RNA_set
-selected_trees <- selected_combination$Trees
-selected_depth <- selected_combination$Max.Depth
-selected_eta <- selected_combination$Eta
-selected_child_weight <- 1
+selected_trees <- 100
+selected_depth <- 5
+selected_eta <- 0.3
+selected_min_child <- 1
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
   scalled_transcripts_per_million = scld_tpm_set,
   log_scalled_transcripts_per_million = log_scld_tpm,
+  log_transcripts_per_million = log_tpm,
+  expected_counts = exp_set,
+  scalled_expected_counts = scld_exp_set,
+  log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
@@ -186,18 +190,18 @@ print(head(X[, 1:5]))
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  tree = seq(50, 7000, 500),
+  tree = seq(100, 4000, 500),
   gam = seq(0, 0.23, 0.3)
 )
 
-set.seed(99)
+set.seed(100)
 for (j in 1:nrow(grid)) { # nolint
   cat(paste0(
-    "\t\t eta: ", lr,
+    "\t\t eta: ", selected_eta,
     "\t\t gamma: ", grid$gam[j],
-    "\t\t depth: ", depth,
+    "\t\t depth: ", selected_depth,
     "\t\t trees: ", grid$tree[j],
-    "\t\t child_weight: ", min_child,
+    "\t\t child_weight: ", selected_min_child,
     "\n"
   ))
 
@@ -209,10 +213,10 @@ for (j in 1:nrow(grid)) { # nolint
     early_stopping_rounds = 250,
     nfold = 5,
     max_depth = selected_depth,
-    min_child_weight = selected_child_weight,
+    min_child_weight = selected_min_child,
     eta = selected_eta,
     gamma = grid$gam[j],
-    verbose = 1
+    verbose = 0
   )
 
   best_iteration <- 0
@@ -265,7 +269,7 @@ for (j in 1:nrow(grid)) { # nolint
     Trees = grid$tree[j],
     Feature = selected_feature,
     Depth = selected_depth,
-    Child_weight = selected_child_weight,
+    Child_weight = selected_min_child,
     Learning_Rate = selected_eta,
     Gamma = grid$gam[j],
     Trained_RMSE = best_rmse_trained,
@@ -282,6 +286,7 @@ name <- paste0(
   "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_",
   selected_feature, "_",
   selected_rna_set, "_",
+  index, "_",
   datetime, ".csv"
 ) %>%
   str_replace_all(" ", "_") %>%
