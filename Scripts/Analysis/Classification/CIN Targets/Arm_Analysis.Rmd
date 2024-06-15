@@ -103,13 +103,15 @@ ggsave("Plots/Cancer_Type_Arm_Aneuploidies_Distribution.pdf", stacked_plot, widt
 # 
 ```
 
-Find the weights for the classes for each of the arms
+Find the weights for the classes for each of the arms (the inverse of their prevelance)
 
 ```{r}
 arm_weights <- freq %>%
-  mutate(total = rowSums(select(., -arm))) %>%  
-  mutate_at(vars(-arm, -total), funs(round(. / total,2))) %>%
-  select(-total) 
+  mutate(total = rowSums(select(., -arm, -Type))) %>%  
+  mutate_at(vars(-arm,-Type, -total), list(~1- round(. / total,2))) %>% 
+  mutate(total = rowSums(select(., -arm,-total, -Type))) %>%
+  mutate_at(vars(-arm,-Type, -total), list(~ round(./total, 2))) %>%
+  select(-total)
 
 ```
 

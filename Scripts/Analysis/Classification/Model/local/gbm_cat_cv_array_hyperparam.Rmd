@@ -14,8 +14,8 @@ library(caret)
 library(caTools)
 ```
 
-```{r}
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 ```
 
 ```{r}
@@ -134,8 +134,8 @@ aneu_cat_metrics_df <- data.frame(
   Child_weight = numeric(),
   Learning_Rate = numeric(),
   Gamma = numeric(),
-  Trained_Logloss = numeric(),
-  Test_Logloss = numeric()
+  Train_AUC = numeric(),
+  Test_AUC = numeric()
 )
 
 rna_list <- list(
@@ -202,7 +202,7 @@ xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
   gam = seq(0.0, 0.3, 0.5),
-  trees = seq(5, 40, 10)
+  trees = seq(50, 400, 50)
 )
 
 for (j in 1:nrow(grid)) { # nolint
@@ -218,8 +218,8 @@ for (j in 1:nrow(grid)) { # nolint
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
     nrounds = grid$trees[j],
-    objective = "multi:softmax",
-    eval_metric = "mlogloss",
+    objective = "multi:softprob",
+    eval_metric = "auc",
     early_stopping_rounds = 100,
     nfold = 2,
     max_depth = depth,
@@ -254,14 +254,14 @@ for (j in 1:nrow(grid)) { # nolint
     }
   }
 
-  best_mlogloss_train <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_mlogloss_mean[best_iteration]
+  best_auc_train <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$train_auc_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
 
-  best_mlogloss_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_mlogloss_mean[best_iteration]
+  best_auc_test <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$test_auc_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
@@ -281,8 +281,8 @@ for (j in 1:nrow(grid)) { # nolint
     Child_weight = min_child,
     Learning_Rate = lr,
     Gamma = grid$gam[j],
-    Trained_Logloss = best_mlogloss_train,
-    Test_Logloss = best_mlogloss_test
+    Train_AUC = best_auc_train,
+    Test_AUC = best_auc_test
   ))
 }
 

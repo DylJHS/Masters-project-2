@@ -162,144 +162,128 @@ aneu_reg_metrics_df <- data.frame(
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
-  scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
+  scalled_transcripts_per_million = scld_tpm_set,
   log_scalled_transcripts_per_million = log_scld_tpm,
-  # log_transcripts_per_million = log_tpm,
-  # expected_counts = exp_set
-  # scalled_expected_counts = scld_exp_set,
-  # log_expected_counts = log_exp,
+  log_transcripts_per_million = log_tpm,
+  expected_counts = exp_set,
+  scalled_expected_counts = scld_exp_set,
+  log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
 
-combinations <- expand.grid(
-  feature = aneu_reg_feature_list,
-  RNA_Set = rna_names,
-  stringsAsFactors = FALSE
-)
-
+combinations <- expand.grid(feature = aneu_reg_feature_list, RNA_Set = rna_names, stringsAsFactors = FALSE)
 cat("\n\n All combinations: ")
 print(combinations)
 
-total_combinations <- nrow(combinations)
-cat("\n\n Number of total combinations: ", total_combinations)
+# total_combinations <- nrow(combinations)
+# cat("\n\n Number of total combinations: ", total_combinations)
 
-# Select the specific feature and RNA set based on the SLURM task ID
-selected_combination <- combinations[index, ]
-selected_feature <- selected_combination$feature
-selected_rna_set <- selected_combination$RNA_Set
+# # Select the specific feature and RNA set based on the SLURM task ID
+# selected_combination <- combinations[index, ]
+# selected_feature <- selected_combination$feature
+# selected_rna_set <- selected_combination$RNA_Set
 
-cat(paste0(
-  "\n\n Running model for feature: ",
-  selected_feature,
-  " and RNA set: ",
-  selected_rna_set, "\n"
-))
+# cat(paste0("\n\n Running model for feature: ", selected_feature, " and RNA set: ", selected_rna_set, "\n"))
 
-# Now select the data based on these choices
-rna_data <- rna_list[[selected_rna_set]]
-cat("\n\n RNA data: \n")
-print(head(rna_data[, 1:5]))
-cat("\n\n")
+# # Now select the data based on these choices
+# rna_data <- rna_list[[selected_rna_set]]
+# cat("\n\n RNA data: \n")
+# print(head(rna_data[, 1:5]))
+# cat("\n\n")
 
-full_df <- merge(rna_data, full_cin, by = "row.names")
-y <- as.numeric(full_df[[selected_feature]])
-X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
+# full_df <- merge(rna_data, full_cin, by = "row.names")
+# y <- as.numeric(full_df[[selected_feature]])
+# X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 
-xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
+# xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
-grid <- expand.grid(
-  gam = seq(0, 0.23, 0.3),
-  trees = seq(50, 10000, 500)
-)
+# grid <- expand.grid(
+#   gam = seq(0, 0.23, 0.3),
+#   trees = seq(7000, 8000, 5000)
+# )
 
-for (j in 1:nrow(grid)) { # nolint
-  cat(paste0(
-    "\t\t eta: ", lr,
-    "\t\t gamma: ", grid$gam[j],
-    "\t\t depth: ", depth,
-    "\t\t trees: ", grid$trees[j],
-    "\t\t child_weight: ", min_child,
-    "\n"
-  ))
+# for (j in 1:nrow(grid)) { # nolint
+#   cat(paste0(
+#     "\t\t eta: ", lr,
+#     "\t\t gamma: ", grid$gam[j],
+#     "\t\t depth: ", depth,
+#     "\t\t trees: ", grid$trees[j],
+#     "\t\t child_weight: ", min_child,
+#     "\n"
+#   ))
 
-  m_xgb_untuned <- xgb.cv(
-    data = xgb_data,
-    nrounds = grid$trees[j],
-    objective = "reg:squarederror",
-    eval_metric = "rmse",
-    early_stopping_rounds = 250,
-    nfold = 5,
-    max_depth = depth,
-    eta = lr,
-    gamma = grid$gam[j],
-    min_child_weight = min_child,
-    verbose = 0
-  )
+#   m_xgb_untuned <- xgb.cv(
+#     data = xgb_data,
+#     nrounds = grid$trees[j],
+#     objective = "reg:squarederror",
+#     eval_metric = "rmse",
+#     early_stopping_rounds = 250,
+#     nfold = 5,
+#     max_depth = depth,
+#     eta = lr,
+#     gamma = grid$gam[j],
+#     min_child_weight = min_child,
+#     verbose = 0
+#   )
 
-  best_iteration <- 0
+#   best_iteration <- 0
 
-  # First, check if best_iteration is valid
-  if (is.null(m_xgb_untuned$best_iteration) || m_xgb_untuned$best_iteration < 1) {
-    # cat("Best_iteration = last iteration.\n")
-    # Use the last iteration if best_iteration is not valid
-    best_iteration <- nrow(m_xgb_untuned$evaluation_log)
-  } else {
-    # Ensure that the best_iteration does not exceed the number of rows logged
-    if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
-      cat("\n Warning: best_iteration exceeds the number of rows in evaluation_log. Adjusting to maximum available.\n")
-      best_iteration <- nrow(m_xgb_untuned$evaluation_log)
-    } else {
-      best_iteration <- m_xgb_untuned$best_iteration
-    }
-  }
+#    # First, check if best_iteration is valid
+#   if (is.null(m_xgb_untuned$best_iteration) || m_xgb_untuned$best_iteration < 1) {
+#     # cat("Best_iteration = last iteration.\n")
+#     # Use the last iteration if best_iteration is not valid
+#     best_iteration <- nrow(m_xgb_untuned$evaluation_log)
+#   } else {
+#     # Ensure that the best_iteration does not exceed the number of rows logged
+#     if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
+#       cat("\n Warning: best_iteration exceeds the number of rows in evaluation_log. Adjusting to maximum available.\n")
+#       best_iteration <- nrow(m_xgb_untuned$evaluation_log)
+#     } else {
+#       best_iteration <- m_xgb_untuned$best_iteration
+#     }
+#   }
+  
+#   # Accessing the RMSE values safely
+#   best_rmse_trained <- if (best_iteration > 0) {
+#     m_xgb_untuned$evaluation_log$train_rmse_mean[best_iteration]
+#   } else {
+#     NA  # Or appropriate default/error value
+#   }
+  
+#   best_rmse_test <- if (best_iteration > 0) {
+#     m_xgb_untuned$evaluation_log$test_rmse_mean[best_iteration]
+#   } else {
+#     NA  # Or appropriate default/error value
+#   }
 
-  # Accessing the RMSE values safely
-  best_rmse_trained <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_rmse_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
+#   cat(paste0("\n The best iteration occurs with tree #: ", best_iteration, "\n\n"))
 
-  best_rmse_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_rmse_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
+#   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+#     Feature = selected_feature,
+#     RNA_Set = selected_rna_set,
+#     Trees = best_iteration,
+#     Depth = depth,
+#     Child_weight = min_child,
+#     Learning_Rate = lr,
+#     Gamma = grid$gam[j],
+#     Trained_RMSE = best_rmse_trained,
+#     Test_RMSE = best_rmse_test
+#   ))
+# }
 
-  cat(paste0(
-    "\n The best iteration occurs with tree #: ",
-    best_iteration, "\n\n"
-  ))
+# datetime <- Sys.time() %>%
+#   str_replace_all("[ :.]", "_")
 
-  aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
-    Feature = selected_feature,
-    RNA_Set = selected_rna_set,
-    Trees = best_iteration,
-    Depth = depth,
-    Child_weight = min_child,
-    Learning_Rate = lr,
-    Gamma = grid$gam[j],
-    Trained_RMSE = best_rmse_trained,
-    Test_RMSE = best_rmse_test
-  ))
-}
+# name <- paste0(
+#   "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_", selected_feature, "_", selected_rna_set, "_", datetime, ".csv"
+# ) %>%
+#   str_replace_all("[ :]", "_")
 
-datetime <- Sys.time() %>%
-  str_replace_all("[ :.]", "_")
+# write.csv(
+#   aneu_reg_metrics_df,
+#   file = name,
+#   row.names = FALSE
+# )
 
-name <- paste0(
-  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_",
-  selected_feature, "_",
-  selected_rna_set, "_",
-  datetime, ".csv"
-) %>%
-  str_replace_all("[ :]", "_")
-
-write.csv(
-  aneu_reg_metrics_df,
-  file = name,
-  row.names = FALSE
-)
-
-cat("\n\n\t\t Completed processing for index: ", index, "\n")
+# cat("\n\n\t\t Completed processing for index: ", index, "\n")
