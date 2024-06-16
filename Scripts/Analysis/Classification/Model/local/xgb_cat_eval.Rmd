@@ -18,6 +18,14 @@ library(caTools)
 knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 ```
 
+```{r}
+depth <- 5
+min_child <- 1
+lr <- 0.3
+nrounds <- 1000
+target <- "1p"
+```
+
 Loading the test variables and data
 ```{r}
 rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
@@ -30,24 +38,101 @@ log_scld_tpm <- read.csv(
   row.names = 1
 )
 
-depth <- 5
-min_child <- 1
-lr <- 0.3
-
 # Arm Level Aneuploidies
 # Load the data
 chr_cnv <- read_tsv(
   "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
 )%>% 
   replace(is.na(.), 0) %>%
-  select(-c("Type", "Aneuploidy Score")) %>%
+  select(-"Aneuploidy Score", -"Type") %>%
   mutate(Sample = str_replace_all(Sample, "-", "\\.")) %>% 
   column_to_rownames("Sample") %>%
   mutate_all(~ replace(., . == 1, 2)) %>% 
   mutate_all(~ replace(., . == 0, 1)) %>% 
   mutate_all(~ replace(., . == -1, 0))
 
-cat("\n\n arm level data: \n")
-print(head(chr_cnv[, 1:5]))
+# Calc the class weights
+freq <- chr_cnv %>% 
+  as.data.frame() %>% 
+  gather(key = "arm", value = "freq") %>% 
+  group_by(arm) %>%
+  count(freq)%>%
+  as.data.frame() %>%
+  spread(key = freq, value = n) %>%
+  replace(is.na(.), 0)
+
+arm_weights <- freq %>%
+  mutate(total = rowSums(select(., -arm))) %>%  
+  mutate_at(vars(-arm, -total), list(~1- round(. / total,2))) %>% 
+  mutate(total = rowSums(select(., -arm,-total))) %>%
+  mutate_at(vars(-arm, -total), list(~ round(./total, 2))) %>%
+  select(-total) %>% 
+  t() %>% 
+  as.data.frame() %>%
+  setNames(make.unique(unlist(.[1, ]))) %>%   # Convert first row to column names
+  .[-1, ]  
+
+
+```
+Manipulate the data
+```{r}
+# Combine the data
+full_df <- log_scld_tpm %>% 
+  merge(chr_cnv, by = 0) %>% 
+  column_to_rownames( "Row.names") %>%
+  mutate_all(as.numeric) 
+
+# Get the sample IDs from the first data frame
+all_sample_ids <- rownames(full_df)
+
+# Calculate 25% of the total samples
+num_samples_to_select <- round(0.25 * length(all_sample_ids))
+
+# Get a random sample of sample IDs
+set.seed(99)
+random_sample_ids <- sample(
+  all_sample_ids, num_samples_to_select, replace = FALSE
+)
+
+# Define the train and test sets
+train_set <- full_df[!rownames(full_df) %in% random_sample_ids, ]
+test_set <- full_df[rownames(full_df) %in% random_sample_ids, ]
+
+train_x <- as.matrix(train_set[, c(colnames(log_scld_tpm))])
+train_y <- as.numeric(train_set[, target])
+
+test_x <- as.matrix(test_set[, c(colnames(log_scld_tpm))])
+test_y <- as.numeric(test_set[, target])
+
+xgb.train = xgb.DMatrix(data=train_x,label=train_y)
+xgb.test = xgb.DMatrix(data=test_x,label=test_y)
+
+```
+
+
+Train the model
+```{r}
+# Set the parameters 
+xgb_params <- list(
+  objective = "multi:softmax",
+  eval_metric = "mlogloss",
+  num_class = 3,
+  max_depth = depth,
+  eta = lr,
+  gamma = 0
+  nrounds = nrounds,
+  min_child_weight = min_child,
+  scale_pos_weight = arm_weights[[target]]
+)
+
+# Train the model
+xgb_model <- xgb.train(
+  params = xgb_params,
+  data = xgb.train,
+  nrounds = nrounds,
+  watchlist = list(train = xgb.train, test = xgb.test),
+  print_every_n = 10,
+  early_stopping_rounds = 100
+)
 ```
 

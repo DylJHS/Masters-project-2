@@ -11,10 +11,7 @@ rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 index <- 4
 
 # Default parameters
-# trees <- 50
-depth <- 5
-min_child <- 1
-lr <- 0.3
+
 
 # RNA EC SOI sets
 log_scld_exp <- read.csv(
@@ -24,6 +21,15 @@ log_scld_exp <- read.csv(
   ),
   row.names = 1
 )
+
+scld_exp_set <- read.csv(
+  paste0(
+    rna_data_path,
+    "scld_exp_soi.csv"
+  ),
+  row.names = 1
+)
+
 cat("\n\n Log-Scaled Expected Counts df: \n")
 print(head(log_scld_exp[, 1:10]))
 
@@ -50,6 +56,14 @@ log_scld_tpm <- read.csv(
   paste0(
     rna_data_path,
     "log_scld_tpm_soi.csv"
+  ),
+  row.names = 1
+)
+
+log_tpm <- read.csv(
+  paste0(
+    rna_data_path,
+    "log_tpm_soi.csv"
   ),
   row.names = 1
 )
@@ -121,7 +135,7 @@ selected_combination <- reg_hyperparam_df[index, ]
 selected_feature <- selected_combination$Feature
 selected_rna_set <- selected_combination$RNA_set
 selected_trees <- selected_combination$Trees
-selected_depth <- selected_combination$Max.Depth
+selected_depth <- selected_combination$Max_Depth
 selected_eta <- selected_combination$Eta
 selected_child_weight <- 1
 
@@ -130,9 +144,7 @@ rna_list <- list(
   scalled_transcripts_per_million = scld_tpm_set,
   log_scalled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm,
-  expected_counts = exp_set
   scalled_expected_counts = scld_exp_set,
-  log_expected_counts = log_exp
   log_scalled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
@@ -173,13 +185,15 @@ y <- as.numeric(full_df[[selected_feature]])
 X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 cat("\n\n Predictors: \n")
 print(head(X[, 1:5]))
+cat("\n\n ")
 
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  gam = seq(0.0, 0.3, 0.5)
+  gam = seq(0, 0.15, 0.05)
 )
 
+set.seed(99)
 for (j in 1:nrow(grid)) { # nolint
   cat(paste0(
     "\t\t eta: ", lr,
@@ -189,8 +203,6 @@ for (j in 1:nrow(grid)) { # nolint
     "\t\t child_weight: ", min_child,
     "\n"
   ))
-
-  set.seed(99)
 
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,

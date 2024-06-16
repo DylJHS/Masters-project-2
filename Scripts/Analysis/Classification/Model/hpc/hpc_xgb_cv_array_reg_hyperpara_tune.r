@@ -133,9 +133,9 @@ print(head(reg_hyperparam_df))
 selected_combination <- reg_hyperparam_df[index, ]
 selected_feature <- selected_combination$Feature
 selected_rna_set <- selected_combination$RNA_set
-selected_trees <- 100
-selected_depth <- 5
-selected_eta <- 0.3
+selected_trees <- selected_combination$Trees
+selected_depth <- selected_combination$Max_Depth
+selected_eta <- selected_combination$Eta
 selected_min_child <- 1
 
 rna_list <- list(
@@ -143,9 +143,7 @@ rna_list <- list(
   scalled_transcripts_per_million = scld_tpm_set,
   log_scalled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm,
-  expected_counts = exp_set,
   scalled_expected_counts = scld_exp_set,
-  log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
@@ -186,12 +184,12 @@ y <- as.numeric(full_df[[selected_feature]])
 X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
 cat("\n\n Predictors: \n")
 print(head(X[, 1:5]))
+cat("\n\n ")
 
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  tree = seq(100, 4000, 500),
-  gam = seq(0, 0.23, 0.3)
+  gam = seq(0, 0.15, 0.05)
 )
 
 set.seed(100)
@@ -200,14 +198,14 @@ for (j in 1:nrow(grid)) { # nolint
     "\t\t eta: ", selected_eta,
     "\t\t gamma: ", grid$gam[j],
     "\t\t depth: ", selected_depth,
-    "\t\t trees: ", grid$tree[j],
+    "\t\t trees: ", selected_trees,
     "\t\t child_weight: ", selected_min_child,
     "\n"
   ))
 
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
-    nrounds = grid$tree[j],
+    nrounds = selected_trees,
     objective = "reg:squarederror",
     eval_metric = "rmse",
     early_stopping_rounds = 250,
@@ -266,7 +264,7 @@ for (j in 1:nrow(grid)) { # nolint
 
   aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
     RNA_Set = selected_rna_set,
-    Trees = grid$tree[j],
+    Trees = selected_trees,
     Feature = selected_feature,
     Depth = selected_depth,
     Child_weight = selected_min_child,
@@ -292,5 +290,10 @@ name <- paste0(
   str_replace_all(" ", "_") %>%
   str_replace_all(":", "_")
 
+write.csv(
+  aneu_reg_metrics_df,
+  file = name,
+  row.names = FALSE
+)
 
 cat("\n Completed processing for index: ", index, "\n")

@@ -2100,3 +2100,23 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - The AUC in the eval metric is the aggregate of each of the individual class AUC measurements weighing each by its prevalence in the dataset (this is only for the evaluation and not the training, still need to calculate the weights myself for that)
 
 - Tuning the #trees is taking a while 
+
+
+ 14/06/24
+
+- Think it would be nice to visualise the difference/improvement in the categorical models foo
+
+- Curating the number of trees (nrounds) to use for training for each one of the variables
+- using the max nround (rounded up to the closest hundred) of the 3 lowest RMSE associated iterations (excluding the iterations with NA for the number of rounds)
+- Based on the CV for the regression-based models (see aneu_reg_xgb_metrics.xlsm and/or GBM_hyperparameters.xlsx)
+
+- Forgot to set the seeds during cv 
+- Validating the previous hyperparameteres using seed() 
+
+
+15/06/24
+
+- Validating the regression hyper-parameters using cv 
+- Validation of the RNA_sets revealed some of them are indeed present when they were not previously (used cv with 10000 rounds 5 fold cv, 250 early stopping)
+- Validating the # of trees as the numbers that showed for the RNA-set validation indicated that then nrounds should be less than what was estimated previously (100-7000 nround 5 fold cv,500 step size)
+- Need to evaluate the predictions from the model not just ehe mlogloss that is output, so that I can generat the roc plot and AUC measures per class 
