@@ -52,10 +52,6 @@ cnvs_arm <- cvn_arm %>%
 Get a sense of the data distribution for class imbalance
 
 ```{r}
-
-old <- data.frame(loss = numeric(),
-                  gain = numeric(),
-                  normal = numeric())
 freq <- cnvs_arm %>% 
   as.data.frame() %>% 
   gather(key = "arm", value = "freq", -Type) %>% 

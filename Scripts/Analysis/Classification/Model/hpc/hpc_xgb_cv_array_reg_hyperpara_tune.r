@@ -30,7 +30,7 @@ scld_exp_set <- read.csv(
 )
 
 cat("\n\n Log-Scaled Expected Counts df: \n")
-print(head(log_scld_exp[, 1:10]))
+print(head(log_scld_exp[, 1:5]))
 
 # RNA TPM sets
 tpm_set <- read.csv(
@@ -41,7 +41,7 @@ tpm_set <- read.csv(
   row.names = 1
 )
 cat("\n\n TPM df: \n")
-print(head(tpm_set[, 1:10]))
+print(head(tpm_set[, 1:5]))
 
 scld_tpm_set <- read.csv(
   paste0(
@@ -118,9 +118,9 @@ aneu_reg_feature_list <- colnames(full_cin)
 
 cat("\n\n All feature names: ", colnames(full_cin), "\n")
 cat("\n\n full cin data: \n")
-print(head(full_cin[, 1:5]))
-rm(hrd)
-rm(peri_cnv)
+# print(head(full_cin[, 1:5]))
+# rm(hrd)
+# rm(peri_cnv)
 
 # import the hyperparameter df
 reg_hyperparam_df <- read.csv(
@@ -160,13 +160,14 @@ cat(paste0(
 
 # Now select the data based on these choices
 rna_data <- rna_list[[selected_rna_set]]
-cat("\n\n RNA data: \n")
-print(head(rna_data[, 1:5]))
-cat("\n\n")
+# cat("\n\n RNA data: \n")
+# print(head(rna_data[, 1:5]))
+# cat("\n\n")
 
 full_df <- merge(rna_data, full_cin, by = "row.names")
 cat("\n\n full_df: \n")
 print(head(full_df[, 1:5]))
+cat("\n\n")
 
 aneu_reg_metrics_df <- data.frame(
   RNA_Set = character(),
@@ -182,14 +183,14 @@ aneu_reg_metrics_df <- data.frame(
 
 y <- as.numeric(full_df[[selected_feature]])
 X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
-cat("\n\n Predictors: \n")
-print(head(X[, 1:5]))
-cat("\n\n ")
+# cat("\n\n Predictors: \n")
+# print(head(X[, 1:5]))
+# cat("\n\n ")
 
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
 grid <- expand.grid(
-  gam = seq(0, 0.15, 0.05)
+  gam = seq(1.5, 2.5, 0.5)
 )
 
 set.seed(100)
@@ -208,13 +209,13 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = selected_trees,
     objective = "reg:squarederror",
     eval_metric = "rmse",
-    early_stopping_rounds = 250,
+    early_stopping_rounds = 100,
     nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
     eta = selected_eta,
     gamma = grid$gam[j],
-    verbose = 0
+    print_every_n = 50
   )
 
   best_iteration <- 0
