@@ -5,14 +5,20 @@ library(xgboost)
 library(caret)
 library(caTools)
 
-args <- commandArgs(trailingOnly = TRUE)
-index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
+# args <- commandArgs(trailingOnly = TRUE)
+# index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
-rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
-depth <- 5
-min_child <- 1
-selected_trees <- 1000
-lr <- 0.3
+selected_depth <- 5
+selected_min_child <- 1
+selected_lr <- 0.3
+selected_gamma <- 0
+selected_trees <- 10000
+selected_weights <- c(0.45, 0.05, 0.45)
+
+setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+
+rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
+index <- 4
 
 # RNA SOI SETS
 # Expected Counts
@@ -87,7 +93,7 @@ log_scld_tpm <- read.csv(
 # Arm Level Aneuploidies
 # Load the data
 chr_cnv <- read_tsv(
-  "/hpc/shared/prekovic/dhaynessimmons/data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+  "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
 ) %>%
   replace(is.na(.), 0) %>%
   select(-c("Type", "Aneuploidy Score")) %>%
@@ -121,7 +127,7 @@ aneu_cat_metrics_df <- data.frame(
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
-  scalled_transcripts_per_million = scld_tpm_set, 
+  scalled_transcripts_per_million = scld_tpm_set,
   log_scalled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm,
   expected_counts = exp_set,
@@ -131,74 +137,23 @@ rna_list <- list(
 )
 rna_names <- names(rna_list)
 
-combinations <- expand.grid(
-  feature = aneu_cat_feature_list,
-  RNA_Set = rna_names,
-  stringsAsFactors = FALSE
-)
+selected_feature <- aneu_cat_feature_list[[index]]
 
-cat("\n\n All combinations: ")
-print(combinations)
+for (i in 1:length(rna_list)) {
+  rna <- rna_list[[i]]
+  name <- names(rna_list)[i]
+  cat(paste0("\t", name, "\n"))
+  print(head(rna[, 1:5]))
+  cat("\n\n")
 
-total_combinations <- nrow(combinations)
-cat("\n\n Number fo total combinations: ", total_combinations)
+  full_df <- merge(rna,
+    chr_cnv,
+    by = "row.names"
+  )
 
-# Select the specific feature and RNA set based on the SLURM task ID
-selected_combination <- combinations[index, ]
-selected_feature <- selected_combination$feature
-selected_rna_set <- selected_combination$RNA_Set
+  y <- as.integer(full_df[[selected_feature]])
+  X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
 
-cat(paste0(
-  "\n\n Running model for feature: ",
-  selected_feature,
-  " and RNA set: ",
-  selected_rna_set, "\n"
-))
-
-# Now select the data based on these choices
-rna_data <- rna_list[[selected_rna_set]]
-
-cat("\n\n RNA data: \n")
-print(head(rna_data[, 1:5]))
-cat("\n\n R data: \n")
-print(head(rna_data[, 1:5]))
-cat("\n\n")
-
-full_df <- merge(rna_data,
-  chr_cnv,
-  by = "row.names"
-)
-cat("\n\n full_df: \n")
-print(head(full_df[, 1:5]))
-cat("\n\n")
-
-y <- as.integer(full_df[[selected_feature]])
-X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
-cat("\n\n Predicotrs: \n")
-# print(head(X[, 1:5]))
-
-grid <- expand.grid(
-  w1 = seq(0.50, 0.70, 0.05),
-  w2 = seq(0.05, 0.06, 0.05),
-  w3 = seq(0.50, 0.70, 0.05)
-)
-set.seed(101)
-for (j in 1:nrow(grid)) { # nolint
-  selected_weights <- c(grid$w1[j], grid$w2[j], grid$w3[j])
-
-  cat(paste0(
-    # "\t\t eta: ", lr,
-    # "\t\t gamma: ", grid$gam[j],
-    # "\t\t depth: ", depth,
-    # "\t\t trees: ", selected_trees,
-    # "\t\t child_weight: ", min_child,
-    "\t\t Loss Weight: ", selected_weights[1],
-    "\t\t Norm Weight: ", selected_weights[2],
-    "\t\t Gain Weight: ", selected_weights[3],
-    "\n"
-  ))
-
-  # Function to map factor levels to weights
   feature_digit_function <- function(factors) {
     sapply(factors, function(x) selected_weights[as.numeric(x)])
   }
@@ -208,6 +163,11 @@ for (j in 1:nrow(grid)) { # nolint
 
   xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
 
+  cat(paste0(
+    "\t\t Depth: ", selected_depth,
+    "\n"
+  ))
+
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
     nrounds = selected_trees,
@@ -215,16 +175,14 @@ for (j in 1:nrow(grid)) { # nolint
     eval_metric = "auc",
     early_stopping_rounds = 100,
     nfold = 5,
-    max_depth = depth,
-    min_child_weight = min_child,
-    eta = lr,
-    gamma = 0,
+    max_depth = selected_depth,
+    eta = selected_lr,
+    gamma = selected_gamma,
     num_class = 3,
-    print_every_n = 25
+    print_every_n = 2
   )
 
   best_iteration <- 0
-
 
   # First, check if best_iteration is valid
   if (is.null(
@@ -262,21 +220,19 @@ for (j in 1:nrow(grid)) { # nolint
     NA # Or appropriate default/error value
   }
 
-
   cat(paste0(
     "The best iteration occurs with tree #: ",
     best_iteration, "\n\n"
   ))
 
-
   aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
-    RNA_Set = selected_rna_set,
+    RNA_Set = name,
     Trees = selected_trees,
     Feature = selected_feature,
-    Depth = depth,
-    Child_weight = min_child,
-    Learning_Rate = lr,
-    Gamma = 0,
+    Depth = selected_depth,
+    Child_weight = selected_min_child,
+    Learning_Rate = selected_lr,
+    Gamma = selected_gamma,
     Weight_loss = selected_weights[1],
     Weight_norm = selected_weights[2],
     Weight_gain = selected_weights[3],
@@ -285,16 +241,15 @@ for (j in 1:nrow(grid)) { # nolint
   ))
 }
 
-
 datetime <- Sys.time() %>%
   str_replace_all(" ", "_") %>%
   str_replace_all(":", "_")
 
 name <- paste0(
-  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/categorical/Cat_xgb_metrics_params_",
+  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical",
   selected_feature, "_",
   selected_rna_set, "_",
-  datetime, ".csv"
+  datetime, "test.csv"
 ) %>%
   str_replace_all(" ", "_") %>%
   str_replace_all(":", "_")
