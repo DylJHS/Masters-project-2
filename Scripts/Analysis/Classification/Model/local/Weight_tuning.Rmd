@@ -15,7 +15,7 @@ knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internsh
 
 ```{r}
 rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
-index <- 3
+index <- 10
 depth <- 5
 min_child <- 1
 selected_trees <- 1000
@@ -138,7 +138,7 @@ arm_weights <- freq %>%
 
 
 
-cat("\n\n All dfs loaded \n")
+print("\n\n All dfs loaded \n")
 
 aneu_cat_feature_list <- colnames(chr_cnv)
 ```
@@ -179,10 +179,10 @@ combinations <- expand.grid(
   stringsAsFactors = FALSE
 )
 
-cat("\n\n All combinations: ")
+print("\n\n All combinations: ")
 print(combinations)
 total_combinations <- nrow(combinations)
-cat("\n\n Number fo total combinations: ", total_combinations)
+# print("\n\n Number fo total combinations: ", total_combinations)
 ```
 
 
@@ -194,7 +194,7 @@ selected_rna_set <- selected_combination$RNA_Set
 # selected_weights <- as.numeric(arm_weights[[selected_feature]])
 
 
-# cat(paste0(
+# print(paste0(
 #   "\n\n Running model for feature: ",
 #   selected_feature,
 #   " and RNA set: ",
@@ -203,38 +203,39 @@ selected_rna_set <- selected_combination$RNA_Set
 #
 # # Now select the data based on these choices
 rna_data <- rna_list[[selected_rna_set]]
-# cat("\n\n RNA data: \n")
+# print("\n\n RNA data: \n")
 # print(head(rna_data[, 1:5]))
-# cat("\n\n R data: \n")
+# print("\n\n R data: \n")
 # print(head(rna_data[, 1:5]))
-# cat("\n\n")
+# print("\n\n")
 
 full_df <- merge(rna_data,
   chr_cnv,
   by = "row.names"
 )
-cat("\n\n full_df: \n")
+print("\n\n full_df: \n")
 print(head(full_df[, 1:5]))
-cat("\n\n")
+print("\n\n")
 
 y <- as.integer(full_df[[selected_feature]])
 X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
-cat("\n\n Predicotrs: \n")
+print("\n\n Predicotrs: \n")
 # print(head(X[, 1:5]))
 ```
 
 
 ```{r}
 grid <- expand.grid(
-  w1 = seq(0.05, 0.4, 0.05),
-  w2 = seq(0.05, 0.4, 0.05),
-  w3 = seq(0.05, 0.4, 0.05)
+  w1 = seq(0.30, 0.60, 0.1),
+  w2 = seq(0.05, 0.4, 0.5),
+  w3 = seq(0.30, 0.60, 0.1)
 )
 
+print(nrow(grid))
 
+set.seed(99)
 for (j in 1:nrow(grid)) { # nolint
   selected_weights <- c(grid$w1[j], grid$w2[j], grid$w3[j])
-  set.seed(99)
 
   cat(paste0(
     # "\t\t eta: ", lr,
@@ -263,14 +264,14 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = selected_trees,
     objective = "multi:softprob",
     eval_metric = "auc",
-    early_stopping_rounds = 10,
+    early_stopping_rounds = 50,
     nfold = 2,
     max_depth = depth,
     min_child_weight = min_child,
     eta = lr,
     gamma = 0,
     num_class = 3,
-    print_every_n = 10
+    print_every_n = 20
   )
 
   best_iteration <- 0
@@ -351,3 +352,8 @@ name <- paste0(
 
 cat("\n Completed processing for index: ", index, "\n")
 ```
+
+```{r}
+write.csv(aneu_cat_metrics_df, paste0("cat_weights_eval_", index, ".csv"))
+```
+

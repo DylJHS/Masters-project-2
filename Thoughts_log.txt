@@ -2120,3 +2120,29 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Validation of the RNA_sets revealed some of them are indeed present when they were not previously (used cv with 10000 rounds 5 fold cv, 250 early stopping)
 - Validating the # of trees as the numbers that showed for the RNA-set validation indicated that then nrounds should be less than what was estimated previously (100-7000 nround 5 fold cv,500 step size)
 - Need to evaluate the predictions from the model not just ehe mlogloss that is output, so that I can generat the roc plot and AUC measures per class 
+
+ 16/06/24
+
+- When selecting the correct number of nrounds, selecting based on the iterations that generated the 3 lowest (best) RMSE values. Selected the iteration that is associated with the fewest nrounds (# trees) of the best 3. 
+- Tuning the gamma parameter, using the defined hyperparameters that have already been run (RNA_set, # Trees, Max Depth, Learning Rate)
+- Using 5-fold cv and using 100 early-stopping rounds (this is because the goal is not the lowest RMSE but to assess the difference between the Train and Test RMSE)
+- Want to select the gamma that yields a low difference between the RMSE measures (the test model reflects the training model)
+- The cv rounds from 0-0.15 gamma with 0.05 step and 0-0.9 at 0.03 step
+
+- Specifying the selected gamma by selecting the gamma that is associated with the lowest average gap between the train and the test RMSE 
+
+- Ran the categorical 1p example model with both weights and unweighted to assess the performance
+- The unweighted model performed better suggesting that just taking the inverse of the frequencies of the classes may be too aggressive
+- Need to tune this parameter (weight) for each of the features
+
+
+17/06/24
+
+- Reevaluating the categorical model for the weighted vs unweighted classes in terms of the AUC (still mean-weighted by class prevalence) does show an increase in performance with certain weights
+- As opposed to the mlogloss metric which decreased consistently with the weight parameters
+- Only for the 1p so far
+- Writing the script for the hpc so it can run on more folds and all the features
+- Running the weight tuning script on the hpc for 5 fold cv with 1000 nrounds, 100 early stopping, for weights ranging from seq(0.05, 0.6, 0.1) for each of the 3 weights (loss, norm, gain)
+
+
+

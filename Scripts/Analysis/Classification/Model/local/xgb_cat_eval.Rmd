@@ -21,7 +21,7 @@ knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internsh
 ```{r}
 depth <- 5
 min_child <- 1
-lr <- 0.3
+lr <- 0.03
 nrounds <- 1000
 target <- "1p"
 ```
@@ -72,10 +72,15 @@ arm_weights <- freq %>%
   setNames(make.unique(unlist(.[1, ]))) %>%   # Convert first row to column names
   .[-1, ]  
 
-
+target_weights <- arm_weights[[target]]
+target_weights <- c(0.05, 0.4, 0.25)
 ```
 Manipulate the data
 ```{r}
+# Function to map factor levels to weights
+feature_digit_function <- function(factors) {
+  sapply(factors, function(x) target_weights[as.numeric(x)])}  
+
 # Combine the data
 full_df <- log_scld_tpm %>% 
   merge(chr_cnv, by = 0) %>% 
@@ -98,13 +103,16 @@ random_sample_ids <- sample(
 train_set <- full_df[!rownames(full_df) %in% random_sample_ids, ]
 test_set <- full_df[rownames(full_df) %in% random_sample_ids, ]
 
+train_y_factor <- factor(train_set[, target], levels = c(0, 1, 2))
+weights <- as.numeric(feature_digit_function(train_y_factor))
+
 train_x <- as.matrix(train_set[, c(colnames(log_scld_tpm))])
 train_y <- as.numeric(train_set[, target])
 
 test_x <- as.matrix(test_set[, c(colnames(log_scld_tpm))])
 test_y <- as.numeric(test_set[, target])
 
-xgb.train = xgb.DMatrix(data=train_x,label=train_y)
+xgb.train = xgb.DMatrix(data=train_x,label=train_y, weight = weights)
 xgb.test = xgb.DMatrix(data=test_x,label=test_y)
 
 ```
@@ -119,10 +127,9 @@ xgb_params <- list(
   num_class = 3,
   max_depth = depth,
   eta = lr,
-  gamma = 0
+  gamma = 0,
   nrounds = nrounds,
-  min_child_weight = min_child,
-  scale_pos_weight = arm_weights[[target]]
+  min_child_weight = min_child
 )
 
 # Train the model
@@ -132,7 +139,46 @@ xgb_model <- xgb.train(
   nrounds = nrounds,
   watchlist = list(train = xgb.train, test = xgb.test),
   print_every_n = 10,
-  early_stopping_rounds = 100
+  early_stopping_rounds = 200
 )
+```
+```{r}
+xgb_pred <- predict(xgb_model, xgb.test)
+xgb_pred <- as.data.frame(xgb_pred)
+rownames(xgb_pred) <- rownames(test_set)
+xgb_pred$actual <- test_y
+
+confuse_matrix <- confusionMatrix(
+  factor(xgb_pred$actual, levels = c(0, 1, 2)),
+  factor(xgb_pred$xgb_pred, levels = c(0, 1, 2)))
+
+matrix_df <- as.data.frame(as.table(confuse_matrix$table))
+
+wide_df <- pivot_wider(matrix_df, names_from = Reference, values_from = Freq, values_fill = list(frequency = 0)) %>% 
+  column_to_rownames("Prediction") %>% 
+  sweep(., 2, colSums(.), "/") %>% 
+  round(., 2) %>% 
+  rownames_to_column("Prediction")
+
+long_df <- pivot_longer(wide_df, cols = -Prediction, names_to = "Reference", values_to = "NormalizedFreq") %>% 
+  mutate(NormalizedFreq = round(NormalizedFreq, 2))
+
+# Create the heatmap using ggplot2
+heatmap_plot <- ggplot(long_df, aes(x = Reference, y = Prediction, fill = NormalizedFreq)) +
+  geom_tile(color = "black",
+            linetype = 1,
+            lwd = 0.4) +  # Use white lines to separate the tiles
+  geom_text(aes(label = NormalizedFreq), color = "black") +  # Add text labels
+  scale_fill_gradient(low = "white", high = "red3") +  # Colors can be adjusted
+  labs(title = "Normalised Multi-class Confusion Matrix",
+       subtitle = paste0("Feaure: ",target),
+       x = "Actual Class",
+       y = "Predicted Class") +
+  theme_minimal() +
+  theme(axis.text.x = element_text( hjust = 1),  # Adjust text angle for better legibility
+        plot.title = element_text(hjust = 0.5))  # Center the plot title
+
+# Display the plot
+print(heatmap_plot)
 ```
 

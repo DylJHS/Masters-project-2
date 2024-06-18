@@ -100,24 +100,36 @@ chr_cnv <- read_tsv(
 cat("\n\n arm level data: \n")
 print(head(chr_cnv[, 1:5]))
 
+# Calculate the weights for each arm
+freq <- chr_cnv %>%
+  as.data.frame() %>%
+  gather(key = "arm", value = "freq") %>%
+  group_by(arm) %>%
+  count(freq) %>%
+  as.data.frame() %>%
+  spread(key = freq, value = n) %>%
+  replace(is.na(.), 0)
+
+arm_weights <- freq %>%
+  mutate(total = rowSums(select(., -arm))) %>%
+  # mutate_at(vars(-arm, -total), list(~1 - round((.+50) / total, 2))) %>%
+  mutate_at(vars(-arm, -total), list(~ 1 - log1p(.) / log1p(total))) %>%
+  mutate(total = rowSums(select(., -arm, -total))) %>%
+  mutate_at(vars(-arm, -total), list(~ round(. / total, 2))) %>%
+  select(-total) %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(make.unique(unlist(.[1, ]))) %>%
+  .[-1, ]
+
+cat("\n\n arm weights: \n")
+print(head(arm_weights[, 1:5]))
+
+print("\n\n All dfs loaded \n")
+
 aneu_cat_feature_list <- colnames(chr_cnv)
 
 # MODELLING
-
-aneu_cat_metrics_df <- data.frame(
-  RNA_Set = character(),
-  Trees = numeric(),
-  Feature = character(),
-  Depth = numeric(),
-  Child_weight = numeric(),
-  Learning_Rate = numeric(),
-  Gamma = numeric(),
-  Weight_loss = numeric(),
-  Weight_norm = numeric(),
-  Weight_gain = numeric(),
-  Trained_Logloss = numeric(),
-  Test_Logloss = numeric()
-)
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
@@ -147,6 +159,8 @@ cat("\n\n Number fo total combinations: ", total_combinations)
 selected_combination <- combinations[index, ]
 selected_feature <- selected_combination$feature
 selected_rna_set <- selected_combination$RNA_Set
+selected_weights <- as.numeric(arm_weights[[selected_feature]])
+
 
 cat(paste0(
   "\n\n Running model for feature: ",
@@ -177,112 +191,111 @@ X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
 cat("\n\n Predicotrs: \n")
 # print(head(X[, 1:5]))
 
-grid <- expand.grid(
-  w1 = seq(0.15, 0.6, 0.1),
-  w2 = seq(0.05, 0.3, 0.5),
-  w3 = seq(0.15, 0.6, 0.1)
+
+
+
+loss_weight <- selected_weights[1]
+norm_weight <- selected_weights[2]
+gain_weight <- selected_weights[3]
+
+set.seed(99)
+
+cat(paste0(
+  # "\t\t eta: ", lr,
+  # "\t\t gamma: ", grid$gam[j],
+  # "\t\t depth: ", depth,
+  # "\t\t trees: ", selected_trees,
+  # "\t\t child_weight: ", min_child,
+  "\t\t Loss Weight: ", loss_weight,
+  "\t\t Norm Weight: ", norm_weight,
+  "\t\t Gain Weight: ", gain_weight,
+  "\n"
+))
+
+# Function to map factor levels to weights
+feature_digit_function <- function(factors) {
+  sapply(factors, function(x) selected_weights[as.numeric(x)])
+}
+
+train_y_factor <- factor(y, levels = c(0, 1, 2))
+weights <- as.numeric(feature_digit_function(train_y_factor))
+
+xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
+
+m_xgb_untuned <- xgb.cv(
+  data = xgb_data,
+  nrounds = selected_trees,
+  objective = "multi:softprob",
+  eval_metric = "auc",
+  early_stopping_rounds = 100,
+  nfold = 5,
+  max_depth = depth,
+  min_child_weight = min_child,
+  eta = lr,
+  gamma = 0,
+  num_class = 3,
+  print_every_n = 25
 )
-set.seed(101)
-for (j in 1:nrow(grid)) { # nolint
-  selected_weights <- c(grid$w1[j], grid$w2[j], grid$w3[j])
 
+best_iteration <- 0
+
+# First, check if best_iteration is valid
+if (is.null(
+  m_xgb_untuned$best_iteration
+) ||
+  m_xgb_untuned$best_iteration < 1) {
   cat(paste0(
-    # "\t\t eta: ", lr,
-    # "\t\t gamma: ", grid$gam[j],
-    # "\t\t depth: ", depth,
-    # "\t\t trees: ", selected_trees,
-    # "\t\t child_weight: ", min_child,
-    "\t\t Loss Weight: ", selected_weights[1],
-    "\t\t Norm Weight: ", selected_weights[2],
-    "\t\t Gain Weight: ", selected_weights[3],
-    "\n"
+    "Warning: No valid best_iteration found.",
+    " Using last iteration values instead.\n"
   ))
-
-  # Function to map factor levels to weights
-  feature_digit_function <- function(factors) {
-    sapply(factors, function(x) selected_weights[as.numeric(x)])
-  }
-
-  train_y_factor <- factor(y, levels = c(0, 1, 2))
-  weights <- as.numeric(feature_digit_function(train_y_factor))
-
-  xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
-
-  m_xgb_untuned <- xgb.cv(
-    data = xgb_data,
-    nrounds = selected_trees,
-    objective = "multi:softprob",
-    eval_metric = "auc",
-    early_stopping_rounds = 100,
-    nfold = 5,
-    max_depth = depth,
-    min_child_weight = min_child,
-    eta = lr,
-    gamma = 0,
-    num_class = 3,
-    print_every_n = 25
-  )
-
-  best_iteration <- 0
-
-  # First, check if best_iteration is valid
-  if (is.null(
-    m_xgb_untuned$best_iteration
-  ) ||
-    m_xgb_untuned$best_iteration < 1) {
+  # Use the last iteration if best_iteration is not valid
+  best_iteration <- nrow(m_xgb_untuned$evaluation_log)
+} else {
+  # Ensure that the best_iteration does not exceed the number of rows logged
+  if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
     cat(paste0(
-      "Warning: No valid best_iteration found.",
-      " Using last iteration values instead.\n"
+      "Warning: best_iteration exceeds the number of rows in evaluation_log.",
+      " Adjusting to maximum available.\n"
     ))
-    # Use the last iteration if best_iteration is not valid
     best_iteration <- nrow(m_xgb_untuned$evaluation_log)
   } else {
-    # Ensure that the best_iteration does not exceed the number of rows logged
-    if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
-      cat(paste0(
-        "Warning: best_iteration exceeds the number of rows in evaluation_log.",
-        " Adjusting to maximum available.\n"
-      ))
-      best_iteration <- nrow(m_xgb_untuned$evaluation_log)
-    } else {
-      best_iteration <- m_xgb_untuned$best_iteration
-    }
+    best_iteration <- m_xgb_untuned$best_iteration
   }
-
-  best_auc_train <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_auc_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
-
-  best_auc_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_auc_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
-
-
-  cat(paste0(
-    "The best iteration occurs with tree #: ",
-    best_iteration, "\n\n"
-  ))
-
-
-  aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
-    RNA_Set = selected_rna_set,
-    Trees = selected_trees,
-    Feature = selected_feature,
-    Depth = depth,
-    Child_weight = min_child,
-    Learning_Rate = lr,
-    Gamma = 0,
-    Weight_loss = selected_weights[1],
-    Weight_norm = selected_weights[2],
-    Weight_gain = selected_weights[3],
-    Trained_AUC = best_auc_train,
-    Test_AUC = best_auc_test
-  ))
 }
+
+best_auc_train <- if (best_iteration > 0) {
+  m_xgb_untuned$evaluation_log$train_auc_mean[best_iteration]
+} else {
+  NA # Or appropriate default/error value
+}
+
+best_auc_test <- if (best_iteration > 0) {
+  m_xgb_untuned$evaluation_log$test_auc_mean[best_iteration]
+} else {
+  NA # Or appropriate default/error value
+}
+
+
+cat(paste0(
+  "The best iteration occurs with tree #: ",
+  best_iteration, "\n\n"
+))
+
+
+aneu_cat_metrics_df <- data.frame(
+  RNA_Set = selected_rna_set,
+  Trees = selected_trees,
+  Feature = selected_feature,
+  Depth = depth,
+  Child_weight = min_child,
+  Learning_Rate = lr,
+  Gamma = 0,
+  Weight_loss = selected_weights[1],
+  Weight_norm = selected_weights[2],
+  Weight_gain = selected_weights[3],
+  Trained_AUC = best_auc_train,
+  Test_AUC = best_auc_test
+)
 
 
 datetime <- Sys.time() %>%
@@ -290,7 +303,7 @@ datetime <- Sys.time() %>%
   str_replace_all(":", "_")
 
 name <- paste0(
-  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/categorical/Cat_xgb_metrics_params_",
+  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/categorical/Cat_xgb_metrics_weights_",
   selected_feature, "_",
   selected_rna_set, "_",
   datetime, ".csv"
