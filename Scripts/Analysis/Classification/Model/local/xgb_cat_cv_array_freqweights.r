@@ -5,13 +5,18 @@ library(xgboost)
 library(caret)
 library(caTools)
 
+# args <- commandArgs(trailingOnly = TRUE)
+# index <- as.numeric(args[1])
+
+index <- 40
+
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
-index <- 4
 min_child <- 1
 selected_trees <- 1000
 lr <- 0.3
+depth <- 5
 
 # RNA SOI SETS
 # Expected Counts
@@ -86,7 +91,8 @@ log_scld_tpm <- read.csv(
 # Arm Level Aneuploidies
 # Load the data
 chr_cnv <- read_tsv(
-  "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt") %>%
+  "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+) %>%
   replace(is.na(.), 0) %>%
   select(-c("Type", "Aneuploidy Score")) %>%
   mutate(Sample = str_replace_all(Sample, "-", "\\.")) %>%
@@ -131,7 +137,7 @@ aneu_cat_feature_list <- colnames(chr_cnv)
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
-  scalled_transcripts_per_million = scld_tpm_set, 
+  scalled_transcripts_per_million = scld_tpm_set,
   log_scalled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm,
   expected_counts = exp_set,
@@ -225,8 +231,9 @@ m_xgb_untuned <- xgb.cv(
   nrounds = selected_trees,
   objective = "multi:softprob",
   eval_metric = "auc",
-  early_stopping_rounds = 100,
-  nfold = 5,
+  early_stopping_rounds = 50,
+  nfold = 2,
+  nthreads = 2,
   max_depth = depth,
   min_child_weight = min_child,
   eta = lr,
@@ -304,10 +311,11 @@ name <- paste0(
   "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical",
   selected_feature, "_",
   selected_rna_set, "_",
-  datetime, ".csv"
-) %>%
+  datetime) %>%
   str_replace_all(" ", "_") %>%
-  str_replace_all(":", "_")
+  str_replace_all(":", "_") %>%
+  str_replace_all("\\.", "_") %>%
+  paste0(".csv")
 
 write.csv(
   aneu_cat_metrics_df,

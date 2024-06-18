@@ -1,0 +1,41 @@
+---
+title: "Categorical Weights Assessment"
+output: html_document
+date: "2024-06-18"
+Notes: "This is a file for the Categorical Weights Assessment, where the weights of the categories are assessed and the results are presented in a table and visualized in a line plot."
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir ="/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+Read in the data from the individual files
+```{r}
+folder <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical"
+
+full_df <- data.frame()
+for (file in list.files(folder, pattern = "*.csv")){
+  current_file <- read.csv(paste0(folder, "/", file))
+  full_df <- rbind(full_df, current_file)
+}
+```
+
+Create df of the unique Features by best AUC
+```{r}
+best_auc <- full_df %>% 
+  group_by(Feature) %>%
+  slice_max(Test_AUC, n = 1) %>%
+  ungroup() %>% 
+  select(Feature, Weight_loss, Weight_norm, Weight_gain, Test_AUC) %>% 
+  mutate(combo = paste(Weight_loss, Weight_norm, Weight_gain, sep = "_")) 
+
+weight_loss_freq <- as.data.frame(table(best_auc$Weight_loss)) %>% 
+  rename(Weight_loss = Var1)
+weight_gain_freq <- as.data.frame(table(best_auc$Weight_gain)) %>% 
+  rename(Weight_gain = Var1)
+weight_norm_freq <- as.data.frame(table(best_auc$Weight_norm)) %>% 
+  rename(Weight_norm = Var1)
+combo_freq <- as.data.frame(table(best_auc$combo)) %>%
+  rename(combo = Var1)
+```
+

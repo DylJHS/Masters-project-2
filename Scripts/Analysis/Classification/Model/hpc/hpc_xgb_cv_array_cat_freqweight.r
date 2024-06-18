@@ -275,12 +275,10 @@ best_auc_test <- if (best_iteration > 0) {
   NA # Or appropriate default/error value
 }
 
-
 cat(paste0(
   "The best iteration occurs with tree #: ",
   best_iteration, "\n\n"
 ))
-
 
 aneu_cat_metrics_df <- data.frame(
   RNA_Set = selected_rna_set,
@@ -297,7 +295,6 @@ aneu_cat_metrics_df <- data.frame(
   Test_AUC = best_auc_test
 )
 
-
 datetime <- Sys.time() %>%
   str_replace_all(" ", "_") %>%
   str_replace_all(":", "_")
@@ -306,10 +303,11 @@ name <- paste0(
   "/hpc/shared/prekovic/dhaynessimmons/data/model_output/categorical/Cat_xgb_metrics_weights_",
   selected_feature, "_",
   selected_rna_set, "_",
-  datetime, ".csv"
-) %>%
+  datetime) %>%
   str_replace_all(" ", "_") %>%
-  str_replace_all(":", "_")
+  str_replace_all(":", "_") %>%
+  str_replace_all("\\.", "_") %>%
+  paste0(".csv")
 
 write.csv(
   aneu_cat_metrics_df,
