@@ -23,7 +23,7 @@ depth <- 5
 min_child <- 1
 lr <- 0.03
 nrounds <- 1000
-target <- "1p"
+target <- "3p"
 ```
 
 Loading the test variables and data
@@ -73,7 +73,7 @@ arm_weights <- freq %>%
   .[-1, ]  
 
 target_weights <- arm_weights[[target]]
-target_weights <- c(0.05, 0.4, 0.25)
+# target_weights <- c(0.5, 0.5, 0.5)
 ```
 Manipulate the data
 ```{r}
@@ -94,7 +94,7 @@ all_sample_ids <- rownames(full_df)
 num_samples_to_select <- round(0.25 * length(all_sample_ids))
 
 # Get a random sample of sample IDs
-set.seed(99)
+set.seed(97)
 random_sample_ids <- sample(
   all_sample_ids, num_samples_to_select, replace = FALSE
 )
@@ -128,7 +128,6 @@ xgb_params <- list(
   max_depth = depth,
   eta = lr,
   gamma = 0,
-  nrounds = nrounds,
   min_child_weight = min_child
 )
 
@@ -136,12 +135,14 @@ xgb_params <- list(
 xgb_model <- xgb.train(
   params = xgb_params,
   data = xgb.train,
-  nrounds = nrounds,
   watchlist = list(train = xgb.train, test = xgb.test),
   print_every_n = 10,
-  early_stopping_rounds = 200
+  nrounds = nrounds,
+  early_stopping_rounds = 100
 )
 ```
+
+
 ```{r}
 xgb_pred <- predict(xgb_model, xgb.test)
 xgb_pred <- as.data.frame(xgb_pred)
