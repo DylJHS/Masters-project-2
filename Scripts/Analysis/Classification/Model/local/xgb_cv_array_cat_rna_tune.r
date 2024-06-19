@@ -8,6 +8,12 @@ library(caTools)
 # args <- commandArgs(trailingOnly = TRUE)
 # index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
+setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
+
+index <- 4
+cat("The index for this run is: ", index,  "\n")
+
 selected_depth <- 5
 selected_min_child <- 1
 selected_lr <- 0.3
@@ -15,10 +21,7 @@ selected_gamma <- 0
 selected_trees <- 10000
 selected_weights <- c(0.45, 0.05, 0.45)
 
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
-rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
-index <- 4
 
 # RNA SOI SETS
 # Expected Counts
@@ -105,6 +108,7 @@ chr_cnv <- read_tsv(
 
 cat("\n\n arm level data: \n")
 print(head(chr_cnv[, 1:5]))
+cat("\n\n")
 
 aneu_cat_feature_list <- colnames(chr_cnv)
 
@@ -121,8 +125,8 @@ aneu_cat_metrics_df <- data.frame(
   Weight_loss = numeric(),
   Weight_norm = numeric(),
   Weight_gain = numeric(),
-  Trained_Logloss = numeric(),
-  Test_Logloss = numeric()
+  Trained_mlogloss = numeric(),
+  Test_mlogloss = numeric()
 )
 
 rna_list <- list(
@@ -138,6 +142,8 @@ rna_list <- list(
 rna_names <- names(rna_list)
 
 selected_feature <- aneu_cat_feature_list[[index]]
+cat("The selected feature is: ", selected_feature, "\n\n")
+
 
 for (i in 1:length(rna_list)) {
   rna <- rna_list[[i]]
@@ -208,14 +214,14 @@ for (i in 1:length(rna_list)) {
     }
   }
 
-  best_auc_train <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_auc_mean[best_iteration]
+  best_mlogloss_train <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$train_mlogloss_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
 
-  best_auc_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_auc_mean[best_iteration]
+  best_mlogloss_test <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$test_mlogloss_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
@@ -226,7 +232,7 @@ for (i in 1:length(rna_list)) {
   ))
 
   aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
-    RNA_Set = name,
+    RNA_Set = selected_rna_set,
     Trees = selected_trees,
     Feature = selected_feature,
     Depth = selected_depth,
@@ -236,8 +242,8 @@ for (i in 1:length(rna_list)) {
     Weight_loss = selected_weights[1],
     Weight_norm = selected_weights[2],
     Weight_gain = selected_weights[3],
-    Trained_AUC = best_auc_train,
-    Test_AUC = best_auc_test
+    Trained_mlogloss = best_mlogloss_train,
+    Test_mlogloss = best_mlogloss_test
   ))
 }
 

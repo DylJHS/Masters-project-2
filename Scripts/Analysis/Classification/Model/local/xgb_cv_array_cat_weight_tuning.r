@@ -8,6 +8,8 @@ library(caTools)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
+print(index)
+
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
@@ -222,11 +224,10 @@ for (j in 1:nrow(grid)) { # nolint
     eta = selected_lr,
     gamma = 0,
     num_class = 3,
-    print_every_n = 25
+    print_every_n = 15
   )
 
   best_iteration <- 0
-
 
   # First, check if best_iteration is valid
   if (is.null(

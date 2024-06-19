@@ -8,6 +8,8 @@ library(caTools)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
+cat("The index for this run is: ", index, "\n")
+
 selected_depth <- 5
 selected_min_child <- 1
 selected_lr <- 0.3
@@ -103,6 +105,7 @@ chr_cnv <- read_tsv(
 
 cat("\n\n arm level data: \n")
 print(head(chr_cnv[, 1:5]))
+cat("\n\n")
 
 aneu_cat_feature_list <- colnames(chr_cnv)
 
@@ -119,8 +122,8 @@ aneu_cat_metrics_df <- data.frame(
   Weight_loss = numeric(),
   Weight_norm = numeric(),
   Weight_gain = numeric(),
-  Trained_Logloss = numeric(),
-  Test_Logloss = numeric()
+  Trained_mlogloss = numeric(),
+  Test_mlogloss = numeric()
 )
 
 rna_list <- list(
@@ -136,11 +139,12 @@ rna_list <- list(
 rna_names <- names(rna_list)
 
 selected_feature <- aneu_cat_feature_list[[index]]
+cat("The selected feature is: ", selected_feature, "\n\n")
 
 for (i in 1:length(rna_list)) {
-  rna <- rna_list[[i]]
-  name <- names(rna_list)[i]
-  cat(paste0("\t", name, "\n"))
+  rna_data <- rna_list[[i]]
+  selected_rna_set <- names(rna_list)[i]
+  cat(paste0("\t", selected_rna_set, "\n"))
 
   full_df <- merge(rna_data,
     chr_cnv,
@@ -167,15 +171,15 @@ for (i in 1:length(rna_list)) {
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
     nrounds = selected_trees,
-    objective = "multi:softprob",
-    eval_metric = "auc",
+    objective = "multi:softmax",
+    eval_metric = "mlogloss",
     early_stopping_rounds = 100,
     nfold = 5,
     max_depth = selected_depth,
     eta = selected_lr,
     gamma = selected_gamma,
     num_class = 3,
-    print_every_n = 2
+    print_every_n = 10
   )
 
   best_iteration <- 0
@@ -204,14 +208,14 @@ for (i in 1:length(rna_list)) {
     }
   }
 
-  best_auc_train <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_auc_mean[best_iteration]
+  best_mlogloss_train <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$train_mlogloss_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
 
-  best_auc_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_auc_mean[best_iteration]
+  best_mlogloss_test <- if (best_iteration > 0) {
+    m_xgb_untuned$evaluation_log$test_mlogloss_mean[best_iteration]
   } else {
     NA # Or appropriate default/error value
   }
@@ -222,7 +226,7 @@ for (i in 1:length(rna_list)) {
   ))
 
   aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
-    RNA_Set = name,
+    RNA_Set = selected_rna_set,
     Trees = selected_trees,
     Feature = selected_feature,
     Depth = selected_depth,
@@ -232,8 +236,8 @@ for (i in 1:length(rna_list)) {
     Weight_loss = selected_weights[1],
     Weight_norm = selected_weights[2],
     Weight_gain = selected_weights[3],
-    Trained_AUC = best_auc_train,
-    Test_AUC = best_auc_test
+    Trained_mlogloss = best_mlogloss_train,
+    Test_mlogloss = best_mlogloss_test
   ))
 }
 
@@ -244,7 +248,7 @@ datetime <- Sys.time() %>%
 name <- paste0(
   "/hpc/shared/prekovic/dhaynessimmons/data/model_output/categorical/Cat_xgb_metrics_params_",
   selected_feature, "_",
-  selected_rna_set, "_",
+  index, "_",
   datetime, ".csv"
 ) %>%
   str_replace_all(" ", "_") %>%
