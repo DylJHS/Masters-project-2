@@ -8,17 +8,11 @@ library(caTools)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
-cat("The index for this run is: ", index, "\n")
-
-selected_depth <- 5
-selected_min_child <- 1
-selected_lr <- 0.3
-selected_gamma <- 0
-selected_trees <- 10000
-selected_weights <- c(0.45, 0.05, 0.45)
-
 rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
+depth <- 5
+min_child <- 1
+lr <- 0.3
 
 # RNA SOI SETS
 # Expected Counts
@@ -29,6 +23,9 @@ exp_set <- read.csv(
   ),
   row.names = 1
 )
+
+cat("\n Exp Count df: \n")
+print(head(exp_set[, 1:10]))
 
 scld_exp_set <- read.csv(
   paste0(
@@ -64,7 +61,7 @@ tpm_set <- read.csv(
 )
 
 cat("\n\n TPM df: \n")
-print(head(tpm_set[, 1:5]))
+print(head(tpm_set[, 1:10]))
 
 scld_tpm_set <- read.csv(
   paste0(
@@ -114,26 +111,7 @@ arm_weights <- freq %>%
   setNames(make.unique(unlist(.[1, ]))) %>% # Convert first row to column names
   .[-1, ]
 
-# Define the features to be used
 aneu_cat_feature_list <- colnames(chr_cnv)
-selected_feature <- aneu_cat_feature_list[[index]]
-rm(aneu_cat_feature_list)
-
-# Determine the class weights for the target feature
-target_weights <- arm_weights[, index]
-selected_weights <- target_weights
-print(selected_weights)
-
-target <- as.character(colnames(arm_weights)[index])
-cat("\n", target, "weights: ")
-print(target_weights)
-cat("\n\n")
-rm(arm_weights)
-
-# Function to map factor levels to weights
-feature_digit_function <- function(factors) {
-  sapply(factors, function(x) target_weights[as.numeric(x)])
-}
 
 # MODELLING
 
@@ -154,7 +132,7 @@ aneu_cat_metrics_df <- data.frame(
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
-  scalled_transcripts_per_million = scld_tpm_set,
+  scalled_transcripts_per_million = scld_tpm_set, # not too useful (scalled)
   log_scalled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm,
   expected_counts = exp_set,
@@ -162,50 +140,100 @@ rna_list <- list(
   log_expected_counts = log_exp,
   log_scalled_expected_counts = log_scld_exp
 )
+
 rna_names <- names(rna_list)
 
-selected_feature <- aneu_cat_feature_list[[index]]
-cat("The selected feature is: ", selected_feature, "\n\n")
+combinations <- expand.grid(
+  feature = aneu_cat_feature_list,
+  RNA_Set = rna_names,
+  stringsAsFactors = FALSE
+)
+rm(aneu_cat_feature_list)
 
-for (i in 1:length(rna_list)) {
-  rna_data <- rna_list[[i]]
-  selected_rna_set <- names(rna_list)[i]
-  cat(paste0("\t", selected_rna_set, "\n"))
+cat("\n\n All combinations: ")
+print(combinations)
 
-  full_df <- merge(rna_data,
-    chr_cnv,
-    by = "row.names"
-  )
+total_combinations <- nrow(combinations)
+cat("\n\n Number fo total combinations: ", total_combinations)
 
-  y <- as.integer(full_df[[selected_feature]])
-  X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
+# Select the specific feature and RNA set based on the SLURM task ID
+selected_combination <- combinations[index, ]
+selected_feature <- selected_combination$feature
+selected_rna_set <- selected_combination$RNA_Set
 
-  feature_digit_function <- function(factors) {
-    sapply(factors, function(x) selected_weights[as.numeric(x)])
-  }
+# Determine the class weights for the target feature
+target_weights <- arm_weights[[selected_feature]]
+selected_weights <- target_weights
+print(selected_weights)
 
-  train_y_factor <- factor(y, levels = c(0, 1, 2))
-  weights <- as.numeric(feature_digit_function(train_y_factor))
 
-  xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
+cat("\n", selected_feature, "weights: ")
+print(selected_weights)
+cat("\n\n")
+rm(arm_weights)
 
+# Function to map factor levels to weights
+feature_digit_function <- function(factors) {
+  sapply(factors, function(x) target_weights[as.numeric(x)])
+}
+
+cat(paste0(
+  "\n\n Running model for feature: ",
+  selected_feature,
+  " and RNA set: ",
+  selected_rna_set, "\n"
+))
+
+rna_data <- rna_list[[selected_rna_set]]
+full_df <- merge(rna_data,
+  chr_cnv,
+  by = "row.names"
+)
+cat("\n\n full_df: \n")
+print(head(full_df[, 1:5]))
+cat("\n\n")
+
+y <- as.integer(full_df[[selected_feature]])
+X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
+cat("\n\n Predicotrs: \n")
+
+# print(head(X[, 1:5]))
+
+train_y_factor <- factor(y, levels = c(0, 1, 2))
+weights <- as.numeric(feature_digit_function(train_y_factor))
+
+xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
+rm(weights)
+rm(rna_data)
+
+grid <- expand.grid(
+  trees = seq(20, 5000, 1000)
+)
+gam <- 0
+
+for (j in 1:nrow(grid)) { # nolint
   cat(paste0(
-    "\t\t Depth: ", selected_depth,
+    "\t\t eta: ", lr,
+    "\t\t gamma: ", gam,
+    "\t\t depth: ", depth,
+    "\t\t trees: ", grid$trees[j],
+    "\t\t child_weight: ", min_child,
     "\n"
   ))
 
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
-    nrounds = selected_trees,
+    nrounds = grid$trees[j],
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 100,
+    early_stopping_rounds = 5,
     nfold = 5,
-    max_depth = selected_depth,
-    eta = selected_lr,
-    gamma = selected_gamma,
+    max_depth = depth,
+    min_child_weight = min_child,
+    eta = lr,
+    gamma = gam,
     num_class = 3,
-    print_every_n = 10
+    print_every_n = 20
   )
 
   best_iteration <- 0
@@ -246,16 +274,18 @@ for (i in 1:length(rna_list)) {
     NA # Or appropriate default/error value
   }
 
+
   cat(paste0(
     "The best iteration occurs with tree #: ",
     best_iteration, "\n\n"
   ))
 
+
   aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
     RNA_Set = selected_rna_set,
-    Trees = selected_trees,
+    Trees = grid$trees[j],
     Feature = selected_feature,
-    Depth = selected_depth,
+    Depth = depth,
     Child_weight = selected_min_child,
     Learning_Rate = selected_lr,
     Gamma = selected_gamma,
@@ -266,6 +296,7 @@ for (i in 1:length(rna_list)) {
     Test_mlogloss = best_mlogloss_test
   ))
 }
+
 
 datetime <- Sys.time() %>%
   str_replace_all(" ", "_") %>%

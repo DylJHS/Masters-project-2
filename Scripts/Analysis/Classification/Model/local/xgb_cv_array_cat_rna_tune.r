@@ -5,23 +5,19 @@ library(xgboost)
 library(caret)
 library(caTools)
 
-# args <- commandArgs(trailingOnly = TRUE)
-# index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
+args <- commandArgs(trailingOnly = TRUE)
+index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 
-index <- 4
-cat("The index for this run is: ", index,  "\n")
+cat("The index for this run is: ", index, "\n")
 
 selected_depth <- 5
 selected_min_child <- 1
 selected_lr <- 0.3
 selected_gamma <- 0
 selected_trees <- 10000
-selected_weights <- c(0.45, 0.05, 0.45)
-
-
 
 # RNA SOI SETS
 # Expected Counts
@@ -106,11 +102,37 @@ chr_cnv <- read_tsv(
   mutate_all(~ replace(., . == 0, 1)) %>%
   mutate_all(~ replace(., . == -1, 0))
 
-cat("\n\n arm level data: \n")
-print(head(chr_cnv[, 1:5]))
-cat("\n\n")
+arm_weights <- freq %>%
+  mutate(total = rowSums(select(., -arm))) %>%
+  mutate_at(vars(-arm, -total), list(~ 1 - round(. / total, 2))) %>%
+  mutate(total = rowSums(select(., -arm, -total))) %>%
+  mutate_at(vars(-arm, -total), list(~ round(. / total, 2))) %>%
+  select(-total) %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(make.unique(unlist(.[1, ]))) %>% # Convert first row to column names
+  .[-1, ]
 
+# Define the features to be used
 aneu_cat_feature_list <- colnames(chr_cnv)
+selected_feature <- aneu_cat_feature_list[[index]]
+rm(aneu_cat_feature_list)
+
+# Determine the class weights for the target feature
+target_weights <- arm_weights[, index]
+selected_weights <- target_weights
+print(selected_weights)
+
+target <- as.character(colnames(arm_weights)[index])
+cat("\n", target, "weights: ")
+print(target_weights)
+cat("\n\n")
+rm(arm_weights)
+
+# Function to map factor levels to weights
+feature_digit_function <- function(factors) {
+  sapply(factors, function(x) target_weights[as.numeric(x)])
+}
 
 # MODELLING
 
@@ -141,28 +163,18 @@ rna_list <- list(
 )
 rna_names <- names(rna_list)
 
-selected_feature <- aneu_cat_feature_list[[index]]
-cat("The selected feature is: ", selected_feature, "\n\n")
-
-
 for (i in 1:length(rna_list)) {
-  rna <- rna_list[[i]]
-  name <- names(rna_list)[i]
-  cat(paste0("\t", name, "\n"))
-  print(head(rna[, 1:5]))
-  cat("\n\n")
+  rna_data <- rna_list[[i]]
+  selected_rna_set <- names(rna_list)[i]
+  cat(paste0("\t", selected_rna_set, "\n"))
 
-  full_df <- merge(rna,
+  full_df <- merge(rna_data,
     chr_cnv,
     by = "row.names"
   )
 
   y <- as.integer(full_df[[selected_feature]])
   X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
-
-  feature_digit_function <- function(factors) {
-    sapply(factors, function(x) selected_weights[as.numeric(x)])
-  }
 
   train_y_factor <- factor(y, levels = c(0, 1, 2))
   weights <- as.numeric(feature_digit_function(train_y_factor))
@@ -177,15 +189,15 @@ for (i in 1:length(rna_list)) {
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
     nrounds = selected_trees,
-    objective = "multi:softprob",
-    eval_metric = "auc",
+    objective = "multi:softmax",
+    eval_metric = "mlogloss",
     early_stopping_rounds = 100,
     nfold = 5,
     max_depth = selected_depth,
     eta = selected_lr,
     gamma = selected_gamma,
     num_class = 3,
-    print_every_n = 2
+    print_every_n = 10
   )
 
   best_iteration <- 0
@@ -247,22 +259,23 @@ for (i in 1:length(rna_list)) {
   ))
 }
 
-datetime <- Sys.time() %>%
+datetime <- as.character(Sys.time()) %>%
   str_replace_all(" ", "_") %>%
-  str_replace_all(":", "_")
+  str_replace_all(":", "_") %>%
+  str_replace_all("\\.", "_")
 
-name <- paste0(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical",
+file_name <- paste0(
+  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output",
   selected_feature, "_",
-  selected_rna_set, "_",
-  datetime, "test.csv"
+  index, "_",
+  datetime, ".csv"
 ) %>%
   str_replace_all(" ", "_") %>%
   str_replace_all(":", "_")
 
 write.csv(
   aneu_cat_metrics_df,
-  file = name,
+  file = file_name,
   row.names = FALSE
 )
 

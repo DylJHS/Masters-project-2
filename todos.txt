@@ -2,11 +2,10 @@ To Do
 
 
 URGENT: 
-- Get the weights for the classes for each arm level 
-- Balance the training data based on the weights for each categorical arm level model 
 - STACK the models
 - Select the gamma for each of the features in the regression models
 - Run the hyperprameter tuning for the categorical models on the hpc using the weighted data 
+- Figure out what the baseline model is (always predicts normal claass or follows the class frequency frequencies randomly)
 
 
 - visualise the improvements of the models during running (logos & RMSE reduction over the iterations) for the different hyperparameters

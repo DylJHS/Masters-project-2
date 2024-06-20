@@ -282,7 +282,7 @@ datetime <- Sys.time() %>%
   str_replace_all(":", "_")
 
 name <- paste0(
-  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_",
+  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical",
   selected_feature, "_",
   selected_rna_set, "_",
   datetime, ".csv"
