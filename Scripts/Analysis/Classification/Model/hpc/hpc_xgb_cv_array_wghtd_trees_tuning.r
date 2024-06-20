@@ -10,9 +10,9 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
-depth <- 5
-min_child <- 1
-lr <- 0.3
+selected_depth <- 5
+selected_min_child <- 1
+selected_lr <- 0.3
 
 # RNA SOI SETS
 # Expected Counts
@@ -100,6 +100,16 @@ chr_cnv <- read_tsv(
   mutate_all(~ replace(., . == 0, 1)) %>%
   mutate_all(~ replace(., . == -1, 0))
 
+# Calc the class weights
+freq <- chr_cnv %>% 
+  as.data.frame() %>% 
+  gather(key = "arm", value = "freq") %>% 
+  group_by(arm) %>%
+  count(freq)%>%
+  as.data.frame() %>%
+  spread(key = freq, value = n) %>%
+  replace(is.na(.), 0)
+
 arm_weights <- freq %>%
   mutate(total = rowSums(select(., -arm))) %>%
   mutate_at(vars(-arm, -total), list(~ 1 - round(. / total, 2))) %>%
@@ -112,6 +122,8 @@ arm_weights <- freq %>%
   .[-1, ]
 
 aneu_cat_feature_list <- colnames(chr_cnv)
+
+rm(freq)
 
 # MODELLING
 
@@ -207,17 +219,17 @@ rm(weights)
 rm(rna_data)
 
 grid <- expand.grid(
-  trees = seq(20, 5000, 1000)
+  trees = seq(20, 7000, 1000)
 )
-gam <- 0
+selected_gamma <- 0
 
 for (j in 1:nrow(grid)) { # nolint
   cat(paste0(
-    "\t\t eta: ", lr,
-    "\t\t gamma: ", gam,
-    "\t\t depth: ", depth,
+    "\t\t eta: ", selected_lr,
+    "\t\t gamma: ", selected_gamma,
+    "\t\t depth: ", selected_depth,
     "\t\t trees: ", grid$trees[j],
-    "\t\t child_weight: ", min_child,
+    "\t\t child_weight: ", selected_min_child,
     "\n"
   ))
 
@@ -226,14 +238,14 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = grid$trees[j],
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 5,
+    early_stopping_rounds = 250,
     nfold = 5,
-    max_depth = depth,
-    min_child_weight = min_child,
-    eta = lr,
-    gamma = gam,
+    max_depth = selected_depth,
+    min_child_weight = selected_min_child,
+    eta = selected_lr,
+    gamma = selected_gamma,
     num_class = 3,
-    print_every_n = 20
+    print_every_n = 25
   )
 
   best_iteration <- 0
@@ -285,7 +297,7 @@ for (j in 1:nrow(grid)) { # nolint
     RNA_Set = selected_rna_set,
     Trees = grid$trees[j],
     Feature = selected_feature,
-    Depth = depth,
+    Depth = selected_depth,
     Child_weight = selected_min_child,
     Learning_Rate = selected_lr,
     Gamma = selected_gamma,
@@ -296,7 +308,6 @@ for (j in 1:nrow(grid)) { # nolint
     Test_mlogloss = best_mlogloss_test
   ))
 }
-
 
 datetime <- Sys.time() %>%
   str_replace_all(" ", "_") %>%

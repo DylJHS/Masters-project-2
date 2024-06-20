@@ -319,7 +319,7 @@ name <- paste0(
   "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical",
   selected_feature, "_",
   index, "_",
-  datetime, ".csv"
+  datetime, "test.csv"
 ) %>%
   str_replace_all(" ", "_") %>%
   str_replace_all(":", "_")

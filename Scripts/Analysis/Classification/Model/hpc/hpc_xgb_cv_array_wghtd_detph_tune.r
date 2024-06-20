@@ -7,13 +7,9 @@ library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
-index <- 3
 
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
-rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
-
-# selected_depth <- 5
 selected_trees <- 10000
 selected_min_child <- 1
 selected_lr <- 0.3
@@ -29,7 +25,7 @@ exp_set <- read.csv(
 )
 
 cat("\n Exp Count df: \n")
-print(head(exp_set[, 1:10]))
+print(head(exp_set[, 1:5]))
 
 scld_exp_set <- read.csv(
   paste0(
@@ -65,7 +61,7 @@ tpm_set <- read.csv(
 )
 
 cat("\n\n TPM df: \n")
-print(head(tpm_set[, 1:10]))
+print(head(tpm_set[, 1:5]))
 
 scld_tpm_set <- read.csv(
   paste0(
@@ -94,7 +90,7 @@ log_scld_tpm <- read.csv(
 # Arm Level Aneuploidies
 # Load the data
 chr_cnv <- read_tsv(
-  "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+  "/hpc/shared/prekovic/dhaynessimmons/data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
 ) %>%
   replace(is.na(.), 0) %>%
   select(-c("Type", "Aneuploidy Score")) %>%
@@ -316,7 +312,7 @@ datetime <- Sys.time() %>%
   str_replace_all("\\.", "_")
 
 name <- paste0(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical",
+  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/categorical/Cat_xgb_metrics_params_",
   selected_feature, "_",
   index, "_",
   datetime, ".csv"

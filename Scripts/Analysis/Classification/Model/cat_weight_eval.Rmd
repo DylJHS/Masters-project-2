@@ -11,7 +11,7 @@ knitr::opts_knit$set(root.dir ="/Users/Dyll/Documents/Education/VU_UVA/Internshi
 
 Read in the data from the individual files
 ```{r}
-folder <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical"
+folder <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categ"
 
 full_df <- data.frame()
 for (file in list.files(folder, pattern = "*.csv")){
@@ -21,22 +21,40 @@ for (file in list.files(folder, pattern = "*.csv")){
 ```
 
 
-Create df of the unique Features by best AUC
+Create df of the unique Features by best loss
 ```{r}
-best_auc <- full_df %>% 
+best_loss <- full_df %>% 
   group_by(Feature) %>%
-  slice_max(Test_AUC, n = 1) %>%
+  slice_min(Test_mlogloss, n = 1) %>%
   ungroup() %>% 
-  select(Feature, Weight_loss, Weight_norm, Weight_gain, Test_AUC) %>% 
-  mutate(combo = paste(Weight_loss, Weight_norm, Weight_gain, sep = "_")) 
+  mutate(combo = paste(Weight_loss, Weight_norm, Weight_gain, sep = "_"))
+```
 
-weight_loss_freq <- as.data.frame(table(best_auc$Weight_loss)) %>% 
+Get frequency of the weights for the best loss
+```{r}
+weight_loss_freq <- as.data.frame(table(best_loss$Weight_loss)) %>% 
   rename(Weight_loss = Var1)
-weight_gain_freq <- as.data.frame(table(best_auc$Weight_gain)) %>% 
+weight_gain_freq <- as.data.frame(table(best_loss$Weight_gain)) %>% 
   rename(Weight_gain = Var1)
-weight_norm_freq <- as.data.frame(table(best_auc$Weight_norm)) %>% 
+weight_norm_freq <- as.data.frame(table(best_loss$Weight_norm)) %>% 
   rename(Weight_norm = Var1)
-combo_freq <- as.data.frame(table(best_auc$combo)) %>%
+combo_freq <- as.data.frame(table(best_loss$combo)) %>%
   rename(combo = Var1)
+```
+
+Get the frequency of the RNA sets for the best loss
+```{r}
+rna_freq <- as.data.frame(table(best_loss$RNA_Set)) %>% 
+  rename(RNA_Set = Var1) %>% 
+  merge(., 
+        best_loss %>% 
+          group_by(RNA_Set) %>% 
+          summarise(Test_mlogloss = mean(Test_mlogloss)), 
+        by = "RNA_Set")
+```
+
+Save the frequency tables
+```{r}
+write.csv(full_df, "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categ/full_df.csv")
 ```
 

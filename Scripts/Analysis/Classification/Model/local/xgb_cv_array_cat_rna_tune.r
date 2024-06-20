@@ -102,7 +102,17 @@ chr_cnv <- read_tsv(
   mutate_all(~ replace(., . == 0, 1)) %>%
   mutate_all(~ replace(., . == -1, 0))
 
-arm_weights <- freq %>%
+# Calc the class weights
+freq_df <- chr_cnv %>% 
+  as.data.frame() %>% 
+  gather(key = "arm", value = "freq") %>% 
+  group_by(arm) %>%
+  count(freq)%>%
+  as.data.frame() %>%
+  spread(key = freq, value = n) %>%
+  replace(is.na(.), 0)
+
+arm_weights <- freq_df %>%
   mutate(total = rowSums(select(., -arm))) %>%
   mutate_at(vars(-arm, -total), list(~ 1 - round(. / total, 2))) %>%
   mutate(total = rowSums(select(., -arm, -total))) %>%
@@ -112,6 +122,9 @@ arm_weights <- freq %>%
   as.data.frame() %>%
   setNames(make.unique(unlist(.[1, ]))) %>% # Convert first row to column names
   .[-1, ]
+
+print(arm_weights[, 1:5])
+rm(freq_df)
 
 # Define the features to be used
 aneu_cat_feature_list <- colnames(chr_cnv)
@@ -197,7 +210,7 @@ for (i in 1:length(rna_list)) {
     eta = selected_lr,
     gamma = selected_gamma,
     num_class = 3,
-    print_every_n = 10
+    print_every_n = 15
   )
 
   best_iteration <- 0
@@ -265,7 +278,7 @@ datetime <- as.character(Sys.time()) %>%
   str_replace_all("\\.", "_")
 
 file_name <- paste0(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output",
+  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categ/",
   selected_feature, "_",
   index, "_",
   datetime, ".csv"
