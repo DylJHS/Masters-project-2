@@ -94,7 +94,7 @@ all_sample_ids <- rownames(full_df)
 num_samples_to_select <- round(0.25 * length(all_sample_ids))
 
 # Get a random sample of sample IDs
-set.seed(97)
+set.seed(93)
 random_sample_ids <- sample(
   all_sample_ids, num_samples_to_select, replace = FALSE
 )
@@ -181,5 +181,35 @@ heatmap_plot <- ggplot(long_df, aes(x = Reference, y = Prediction, fill = Normal
 
 # Display the plot
 print(heatmap_plot)
+```
+by class
+```{r}
+class_metrics <- as.data.frame(confuse_matrix$byClass) %>% 
+  rownames_to_column("Class") %>% 
+  mutate(Class = as.integer(str_replace_all(Class, "Class: ", "")),
+         Feature = target) %>%
+  mutate(Class = case_when(
+    Class == 0 ~ "Loss",
+    Class == 1 ~ "Normal",
+    Class == 2 ~ "Gain"
+  ))
+
+# Gather the data into long format
+class_metrics_long <- gather(class_metrics, key = Metric, value = Value, -Class, -Feature)
+
+# Create bar plot comparing the metrics between the 3 classes
+class_metrics_plot <- ggplot(class_metrics_long, aes(x = Metric, y = Value, fill = Class)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("#ABDDDE", "#CCEDB1", "#41B7C4"))+
+  coord_flip() +  
+  labs(title = "Class Metrics",
+       subtitle = paste0("Feature: ", target),
+       x = "Metric",
+       y = "Value") +
+  theme_minimal() +
+  theme(axis.text.x = element_text( hjust = 1),  # Adjust text angle for better legibility
+        plot.title = element_text(hjust = 0.5))  # Center the plot title
+
+
 ```
 

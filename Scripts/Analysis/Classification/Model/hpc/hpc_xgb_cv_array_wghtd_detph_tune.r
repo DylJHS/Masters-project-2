@@ -13,6 +13,8 @@ rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/
 selected_trees <- 10000
 selected_min_child <- 1
 selected_lr <- 0.3
+selected_gamma <- 0
+
 
 # RNA SOI SETS
 # Expected Counts
@@ -176,7 +178,6 @@ target_weights <- arm_weights[[selected_feature]]
 selected_weights <- target_weights
 print(selected_weights)
 
-
 cat("\n", selected_feature, "weights: ")
 print(selected_weights)
 cat("\n\n")
@@ -219,7 +220,6 @@ rm(rna_data)
 grid <- expand.grid(
   depth = seq(1, 7, 2)
 )
-selected_gamma <- 0
 
 for (j in 1:nrow(grid)) { # nolint
   selected_depth <- grid$depth[j]
@@ -237,7 +237,7 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 5,
+    early_stopping_rounds = 100,
     nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
@@ -292,7 +292,7 @@ for (j in 1:nrow(grid)) { # nolint
 
   aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
     RNA_Set = selected_rna_set,
-    Trees = selected_trees,
+    Trees = best_iteration,
     Feature = selected_feature,
     Depth = selected_depth,
     Child_weight = selected_min_child,

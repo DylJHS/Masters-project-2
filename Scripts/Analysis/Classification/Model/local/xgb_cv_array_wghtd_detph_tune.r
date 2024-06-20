@@ -6,8 +6,8 @@ library(caret)
 library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
-index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
-index <- 3
+index <- as.numeric(args[1])
+# index <- 3
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
@@ -17,6 +17,8 @@ rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 selected_trees <- 10000
 selected_min_child <- 1
 selected_lr <- 0.3
+selected_gamma <- 0
+
 
 # RNA SOI SETS
 # Expected Counts
@@ -180,7 +182,6 @@ target_weights <- arm_weights[[selected_feature]]
 selected_weights <- target_weights
 print(selected_weights)
 
-
 cat("\n", selected_feature, "weights: ")
 print(selected_weights)
 cat("\n\n")
@@ -221,9 +222,8 @@ rm(weights)
 rm(rna_data)
 
 grid <- expand.grid(
-  depth = seq(1, 7, 2)
+  depth = seq(2, 3, 2)
 )
-selected_gamma <- 0
 
 for (j in 1:nrow(grid)) { # nolint
   selected_depth <- grid$depth[j]
@@ -241,7 +241,7 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 5,
+    early_stopping_rounds = 100,
     nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
