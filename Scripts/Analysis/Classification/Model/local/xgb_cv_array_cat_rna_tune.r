@@ -13,7 +13,7 @@ rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
 
 cat("The index for this run is: ", index, "\n")
 
-selected_depth <- 5
+selected_depth <- 1
 selected_min_child <- 1
 selected_lr <- 0.3
 selected_gamma <- 0
@@ -103,11 +103,11 @@ chr_cnv <- read_tsv(
   mutate_all(~ replace(., . == -1, 0))
 
 # Calc the class weights
-freq_df <- chr_cnv %>% 
-  as.data.frame() %>% 
-  gather(key = "arm", value = "freq") %>% 
+freq_df <- chr_cnv %>%
+  as.data.frame() %>%
+  gather(key = "arm", value = "freq") %>%
   group_by(arm) %>%
-  count(freq)%>%
+  count(freq) %>%
   as.data.frame() %>%
   spread(key = freq, value = n) %>%
   replace(is.na(.), 0)
@@ -258,7 +258,7 @@ for (i in 1:length(rna_list)) {
 
   aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
     RNA_Set = selected_rna_set,
-    Trees = selected_trees,
+    Trees = best_iteration,
     Feature = selected_feature,
     Depth = selected_depth,
     Child_weight = selected_min_child,

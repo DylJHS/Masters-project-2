@@ -12,8 +12,8 @@ rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/
 
 selected_trees <- 10000
 selected_min_child <- 1
-selected_lr <- 0.3
 selected_gamma <- 0
+selected_depth <- 1
 
 
 # RNA SOI SETS
@@ -125,8 +125,6 @@ arm_weights <- freq_df %>%
 
 aneu_cat_feature_list <- colnames(chr_cnv)
 
-rm(freq_df)
-
 # MODELLING
 
 aneu_cat_metrics_df <- data.frame(
@@ -169,15 +167,11 @@ print(combinations)
 
 total_combinations <- nrow(combinations)
 cat("\n\n Number fo total combinations: ", total_combinations)
-rm(total_combinations)
-
 
 # Select the specific feature and RNA set based on the SLURM task ID
 selected_combination <- combinations[index, ]
 selected_feature <- selected_combination$feature
 selected_rna_set <- selected_combination$RNA_Set
-
-rm(combinations)
 
 # Determine the class weights for the target feature
 target_weights <- arm_weights[[selected_feature]]
@@ -187,8 +181,6 @@ print(selected_weights)
 cat("\n", selected_feature, "weights: ")
 print(selected_weights)
 cat("\n\n")
-
-rm(selected_combination)
 rm(arm_weights)
 
 # Function to map factor levels to weights
@@ -226,11 +218,11 @@ rm(weights)
 rm(rna_data)
 
 grid <- expand.grid(
-  depth = seq(1, 7, 2)
+  eta = seq(0.01, 0.11, 0.02)
 )
 
 for (j in 1:nrow(grid)) { # nolint
-  selected_depth <- grid$depth[j]
+  selected_lr <- grid$eta[j]
   cat(paste0(
     "\t\t eta: ", selected_lr,
     "\t\t gamma: ", selected_gamma,
@@ -245,7 +237,7 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 100,
+    early_stopping_rounds = 250,
     nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,

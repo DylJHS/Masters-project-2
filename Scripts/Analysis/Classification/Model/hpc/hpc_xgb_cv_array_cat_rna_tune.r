@@ -10,12 +10,11 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 cat("The index for this run is: ", index, "\n")
 
-selected_depth <- 5
+selected_depth <- 1
 selected_min_child <- 1
 selected_lr <- 0.3
 selected_gamma <- 0
 selected_trees <- 10000
-selected_weights <- c(0.45, 0.05, 0.45)
 
 rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
@@ -103,6 +102,16 @@ chr_cnv <- read_tsv(
   mutate_all(~ replace(., . == 0, 1)) %>%
   mutate_all(~ replace(., . == -1, 0))
 
+# Calc the class weights
+freq <- chr_cnv %>%
+  as.data.frame() %>%
+  gather(key = "arm", value = "freq") %>%
+  group_by(arm) %>%
+  count(freq) %>%
+  as.data.frame() %>%
+  spread(key = freq, value = n) %>%
+  replace(is.na(.), 0)
+
 arm_weights <- freq %>%
   mutate(total = rowSums(select(., -arm))) %>%
   mutate_at(vars(-arm, -total), list(~ 1 - round(. / total, 2))) %>%
@@ -117,7 +126,7 @@ arm_weights <- freq %>%
 # Define the features to be used
 aneu_cat_feature_list <- colnames(chr_cnv)
 selected_feature <- aneu_cat_feature_list[[index]]
-rm(aneu_cat_feature_list)
+rm(freq)
 
 # Determine the class weights for the target feature
 target_weights <- arm_weights[, index]
@@ -166,6 +175,7 @@ rna_names <- names(rna_list)
 
 selected_feature <- aneu_cat_feature_list[[index]]
 cat("The selected feature is: ", selected_feature, "\n\n")
+rm(aneu_cat_feature_list)
 
 for (i in 1:length(rna_list)) {
   rna_data <- rna_list[[i]]
@@ -253,7 +263,7 @@ for (i in 1:length(rna_list)) {
 
   aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
     RNA_Set = selected_rna_set,
-    Trees = selected_trees,
+    Trees = best_iteration,
     Feature = selected_feature,
     Depth = selected_depth,
     Child_weight = selected_min_child,

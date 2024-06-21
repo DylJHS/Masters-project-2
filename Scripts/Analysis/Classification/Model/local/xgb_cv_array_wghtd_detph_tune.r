@@ -222,9 +222,9 @@ rm(weights)
 rm(rna_data)
 
 grid <- expand.grid(
-  depth = seq(2, 3, 2)
+  depth = seq(1, 6, 1)
 )
-
+set.seed(22)
 for (j in 1:nrow(grid)) { # nolint
   selected_depth <- grid$depth[j]
   cat(paste0(
@@ -241,7 +241,7 @@ for (j in 1:nrow(grid)) { # nolint
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 100,
+    early_stopping_rounds = 250,
     nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
