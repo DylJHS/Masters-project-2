@@ -7,7 +7,10 @@ URGENT:
 - Run the hyperprameter tuning for the categorical models on the hpc using the weighted data 
 - Figure out what the baseline model is (always predicts normal claass or follows the class frequency frequencies randomly)
 
+- Remove the cancer types with less than 150 samples
+- Loop over the different cancer types and tune the hyperparameters 
+- Create a model based on each type 
 
-- visualise the improvements of the models during running (logos & RMSE reduction over the iterations) for the different hyperparameters
-
-- Visualise the difference in categorical model improvements (both loglooss and AUC) when training on balanced (class weighted) data vs unbalanced. CANNOT USE THE TUNING AUC EVAL METRIC FOR THIS AS THE AUC THAT IS PROVIDED IS WEIGHTED BY THE PREVALENCE OF THE CLASSES will therefore overemphasise the accuracy of predicting no aneuploidies vs aneuploidies
+- Once the parameters and hyperparameters are set train the full model on the train data 
+- Test on the validation/test data 
+- Visualise the model performance by visualising the loss vs the epochs for each feature

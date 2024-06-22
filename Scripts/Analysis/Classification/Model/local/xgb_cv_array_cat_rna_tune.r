@@ -278,7 +278,7 @@ datetime <- as.character(Sys.time()) %>%
   str_replace_all("\\.", "_")
 
 file_name <- paste0(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categ/",
+  "Data/Model_output/categorical/mlogloss_measures/",
   selected_feature, "_",
   index, "_",
   datetime, ".csv"

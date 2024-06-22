@@ -2097,7 +2097,8 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - When doing this can use the One vs Rest (OvR) AUC metric, measuring the accuracy of the classification of a class (loss, gain or normal) as the positive class vs the other classes combined as the negative class
 - Or could implement the One vs One (OvO) approach, which measures the accuracy of classifications for each possible pairwise combo (gain vs loss, loss vs normal, gain vs normal) and both ways (classifying gain vs normal is different than classifying normal vs gain) 
 - When using the AUC eval metric with the multi:softprob objective in xgboost, the AUC is calculated using OvR 
-- The AUC in the eval metric is the aggregate of each of the individual class AUC measurements weighing each by its prevalence in the dataset (this is only for the evaluation and not the training, still need to calculate the weights myself for that)
+- The AUC in the eval metric is the aggregate of each of the individual class AUC measurements weighing each by its prevalence in the dataset
+- This is only for the evaluation and not the training, still need to calculate the weights myself for that
 
 - Tuning the #trees is taking a while 
 
@@ -2138,7 +2139,8 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 
 17/06/24
 
-- Reevaluating the categorical model for the weighted vs unweighted classes in terms of the AUC (still mean-weighted by class prevalence) does show an increase in performance with certain weights
+- Reevaluating the categorical model for the weighted vs unweighted classes in terms of the AUC 
+- still mean-weighted by class prevalence does show an increase in performance with certain weights
 - As opposed to the mlogloss metric which decreased consistently with the weight parameters
 - Only for the 1p so far
 - Writing the script for the hpc so it can run on more folds and all the features
@@ -2146,3 +2148,33 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 
 
 
+18/06/24
+
+- For the selection of gamma, will select the one that produces the lowest average gap between the train and test metrics (RMSE, auc/mlogloss) before seeing a drastic increase in the eval metric
+
+- Scripting the hyperparameter tuning script for the categorical models using the weighted data
+
+19/06/24
+
+- Running the RNA set and the weights tuning for the categorical model
+- Building the script for the other hyperparameter tuning with the weighted data
+
+- For the weights, it might be best to just use the inverse of the frequency (normalized) instead of the best weights (based on the tuning)
+- Also evaluate the best model in terms of the mlogloss (want the best prediction), not the auc  
+- For the weights for the full general model, calculating them based on their class frequencies, over all cancers/samples
+- Using the full dataset (not just training) as best reflection of their true frequencies 
+- Each sample/class counts as the data is highly imbalanced
+
+- Creating the heatmap showing the sensitivity of the model for each class between the weighted and unweighted data per feature 
+- Create a bar plot showing the metrics (sensitivity, specificity, accuracy...) between the 2 data types averaged across all features
+- Create bar plots the same as the above but per feature
+
+- For the RNA_sets to use for the categorical and regression models, decided to select the best set per feature from the top 3 performing sets
+- Even in case the best set for a particular model was not in the top 3 selected the best of those 3 for the feature 
+- The best 3 models for the categorical features on the weighted data are scaled_tpm, log_scaled_tpm and tpm
+
+20/06/24
+
+- What is the best way to visualise the performance of regression models?
+- Cut down on the cancer types, those with less than 150 samples should be removed from the analysis
+- Train on each remaining cancer type and evaluate the performance of the model on the remaining cancer types
