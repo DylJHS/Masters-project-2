@@ -38,7 +38,12 @@ arm_weights <- freq %>%
   setNames(make.unique(unlist(.[1, ]))) %>%   # Convert first row to column names
   .[-1, ]  
 
-arm_order <- c("1p", "1q", "2p", "2q", "3p", "3q", "4p", "4q", "5p", "5q", "6p", "6q", "7p", "7q", "8p", "8q", "9p", "9q", "10p", "10q", "11p", "11q", "12p", "12q", "13 (13q)", "14 (14q)", "15 (15q)", "16p", "16q", "17p", "17q", "18p", "18q", "19p", "19q", "20p", "20q", "21 (21q)", "22 (22q)")
+arm_order <- c("1p", "1q", "2p", "2q", "3p", "3q", "4p", "4q", 
+               "5p", "5q", "6p", "6q", "7p", "7q", "8p", "8q", 
+               "9p", "9q", "10p", "10q", "11p", "11q", "12p", 
+               "12q", "13 (13q)", "14 (14q)", "15 (15q)", 
+               "16p", "16q", "17p", "17q", "18p", "18q", 
+               "19p", "19q", "20p", "20q", "21 (21q)", "22 (22q)")
 
 # Reorder the arms and save the weights as data frame
 n_arm_weights <- arm_weights[, arm_order] %>%

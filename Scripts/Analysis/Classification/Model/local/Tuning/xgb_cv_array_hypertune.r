@@ -22,16 +22,18 @@ cat("\n\n")
 selected_feature <- selected_parameters$Feature
 selected_rna_set <- selected_parameters$RNA_set
 selected_trees <- as.numeric(selected_parameters$Trees)
-# selected_lr <- selected_parameters$Eta
-# selected_gamma <- 0
+selected_eta <- selected_parameters$Eta
+selected_gamma <- if (is.na(selected_parameters$Gamma)) {
+  0
+} else {
+  selected_parameters$Gamma
+}
 selected_depth <- selected_parameters$Max_depth
 selected_weights <- as.numeric(selected_parameters[c("Weight.loss", "Weight.normal", "Weight.gain")] )
 
 # Define the extra parameters
 selected_min_child <- 1
-selected_gamma <- 0
-selected_lr <- 0.3
-selected_seed <- 235
+selected_seed <- 99
 
 # Get the corresonding rna set
 rna_list <- list(
@@ -81,7 +83,7 @@ aneu_cat_metrics_df <- data.frame(
   Feature = character(),
   Depth = numeric(),
   Child_weight = numeric(),
-  Learning_Rate = numeric(),
+  Eta = numeric(),
   Gamma = numeric(),
   Weight_loss = numeric(),
   Weight_norm = numeric(),
@@ -124,90 +126,98 @@ xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
 rm(weights)
 rm(rna_set)
 
-cat(paste0(
-  "\t\t eta: ", selected_lr,
-  "\t\t gamma: ", selected_gamma,
-  "\t\t depth: ", selected_depth,
-  "\t\t trees: ", selected_trees,
-  "\t\t child_weight: ", selected_min_child,
-  "\n"
-))
-
-set.seed(selected_seed)
-
-m_xgb_untuned <- xgb.cv(
-  data = xgb_data,
-  nrounds = selected_trees,
-  objective = "multi:softmax",
-  eval_metric = "mlogloss",
-  early_stopping_rounds = 250,
-  nfold = 5,
-  max_depth = selected_depth,
-  min_child_weight = selected_min_child,
-  eta = selected_lr,
-  gamma = selected_gamma,
-  num_class = 3,
-  print_every_n = 10
+grid <- expand.grid(
+  depth = seq(1, 7, 2)
 )
 
-best_iteration <- 0
+for (j in 1:nrow(grid)) {
 
-# First, check if best_iteration is valid
-if (is.null(
-  m_xgb_untuned$best_iteration
-) ||
-  m_xgb_untuned$best_iteration < 1) {
+  assign(paste0("selected_", names(grid)[1]), grid[j, 1])
+
+  set.seed(selected_seed)
+
   cat(paste0(
-    "Warning: No valid best_iteration found.",
-    " Using last iteration values instead.\n"
-  ))
-  # Use the last iteration if best_iteration is not valid
-  best_iteration <- nrow(m_xgb_untuned$evaluation_log)
-} else {
-  # Ensure that the best_iteration does not exceed the number of rows logged
-  if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
+    "\t\t eta: ", selected_eta,
+    "\t\t gamma: ", selected_gamma,
+    "\t\t depth: ", selected_depth,
+    "\t\t trees: ", selected_trees,
+    "\t\t child_weight: ", selected_min_child,
+    "\n"))
+
+  m_xgb_untuned <- xgb.cv(
+    data = xgb_data,
+    nrounds = selected_trees,
+    objective = "multi:softmax",
+    eval_metric = "mlogloss",
+    early_stopping_rounds = 2,
+    nfold = 2,
+    max_depth = selected_depth,
+    min_child_weight = selected_min_child,
+    eta = selected_eta,
+    gamma = selected_gamma,
+    num_class = 3,
+    print_every_n = 10
+  )
+
+  best_iteration <- 0
+
+  # First, check if best_iteration is valid
+  if (is.null(
+    m_xgb_untuned$best_iteration
+  ) ||
+    m_xgb_untuned$best_iteration < 1) {
     cat(paste0(
-      "Warning: best_iteration exceeds the number of rows in evaluation_log.",
-      " Adjusting to maximum available.\n"
+      "Warning: No valid best_iteration found.",
+      " Using last iteration values instead.\n"
     ))
+    # Use the last iteration if best_iteration is not valid
     best_iteration <- nrow(m_xgb_untuned$evaluation_log)
   } else {
-    best_iteration <- m_xgb_untuned$best_iteration
+    # Ensure that the best_iteration does not exceed the number of rows logged
+    if (m_xgb_untuned$best_iteration > nrow(m_xgb_untuned$evaluation_log)) {
+      cat(paste0(
+        "Warning: best_iteration exceeds the number of rows in evaluation_log.",
+        " Adjusting to maximum available.\n"
+      ))
+      best_iteration <- nrow(m_xgb_untuned$evaluation_log)
+    } else {
+      best_iteration <- m_xgb_untuned$best_iteration
+    }
+
+
+    best_mlogloss_train <- if (best_iteration > 0) {
+      m_xgb_untuned$evaluation_log$train_mlogloss_mean[best_iteration]
+    } else {
+      NA # Or appropriate default/error value
+    }
+
+    best_mlogloss_test <- if (best_iteration > 0) {
+      m_xgb_untuned$evaluation_log$test_mlogloss_mean[best_iteration]
+    } else {
+      NA # Or appropriate default/error value
+    }
+
+    cat(paste0(
+      "The best iteration occurs with tree #: ",
+      best_iteration, "\n\n"
+    ))
+
+    aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
+      RNA_Set = selected_rna_set,
+      Trees = selected_trees,
+      Feature = selected_feature,
+      Depth = selected_depth,
+      Child_weight = selected_min_child,
+      Eta = selected_eta,
+      Gamma = selected_gamma,
+      Weight_loss = selected_weights[1],
+      Weight_norm = selected_weights[2],
+      Weight_gain = selected_weights[3],
+      Trained_mlogloss = best_mlogloss_train,
+      Test_mlogloss = best_mlogloss_test,
+      Seed = selected_seed
+    ))
   }
-
-
-  best_mlogloss_train <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_mlogloss_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
-
-  best_mlogloss_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_mlogloss_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
-
-  cat(paste0(
-    "The best iteration occurs with tree #: ",
-    best_iteration, "\n\n"
-  ))
-
-  aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
-    RNA_Set = selected_rna_set,
-    Trees = selected_trees,
-    Feature = selected_feature,
-    Depth = selected_depth,
-    Child_weight = selected_min_child,
-    Learning_Rate = selected_lr,
-    Gamma = selected_gamma,
-    Weight_loss = selected_weights[1],
-    Weight_norm = selected_weights[2],
-    Weight_gain = selected_weights[3],
-    Trained_mlogloss = best_mlogloss_train,
-    Test_mlogloss = best_mlogloss_test,
-    Seed = selected_seed
-  ))
 }
 
 datetime <- Sys.time() %>%
