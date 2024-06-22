@@ -7,14 +7,9 @@ library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
-index <- 1
-
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 # Get the parameters from stored Parameters file
-parameters <- read.csv("Data/CIN_Features/XGB_parameters.csv")
-cat("\n Parameters: \n")
-print(dim(parameters))
+parameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/XGB_parameters.csv")
 
 # select the parameters and weights corrsponding to the index
 selected_parameters <- parameters[index, ]
@@ -55,7 +50,7 @@ rna_list <- list(
 
 rna_selection_name <- rna_list[[selected_rna_set]]
 
-rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
+rna_data_path <-  "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
 rna_set <- read.csv(
   paste0(
@@ -69,7 +64,7 @@ rna_set <- read.csv(
 # Arm Level Aneuploidies
 # Load the data
 chr_cnv <- read_tsv(
-  "Data/CIN_Features/CNV_Data/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+  "/hpc/shared/prekovic/dhaynessimmons/data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
 ) %>%
   replace(is.na(.), 0) %>%
   select(-c("Type", "Aneuploidy Score")) %>%
@@ -99,7 +94,6 @@ aneu_cat_metrics_df <- data.frame(
   Seed = numeric()
 )
 
-
 # Determine the class weights for the target feature
 
 cat("\n selected weights: ")
@@ -122,7 +116,7 @@ cat("\n\n")
 
 y <- as.integer(full_df[[selected_feature]])
 X <- full_df %>% select(-c("Row.names", colnames(chr_cnv)))
-cat("\n\n Predicotrs: \n")
+cat("\n\n Predictors: \n")
 
 # print(head(X[, 1:5]))
 
@@ -136,17 +130,16 @@ rm(X)
 rm(y)
 
 grid <- expand.grid(
-  eta = seq(0.05, 2, 0.05),
-  gamma = seq(0.2, 1, 0.05)
+  eta = seq(0.03, 2, 0.03)
 )
+
+set.seed(selected_seed)
 
 for (j in 1:nrow(grid)) {
 
   for (param in names(grid)) {
     assign(paste0("selected_", param), grid[j, param])
   }
-
-  set.seed(selected_seed)
 
   cat(paste0(
     "\t\t eta: ", selected_eta,
@@ -161,14 +154,14 @@ for (j in 1:nrow(grid)) {
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 2,
-    nfold = 2,
+    early_stopping_rounds = 100,
+    nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
     eta = selected_eta,
     gamma = selected_gamma,
     num_class = 3,
-    print_every_n = 10
+    print_every_n = 25
   )
 
   best_iteration <- 0
@@ -238,7 +231,7 @@ datetime <- Sys.time() %>%
   str_replace_all("\\.", "_")
 
 name <- paste0(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical/",
+  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/categorical/Cat_xgb_metrics_params_",
   selected_feature, "_",
   index, "_",
   datetime, ".csv"
