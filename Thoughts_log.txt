@@ -2178,3 +2178,54 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - What is the best way to visualise the performance of regression models?
 - Cut down on the cancer types, those with less than 150 samples should be removed from the analysis
 - Train on each remaining cancer type and evaluate the performance of the model on the remaining cancer types
+
+
+21/06/24
+
+- Might be easier to break down the confusion heatmap by class instead of showing the multi-class confusion heatmap
+- This would make it easier to read 
+- Also allows for not having to normalize the confusion matrix
+
+- The best performing model RNA-sets for the categorical models are scaled, log and log-scaled tpm sets
+
+- For the n_estimator (nrounds/trees) hyper/parameter limiting the number to more than 500 
+- This is so that there is more leeway for the model to find the optimal number of trees 
+- Important given the variation that could occur in the gene sets being used
+- This is the minimum number of possible trees given the early stopping mechanism that will be set at 100
+- Meaning that the true minimum possible number of rounds is 101 if best model is achieved on first epoch (single tree)
+  
+- Finish the model and the stacking before the starting on the individual cancer types. Start with Breast
+
+- Change any use of the "Learning rate" to Eta for consistency 
+
+- Final validation using the learning rate done using 100 early stopping instead of the 250 
+
+
+22/06/24
+
+- For the stacked model building process:
+- All models must be trained on the same training set.
+- All models must be trained with the same number of CV folds.
+- All models must use the same fold assignment to ensure the same observations are used
+- The cross-validated predictions from all of the models must be preserved by setting keep_cross_validation_predictions = TRUE. This is the data which is used to train the meta learner algorithm in the ensemble.
+
+- Stacking the models involes training on the out of fold predictions from the base models
+- The meta learners are then trained on the out of fold predictions from the base models
+- The meta learners are then used to make predictions on the test set
+
+- Running the gamma hyperparameter optimisation for the XGBoost model
+
+
+23/06/24
+
+- Running the xgb cross validation for the main models
+- making sure to use the same folds for all models
+- This is to ensure that the models are trained on the same data
+- And saving the cross validation predictions for the stacking
+
+- Need to use the "prediction = TRUE" argument in the xgb.cv function to get the predictions
+- also call the predictions usinig xgb_moodel$pred
+- The rows represent the observations and the columns represent the class
+- When using "softmax" the values are the same across columns and represent the most likely class
+- When using "softprob" the values are the probabilities of each class
+- For the "softmax" case, only one column matters the others can be ignored, the values will range from 0 (loss) to 2 (gain)

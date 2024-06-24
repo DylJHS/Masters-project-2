@@ -9,7 +9,7 @@ args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
 
 # Get the parameters from stored Parameters file
-parameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/XGB_parameters.csv")
+parameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/XGB_cat_parameters.csv")
 
 # select the parameters and weights corrsponding to the index
 selected_parameters <- parameters[index, ]
@@ -20,13 +20,9 @@ cat("\n\n")
 
 selected_feature <- selected_parameters$Feature
 selected_rna_set <- selected_parameters$RNA_set
-selected_trees <- as.numeric(selected_parameters$Trees)
+selected_trees <- as.numeric(selected_parameters$Trees) + 500
 selected_eta <- selected_parameters$Eta
-selected_gamma <- if (is.na(selected_parameters$Gamma)) {
-  0
-} else {
-  selected_parameters$Gamma
-}
+selected_gamma <- selected_parameters$Gamma
 selected_depth <- selected_parameters$Max_depth
 selected_weights <- as.numeric(selected_parameters[c("Weight.loss", "Weight.normal", "Weight.gain")] )
 
@@ -130,7 +126,8 @@ rm(X)
 rm(y)
 
 grid <- expand.grid(
-  eta = seq(0.03, 2, 0.03)
+  eta = seq(selected_eta - 0.1, selected_eta + 0.1, 0.1),
+  depth = seq(selected_depth, selected_depth + 2, 1)
 )
 
 set.seed(selected_seed)
@@ -161,6 +158,7 @@ for (j in 1:nrow(grid)) {
     eta = selected_eta,
     gamma = selected_gamma,
     num_class = 3,
+    stratified = TRUE,
     print_every_n = 25
   )
 
@@ -209,7 +207,7 @@ for (j in 1:nrow(grid)) {
 
     aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
       RNA_Set = selected_rna_set,
-      Trees = selected_trees,
+      Trees = best_iteration,
       Feature = selected_feature,
       Depth = selected_depth,
       Child_weight = selected_min_child,

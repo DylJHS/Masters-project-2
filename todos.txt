@@ -14,3 +14,6 @@ URGENT:
 - Once the parameters and hyperparameters are set train the full model on the train data 
 - Test on the validation/test data 
 - Visualise the model performance by visualising the loss vs the epochs for each feature
+
+
+- Give Marit the data sets if she does not already have them

@@ -7,12 +7,11 @@ library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
-index <- 1
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 # Get the parameters from stored Parameters file
-parameters <- read.csv("Data/CIN_Features/XGB_parameters.csv")
+parameters <- read.csv("Data/CIN_Features/XGB_cat_parameters.csv")
 cat("\n Parameters: \n")
 print(dim(parameters))
 
@@ -27,13 +26,9 @@ selected_feature <- selected_parameters$Feature
 selected_rna_set <- selected_parameters$RNA_set
 selected_trees <- as.numeric(selected_parameters$Trees)
 selected_eta <- selected_parameters$Eta
-selected_gamma <- if (is.na(selected_parameters$Gamma)) {
-  0
-} else {
-  selected_parameters$Gamma
-}
+selected_gamma <- selected_parameters$Gamma
 selected_depth <- selected_parameters$Max_depth
-selected_weights <- as.numeric(selected_parameters[c("Weight.loss", "Weight.normal", "Weight.gain")] )
+selected_weights <- as.numeric(selected_parameters[c("Weight.loss", "Weight.normal", "Weight.gain")])
 
 rm(selected_parameters)
 
@@ -48,9 +43,9 @@ rna_list <- list(
   log_scalled_transcripts_per_million = "log_scld_tpm",
   log_transcripts_per_million = "log_tpm",
   expected_counts = "exp",
-  scalled_expected_counts = "scld",
-  log_expected_counts = "log",
-  log_scalled_expected_counts = "log_scld"
+  scalled_expected_counts = "scld_exp",
+  log_expected_counts = "log_exp",
+  log_scalled_expected_counts = "log_scld_exp"
 )
 
 rna_selection_name <- rna_list[[selected_rna_set]]
@@ -99,7 +94,6 @@ aneu_cat_metrics_df <- data.frame(
   Seed = numeric()
 )
 
-
 # Determine the class weights for the target feature
 
 cat("\n selected weights: ")
@@ -136,12 +130,11 @@ rm(X)
 rm(y)
 
 grid <- expand.grid(
-  eta = seq(0.05, 2, 0.05),
-  gamma = seq(0.2, 1, 0.05)
+  eta = seq(selected_eta - 0.1, selected_eta + 0.1, 0.1),
+  depth = seq(selected_depth, selected_depth + 2, 1)
 )
 
 for (j in 1:nrow(grid)) {
-
   for (param in names(grid)) {
     assign(paste0("selected_", param), grid[j, param])
   }
@@ -154,20 +147,22 @@ for (j in 1:nrow(grid)) {
     "\t\t depth: ", selected_depth,
     "\t\t trees: ", selected_trees,
     "\t\t child_weight: ", selected_min_child,
-    "\n"))
+    "\n"
+  ))
 
   m_xgb_untuned <- xgb.cv(
     data = xgb_data,
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = 2,
-    nfold = 2,
+    early_stopping_rounds =50,
+    nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
     eta = selected_eta,
     gamma = selected_gamma,
     num_class = 3,
+    stratified = TRUE,
     print_every_n = 10
   )
 
@@ -216,7 +211,7 @@ for (j in 1:nrow(grid)) {
 
     aneu_cat_metrics_df <- rbind(aneu_cat_metrics_df, data.frame(
       RNA_Set = selected_rna_set,
-      Trees = selected_trees,
+      Trees = best_iteration,
       Feature = selected_feature,
       Depth = selected_depth,
       Child_weight = selected_min_child,

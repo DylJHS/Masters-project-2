@@ -95,13 +95,6 @@ n_arm_weights <- arm_weights %>%
   column_to_rownames("arm") %>% 
   t() %>% 
   as.data.frame() 
-
-
-
-  
-
-#save the weights to a file
-write.csv(arm_weights, "Data/CIN_Features/CNV_Data/arm_weights.csv", row.names = TRUE)
 ```
 Manipulate the data
 ```{r}
