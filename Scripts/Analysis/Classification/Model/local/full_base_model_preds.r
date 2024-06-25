@@ -116,7 +116,8 @@ full_data <- merge(read.csv(
   full_cin,
   by = "row.names")
 
-folds <- createFolds(full_data[["1p"]], k = 2, list = TRUE, returnTrain = TRUE)
+# Creating the folds and returning the indices for the out-of-fold predictions only
+folds <- createFolds(full_data[["1p"]], k = 2, list = TRUE, returnTrain = FALSE)
 
 # Get the indices of the folds
 fold_indices <- combine_all_folds(folds)
