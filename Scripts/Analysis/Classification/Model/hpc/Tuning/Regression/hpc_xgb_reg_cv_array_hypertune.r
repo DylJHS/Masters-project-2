@@ -5,11 +5,8 @@ library(xgboost)
 library(caret)
 library(caTools)
 
-# args <- commandArgs(trailingOnly = TRUE)
-# index <- as.numeric(args[1])
-for (i in 1:10) {
-  index <- i
-}
+args <- commandArgs(trailingOnly = TRUE)
+index <- as.numeric(args[1])
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
@@ -146,7 +143,7 @@ rm(y)
 
 grid <- expand.grid(
   eta = seq(selected_eta - 0.01, selected_eta + 0.1, 0.1),
-  depth = seq(selected_depth, selected_depth + 2, 1)
+  depth = seq(selected_depth - 2, selected_depth + 2, 1)
 )
 
 for (j in 1:nrow(grid)) {
@@ -251,10 +248,10 @@ name <- paste0(
   str_replace_all(" ", "_") %>%
   str_replace_all(":", "_")
 
-# write.csv(
-#   aneu_reg_metrics_df,
-#   file = name,
-#   row.names = FALSE
-# )
+write.csv(
+  aneu_reg_metrics_df,
+  file = name,
+  row.names = FALSE
+)
 
 cat(paste0("\n Completed processing for index: ", index, "\n"))
