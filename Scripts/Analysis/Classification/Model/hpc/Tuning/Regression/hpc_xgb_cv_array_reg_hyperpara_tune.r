@@ -5,106 +5,91 @@ library(xgboost)
 library(caret)
 library(caTools)
 
-
 args <- commandArgs(trailingOnly = TRUE)
-index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
-cat("Index: ", index, "\n\n")
+index <- as.numeric(args[1])
+
+
+# Get the parameters from stored Parameters file
+parameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/XGB_reg_parameters.csv")
+cat("\n Parameters: \n")
+print(dim(parameters))
+
+# select the parameters corrsponding to the index
+selected_parameters <- parameters[index, ]
+rm(parameters)
+cat("\n Parameters: \n")
+
+print(selected_parameters)
+cat("\n\n")
+
+selected_feature <- selected_parameters$Feature
+selected_rna_set <- selected_parameters$RNA_set
+selected_trees <- as.numeric(selected_parameters$Trees) + 500
+selected_eta <- selected_parameters$Eta
+selected_gamma <- selected_parameters$Gamma
+selected_depth <- selected_parameters$Max_depth
+
+rm(selected_parameters)
+
+# Define the extra parameters
+selected_min_child <- 1
+selected_seed <- 99
+
+# Get the corresonding rna set
+rna_list <- list(
+  transcripts_per_million = "tpm",
+  scalled_transcripts_per_million = "scld_tpm",
+  log_scalled_transcripts_per_million = "log_scld_tpm",
+  log_transcripts_per_million = "log_tpm",
+  expected_counts = "exp",
+  scalled_expected_counts = "scld_exp",
+  log_expected_counts = "log_exp",
+  log_scalled_expected_counts = "log_scld_exp"
+)
+
+rna_selection_name <- rna_list[[selected_rna_set]]
 
 rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
-# RNA EC SOI sets
-log_scld_exp <- read.csv(
+rna_set <- read.csv(
   paste0(
     rna_data_path,
-    "log_scld_exp_soi.csv"
-  ),
-  row.names = 1
-)
-
-scld_exp_set <- read.csv(
-  paste0(
-    rna_data_path,
-    "scld_exp_soi.csv"
-  ),
-  row.names = 1
-)
-
-cat("\n\n Log-Scaled Expected Counts df: \n")
-print(head(log_scld_exp[, 1:5]))
-
-# RNA TPM sets
-tpm_set <- read.csv(
-  paste0(
-    rna_data_path,
-    "tpm_soi.csv"
-  ),
-  row.names = 1
-)
-cat("\n\n TPM df: \n")
-print(head(tpm_set[, 1:5]))
-
-scld_tpm_set <- read.csv(
-  paste0(
-    rna_data_path,
-    "scld_tpm_soi.csv"
-  ),
-  row.names = 1
-)
-
-log_tpm <- read.csv(
-  paste0(
-    rna_data_path,
-    "log_tpm_soi.csv"
-  ),
-  row.names = 1
-)
-
-log_scld_tpm <- read.csv(
-  paste0(
-    rna_data_path,
-    "log_scld_tpm_soi.csv"
+    rna_selection_name,
+    "_soi.csv"
   ),
   row.names = 1
 )
 
 # HRD scores
-# import HRD data
 ori_hrd <- read_tsv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/TCGA.HRD_withSampleID.txt")
-t_hrd <- as.data.frame(t(ori_hrd)) # Transpose the data
-first_hrd <- t_hrd
-colnames(first_hrd) <- t_hrd[1, ] # Set the first row as the column names
-rm(ori_hrd)
 
-# Remove the first row, convert the data to numeric, rename the column, reformat the rownames, and remove the HRD column
+# Pericentromeric CNVs
+peri_cnv <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/lim_alpha_incl_TCGA_pericentro_cnv.csv") %>%
+  mutate_all(~ replace(., is.na(.), 0)) %>%
+  mutate(sampleID = gsub("-", ".", sampleID))
+cat("\n\n pericentromeric data: \n")
+print(head(peri_cnv[, 1:10]))
+
+cat("\n\n All dfs loaded \n")
+
+t_hrd <- as.data.frame(t(ori_hrd))
+first_hrd <- t_hrd
+colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
   rename(loh_hrd = "hrd-loh") %>%
-  mutate(new = str_replace_all(rownames(.), "-", "\\.")) %>%
-  select(-"HRD")
+  mutate(new = str_replace_all(rownames(.), "-", "\\."))
 
-rownames(hrd) <- hrd$new # Set the rownames to the new column
-hrd <- hrd %>% # Remove the new column
+rownames(hrd) <- hrd$new
+hrd <- hrd %>%
   select(-new)
 
 cat("\n\n hrd data: \n")
 print(head(hrd))
+
 rm(t_hrd)
 rm(first_hrd)
 
-
-# Pericentromeric CNVs
-# Import pericentromeric CNV data, replace NA values with 0
-# and reformat the sampleID column
-peri_cnv <- read.csv(
-  "/hpc/shared/prekovic/dhaynessimmons/data/CIN/lim_alpha_incl_TCGA_pericentro_cnv.csv"
-) %>%
-  mutate_all(~ replace(., is.na(.), 0)) %>%
-  mutate(sampleID = gsub("-", ".", sampleID))
-cat("\n\n pericentromeric data: \n")
-print(head(peri_cnv[, 1:5]))
-cat("\n\n All dfs loaded \n")
-
-# Merge the HRD and pericentromeric CNV data to get full CIN data
 full_cin <- merge(
   hrd,
   peri_cnv,
@@ -113,61 +98,16 @@ full_cin <- merge(
 ) %>%
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
-# Get the target feature list
-aneu_reg_feature_list <- colnames(full_cin)
 
-cat("\n\n All feature names: ", colnames(full_cin), "\n")
 cat("\n\n full cin data: \n")
-# print(head(full_cin[, 1:5]))
-# rm(hrd)
-# rm(peri_cnv)
-
-# import the hyperparameter df
-reg_hyperparam_df <- read.csv(
-  "/hpc/shared/prekovic/dhaynessimmons/data/XGB_hyperparameters.csv"
-)
-
-print(head(reg_hyperparam_df))
-
-# Select the specific parameters for this array
-selected_combination <- reg_hyperparam_df[index, ]
-selected_feature <- selected_combination$Feature
-selected_rna_set <- selected_combination$RNA_set
-selected_trees <- selected_combination$Trees
-selected_depth <- selected_combination$Max_Depth
-selected_eta <- selected_combination$Eta
-selected_min_child <- 1
-
-rna_list <- list(
-  transcripts_per_million = tpm_set,
-  scalled_transcripts_per_million = scld_tpm_set,
-  log_scalled_transcripts_per_million = log_scld_tpm,
-  log_transcripts_per_million = log_tpm,
-  scalled_expected_counts = scld_exp_set,
-  log_scalled_expected_counts = log_scld_exp
-)
-rna_names <- names(rna_list)
-
-#     MODELLING
-cat(paste0(
-  "\n\n Running model for feature: ",
-  selected_feature,
-  " RNA set: ",
-  selected_rna_set,
-  " Trees: ",
-  selected_trees, "\n"
-))
-
-# Now select the data based on these choices
-rna_data <- rna_list[[selected_rna_set]]
-# cat("\n\n RNA data: \n")
-# print(head(rna_data[, 1:5]))
-# cat("\n\n")
-
-full_df <- merge(rna_data, full_cin, by = "row.names")
-cat("\n\n full_df: \n")
-print(head(full_df[, 1:5]))
+print(head(full_cin))
 cat("\n\n")
+
+rm(hrd)
+rm(peri_cnv)
+
+# MODELLING
+
 
 aneu_reg_metrics_df <- data.frame(
   RNA_Set = character(),
@@ -175,29 +115,47 @@ aneu_reg_metrics_df <- data.frame(
   Feature = character(),
   Depth = numeric(),
   Child_weight = numeric(),
-  Learning_Rate = numeric(),
+  Eta = numeric(),
   Gamma = numeric(),
   Trained_RMSE = numeric(),
-  Test_RMSE = numeric()
+  Test_RMSE = numeric(),
+  Seed = numeric()
 )
+
+
+full_df <- merge(rna_set, full_cin, by = "row.names")
+print(head(rna_set[,1:5]))
+rm(rna_set)
+cat("\n\n full_df: \n")
+print(head(full_df[, 1:5]))
+cat("\n\n")
 
 y <- as.numeric(full_df[[selected_feature]])
 X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
-# cat("\n\n Predictors: \n")
-# print(head(X[, 1:5]))
-# cat("\n\n ")
+cat("\n\n Predictors: \n")
+print(head(X[, 1:5]))
+cat("\n\n")
 
 xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
+rm(X)
+rm(y)
+
 
 grid <- expand.grid(
-  gam = seq(1.5, 2.5, 0.5)
+  eta = seq(selected_eta - 0.01, selected_eta + 0.1, 0.1),
+  depth = seq(selected_depth - 2, selected_depth + 2, 1)
 )
 
-set.seed(100)
-for (j in 1:nrow(grid)) { # nolint
+for (j in 1:nrow(grid)) {
+  for (param in names(grid)) {
+    assign(paste0("selected_", param), grid[j, param])
+  }
+
+  set.seed(selected_seed)
+
   cat(paste0(
     "\t\t eta: ", selected_eta,
-    "\t\t gamma: ", grid$gam[j],
+    "\t\t gamma: ", selected_gamma,
     "\t\t depth: ", selected_depth,
     "\t\t trees: ", selected_trees,
     "\t\t child_weight: ", selected_min_child,
@@ -214,8 +172,8 @@ for (j in 1:nrow(grid)) { # nolint
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
     eta = selected_eta,
-    gamma = grid$gam[j],
-    print_every_n = 50
+    gamma = selected_gamma,
+    print_every_n = 15
   )
 
   best_iteration <- 0
@@ -242,49 +200,48 @@ for (j in 1:nrow(grid)) { # nolint
     } else {
       best_iteration <- m_xgb_untuned$best_iteration
     }
+
+
+    best_rmse_trained <- if (best_iteration > 0) {
+      m_xgb_untuned$evaluation_log$train_rmse_mean[best_iteration]
+    } else {
+      NA # Or appropriate default/error value
+    }
+
+    best_rmse_test <- if (best_iteration > 0) {
+      m_xgb_untuned$evaluation_log$test_rmse_mean[best_iteration]
+    } else {
+      NA # Or appropriate default/error value
+    }
+
+    cat(paste0(
+      "The best iteration occurs with tree #: ",
+      best_iteration, "\n\n"
+    ))
+
+    aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+      RNA_Set = selected_rna_set,
+      Trees = best_iteration,
+      Feature = selected_feature,
+      Depth = selected_depth,
+      Child_weight = selected_min_child,
+      Eta = selected_eta,
+      Gamma = selected_gamma,
+      Trained_RMSE = best_rmse_trained,
+      Test_RMSE = best_rmse_test,
+      Seed = selected_seed
+    ))
   }
-
-  # Accessing the RMSE values safely
-  best_rmse_trained <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$train_rmse_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
-
-  best_rmse_test <- if (best_iteration > 0) {
-    m_xgb_untuned$evaluation_log$test_rmse_mean[best_iteration]
-  } else {
-    NA # Or appropriate default/error value
-  }
-
-  cat(paste0(
-    "The best iteration occurs with tree #: ",
-    best_iteration, "\n\n"
-  ))
-
-
-  aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
-    RNA_Set = selected_rna_set,
-    Trees = selected_trees,
-    Feature = selected_feature,
-    Depth = selected_depth,
-    Child_weight = selected_min_child,
-    Learning_Rate = selected_eta,
-    Gamma = grid$gam[j],
-    Trained_RMSE = best_rmse_trained,
-    Test_RMSE = best_rmse_test
-  ))
 }
-
 
 datetime <- Sys.time() %>%
   str_replace_all(" ", "_") %>%
-  str_replace_all(":", "_")
+  str_replace_all(":", "_") %>%
+  str_replace_all("\\.", "_")
 
 name <- paste0(
   "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_",
   selected_feature, "_",
-  selected_rna_set, "_",
   index, "_",
   datetime, ".csv"
 ) %>%
@@ -297,4 +254,4 @@ write.csv(
   row.names = FALSE
 )
 
-cat("\n Completed processing for index: ", index, "\n")
+cat(paste0("\n Completed processing for index: ", index, "\n"))

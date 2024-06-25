@@ -38,7 +38,7 @@ selected_seed <- 99
 
 # Get the corresonding rna set
 rna_list <- list(
-  transcripts_per_million = "tpm_set",
+  transcripts_per_million = "tpm",
   scalled_transcripts_per_million = "scld_tpm",
   log_scalled_transcripts_per_million = "log_scld_tpm",
   log_transcripts_per_million = "log_tpm",
