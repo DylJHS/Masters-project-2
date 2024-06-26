@@ -8,9 +8,14 @@ library(tidyverse)
 library(xgboost)
 library(caret)
 
-
+# Set the params
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
+
+early_stopping <- 100
+print_every <- 25
+cv <- 5
+
 
 input_path <- "/hpc/shared/prekovic/dhaynessimmons/data/"
 
@@ -38,15 +43,11 @@ rna_list <- list(
   log_transcripts_per_million = "log_tpm",
   expected_counts = "exp",
   scalled_expected_counts = "scld",
-  log_expected_counts = "log",
+  log_expected_counts = "log_exp",
   log_scalled_expected_counts = "log_scld"
 )
 
 # print(rna_list)
-
-early_stopping <- 100
-print_every <- 25
-cv <- 5
 
 # The CIN response features
 # Categorical features
@@ -63,7 +64,14 @@ cat_cin <- read_tsv(
   column_to_rownames("Sample") %>%
   mutate_all(~ replace(., . == 1, 2)) %>%
   mutate_all(~ replace(., . == 0, 1)) %>%
-  mutate_all(~ replace(., . == -1, 0))
+  mutate_all(~ replace(., . == -1, 0)) %>%
+  rename(
+    "13q" = "13 (13q)",
+    "14q" = "14 (14q)",
+    "15q" = "15 (15q)",
+    "21q" = "21 (21q)",
+    "22q" = "22 (22q)"
+  )
 
 cat("\n Categorical CIN:  \n")
 print(head(cat_cin[1:5]))
@@ -81,7 +89,7 @@ colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
   rename(loh_hrd = "hrd-loh") %>%
-  select(-HRD) %>% 
+  select(-HRD) %>%
   mutate(new = str_replace_all(rownames(.), "-", "\\."))
 
 rm(first_hrd)
@@ -133,9 +141,11 @@ print(head(full_cin[1:5]))
 response_features <- colnames(full_cin)
 reg_features <- colnames(reg_cin)
 cat_features <- colnames(cat_cin)
-cat("\n Response Features # :", length(response_features), "\n",
-    "Regression Features # :", length(reg_features), "\n",
-    "Categorical Features # :", length(cat_features), "\n")
+cat(
+  "\n Response Features # :", length(response_features), "\n",
+  "Regression Features # :", length(reg_features), "\n",
+  "Categorical Features # :", length(cat_features), "\n"
+)
 
 rm(reg_cin)
 rm(cat_cin)
@@ -154,6 +164,20 @@ full_data <- merge(
 )
 cat("\n Full Data:  \n")
 print(head(full_data[1:5]))
+
+# Save the sample ids with the index
+ref_data <- full_data %>%
+  mutate(act_index = as.factor(row_number())) %>%
+  select(c("act_index", "Row.names"))
+
+write.csv(
+  ref_data,
+  paste0(
+    input_path,
+    "model_output/base_predictions/XGB_pred_ref.csv"
+  )
+)
+rm(ref_data)
 
 # Creating the folds and returning the indices for the out-of-fold predictions only
 folds <- createFolds(full_data[["1p"]], k = cv, list = TRUE, returnTrain = FALSE)
@@ -177,12 +201,12 @@ fold_labels <- full_data %>%
   mutate(
     index = as.factor(row_number())
   ) %>%
-  rename_with(~ paste0("act_", .)) 
+  rename_with(~ paste0("act_", .))
 
 # merge the fold labels with the predictions dataframe
-oof_predictions <- cbind(oof_predictions, fold_labels) %>% 
-  arrange(act_index) 
-  
+oof_predictions <- cbind(oof_predictions, fold_labels) %>%
+  arrange(act_index)
+
 
 cat_parameters <- read.csv(
   paste0(
@@ -206,7 +230,8 @@ cat(
 
 # Reduce the prediction dataframe to the selected feature
 oof_predictions <- oof_predictions %>%
-  select(c("act_index",
+  select(c(
+    "act_index",
     paste0("pred_", feature),
     paste0("act_", feature)
   ))
@@ -251,7 +276,7 @@ if (feature %in% cat_features) {
   rna_set <- read.csv(
     paste0(
       input_path,
-      "RNA/Train/train_",
+      "mRNA/gbm_input/Train/train_",
       rna_selection_name,
       "_soi.csv"
     ),
@@ -264,7 +289,7 @@ if (feature %in% cat_features) {
   )
 
   y <- as.integer(full_df[[selected_feature]])
-  X <- full_df %>% select(-c("Row.names", response_features))
+  X <- full_df %>% select(-c("Row.names", all_of(response_features)))
 
   train_y_factor <- factor(y, levels = c(0, 1, 2))
   weights <- as.numeric(feature_digit_function(train_y_factor))
@@ -276,7 +301,7 @@ if (feature %in% cat_features) {
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds = early_stopping,
+    # early_stopping_rounds = early_stopping,
     folds = folds,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
@@ -321,7 +346,7 @@ if (feature %in% cat_features) {
   rna_set <- read.csv(
     paste0(
       input_path,
-      "RNA/Train/train_",
+      "mRNA/gbm_input/Train/train_",
       rna_selection_name,
       "_soi.csv"
     ),
@@ -334,7 +359,7 @@ if (feature %in% cat_features) {
   )
 
   y <- as.numeric(full_df[[selected_feature]])
-  X <- full_df %>% select(-c("Row.names", response_features))
+  X <- full_df %>% select(-c("Row.names", all_of(response_features)))
 
   xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
@@ -343,7 +368,7 @@ if (feature %in% cat_features) {
     nrounds = selected_trees,
     objective = "reg:squarederror",
     eval_metric = "rmse",
-    early_stopping_rounds = early_stopping,
+    # early_stopping_rounds = early_stopping,
     folds = folds,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
@@ -359,18 +384,14 @@ if (feature %in% cat_features) {
   cat("Feature not found")
 }
 
-print(xgb_model[["pred"]][1:5,])
-
-# Reorder the columns of the predictions dataframe
-suffixes <- sapply(strsplit(names(oof_predictions), "_"), tail, 1)
-order <- order(suffixes)
-df_ordered <- oof_predictions[, order]
-
 write.csv(
   oof_predictions,
   paste0(
+    input_path,
     "model_output/base_predictions/XGB_base_predictions_",
     feature,
     ".csv"
   )
 )
+
+cat("\n The script has finished running for feature: ", feature)

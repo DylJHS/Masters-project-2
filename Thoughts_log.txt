@@ -2229,3 +2229,24 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - When using "softmax" the values are the same across columns and represent the most likely class
 - When using "softprob" the values are the probabilities of each class
 - For the "softmax" case, only one column matters the others can be ignored, the values will range from 0 (loss) to 2 (gain)
+24/06/24
+
+- In the stacking it could be possible and interesting to use the softprob objective and then use the probabilities as features for the second level model
+-  This could be done with the `predict_proba` method of the model.
+- This could potentially improve the performance of the stacking model.
+- But may not have the time to implement this.
+
+- Have created a categorical training & test set for the meta learner made of the predictions of the base categorical models on the training set.
+- Need to use this set to tune the hyperparameters of the meta learner.
+
+25/06/24
+- Need to write the scrit that will generate the meta learner training set using the predictions from all base models.
+
+- Fro the cross validaiton obtaining the out of fold predictions 
+- These are predictions that are made on the validation set during the cross validation process
+- These do not include the training predictions
+- Need to use these to train the meta learner
+- Set createFolds returnTrain argument to False to obtain the out of fold predictions
+
+
+26/
