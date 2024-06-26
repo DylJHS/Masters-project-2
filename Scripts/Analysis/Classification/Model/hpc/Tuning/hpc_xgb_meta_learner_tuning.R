@@ -9,12 +9,9 @@ library(xgboost)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
-index <- 53
-
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 # Load the full prediction data
-predictions <- read.csv("Data/Model_input/Base_predictions/Full_base_predictions.csv",
+predictions <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/base_predictions/Full_base_predictions.csv",
   row.names = 1
 )
 
@@ -105,8 +102,8 @@ if (selected_feature %in% cat_features) {
     xgb_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
-      nfold = 2,
-      early_stopping_rounds = 50,
+      nfold = 5,
+      early_stopping_rounds = 250,
       objective = "multi:softmax",
       eval_metric = "mlogloss",
       num_class = 3,
@@ -215,8 +212,8 @@ if (selected_feature %in% cat_features) {
     xgb_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
-      nfold = 2,
-      early_stopping_rounds = 50,
+      nfold = 5,
+      early_stopping_rounds = 250,
       objective = "reg:squarederror",
       eval_metric = "rmse",
       eta = selected_eta,
@@ -293,13 +290,12 @@ if (selected_feature %in% cat_features) {
 write.csv(
   meta_model_metrics,
   paste0(
-    "Data/Model_output/Hyperparams/Meta_models/Hyperparams_",
+    "/hpc/shared/prekovic/dhaynessimmons/data/model_output/meta_params/Hyperparams_",
     selected_feature,
     ".csv"
   ),
   row.names = FALSE
 )
-
 
 cat(
   "\n\n The hyperparameter tuning for the meta learner is complete.\n\n"
