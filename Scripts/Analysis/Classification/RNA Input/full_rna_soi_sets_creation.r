@@ -202,70 +202,70 @@ rm(exp_data)
 
 # Save the data in the different forms only selecting the SOI genes
 
-# Expected Counts
-exp_set <- data_complete_exp %>% # Raw expected counts
-  filter(rownames(.) %in% soi_genes) %>%
-  t() %>%
-  as.data.frame()
-rm(data_complete_exp)
-write.csv(exp_set,
-  "exp_soi.csv"
-)
-
-scld_exp_set <- scld_cnts_exp %>% # Library size normalised Expected counts
-  filter(rownames(.) %in% soi_genes) %>%
-  t() %>%
-  as.data.frame()
-rm(scld_cnts_exp)
-write.csv(scld_exp_set,
-  "scld_exp_soi.csv"
-)
-
-log_exp <- exp_set %>% # Log transformed expected counts
-  mutate_at(vars(everything()), transform_exp)
-write.csv(log_exp,
-  "log_exp_soi.csv"
-)
-rm(log_exp)
-rm(exp_set)
-
-log_scld_exp <- scld_exp_set %>% # Log transformed Library size normalised expected counts
-  mutate_at(vars(everything()), transform_exp)
-write.csv(log_scld_exp,
-  "log_scld_exp_soi.csv"
-)
-rm(log_scld_exp)
-rm(scld_exp_set)
-
-# Transcript per million (TPM)
-tpm_set <- data_complete_tpm %>% # Raw TPM counts
-  filter(rownames(.) %in% soi_genes) %>%
-  t() %>%
-  as.data.frame()
-rm(data_complete_tpm)
-write.csv(tpm_set,
-  "tpm_soi.csv"
-)
-
-scld_tpm_set <- scld_cnts_tpm %>% # Library size normalised TPM counts
-  filter(rownames(.) %in% soi_genes) %>%
-  t() %>%
-  as.data.frame()
-rm(scld_cnts_tpm)
-write.csv(scld_tpm_set,
-  "scld_tpm_soi.csv"
-)
-
-log_tpm <- tpm_set %>% # Log transformed TPM counts
-  mutate_at(vars(everything()), transform_tpm)
-write.csv(log_tpm,
-  "log_tpm_soi.csv"
-)
-rm(log_tpm)
-rm(tpm_set)
-
-log_scld_tpm <- scld_tpm_set %>% # Log transformed Library size normalised TPM counts
-  mutate_at(vars(everything()), transform_tpm)
-write.csv(log_scld_tpm,
-  "log_scld_tpm_soi.csv"
-)
+# # Expected Counts
+# exp_set <- data_complete_exp %>% # Raw expected counts
+#   filter(rownames(.) %in% soi_genes) %>%
+#   t() %>%
+#   as.data.frame()
+# rm(data_complete_exp)
+# write.csv(exp_set,
+#   "exp_soi.csv"
+# )
+# 
+# scld_exp_set <- scld_cnts_exp %>% # Library size normalised Expected counts
+#   filter(rownames(.) %in% soi_genes) %>%
+#   t() %>%
+#   as.data.frame()
+# rm(scld_cnts_exp)
+# write.csv(scld_exp_set,
+#   "scld_exp_soi.csv"
+# )
+# 
+# log_exp <- exp_set %>% # Log transformed expected counts
+#   mutate_at(vars(everything()), transform_exp)
+# write.csv(log_exp,
+#   "log_exp_soi.csv"
+# )
+# rm(log_exp)
+# rm(exp_set)
+# 
+# log_scld_exp <- scld_exp_set %>% # Log transformed Library size normalised expected counts
+#   mutate_at(vars(everything()), transform_exp)
+# write.csv(log_scld_exp,
+#   "log_scld_exp_soi.csv"
+# )
+# rm(log_scld_exp)
+# rm(scld_exp_set)
+# 
+# # Transcript per million (TPM)
+# tpm_set <- data_complete_tpm %>% # Raw TPM counts
+#   filter(rownames(.) %in% soi_genes) %>%
+#   t() %>%
+#   as.data.frame()
+# rm(data_complete_tpm)
+# write.csv(tpm_set,
+#   "tpm_soi.csv"
+# )
+# 
+# scld_tpm_set <- scld_cnts_tpm %>% # Library size normalised TPM counts
+#   filter(rownames(.) %in% soi_genes) %>%
+#   t() %>%
+#   as.data.frame()
+# rm(scld_cnts_tpm)
+# write.csv(scld_tpm_set,
+#   "scld_tpm_soi.csv"
+# )
+# 
+# log_tpm <- tpm_set %>% # Log transformed TPM counts
+#   mutate_at(vars(everything()), transform_tpm)
+# write.csv(log_tpm,
+#   "log_tpm_soi.csv"
+# )
+# rm(log_tpm)
+# rm(tpm_set)
+# 
+# log_scld_tpm <- scld_tpm_set %>% # Log transformed Library size normalised TPM counts
+#   mutate_at(vars(everything()), transform_tpm)
+# write.csv(log_scld_tpm,
+#   "log_scld_tpm_soi.csv"
+# )

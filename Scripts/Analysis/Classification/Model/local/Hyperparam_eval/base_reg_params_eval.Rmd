@@ -20,7 +20,7 @@ knitr::opts_knit$set(root.dir="/Users/Dyll/Documents/Education/VU_UVA/Internship
 
 Read in the data from the individual files
 ```{r}
-folder <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/regression/data"
+folder <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/Hyperparams/Base_models/regression/data"
 
 full_df <- data.frame()
 for (file in list.files(folder, pattern = "*.csv")){
@@ -39,8 +39,6 @@ for (file in list.files(folder, pattern = "*.csv")){
 full_df <- full_df %>% 
   distinct()
 
-# Save the full_df to a csv
-# write.csv(full_df, "Data/Model_output/categorical/mlogloss_measures/Full_categorical_loss_metrics_df.csv", row.names = FALSE)
 
 ```
 
@@ -59,8 +57,16 @@ best_loss <- full_df %>%
   select(Feature, everything())
 # 
 # # Save the best to a csv
-write.csv(best_loss, "Data/Model_output/regression/best_loss.csv", row.names = FALSE)
+write.csv(best_loss, "Data/Model_output/Hyperparams/Base_models/regression/best_loss.csv", row.names = FALSE)
 ```
+
+Save to the hyperparams folder
+```{r}
+final_best_loss <- best_loss %>% 
+  select(RNA_Set ,Feature, Trees, Eta, Gamma, Depth, Child_weight) %>% 
+  write.csv("Data/Model_input/Hyperparameters/base_reg_hyperparams.csv", row.names = FALSE)
+```
+
 
 Get frequency of the weights for the best loss
 ```{r}

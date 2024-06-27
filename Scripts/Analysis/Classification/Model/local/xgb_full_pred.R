@@ -27,15 +27,6 @@ feature_digit_function <- function(factors) {
   sapply(factors, function(x) selected_weights[as.numeric(x)])
 }
 
-# Function to extract the fold indices from the folds
-combine_all_folds <- function(folds) {
-  all_indices <- c()
-  for (fold in folds) {
-    all_indices <- c(all_indices, fold)
-  }
-  return(all_indices)
-}
-
 # Set the constant variables
 # The RNA list
 rna_list <- list(

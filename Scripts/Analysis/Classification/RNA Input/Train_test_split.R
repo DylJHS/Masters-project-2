@@ -31,12 +31,15 @@ random_sample_ids <- sample(
 
 for (file in rna_list) {
   set <- read.csv(paste0(path, "Full/", file))
+  cat("\n\n File: ", file, "\n")
+  print(dim(set))
 
   train_set <- set[!set[, 1] %in% random_sample_ids, ]
   test_set <- set[set[, 1] %in% random_sample_ids, ]
 
   test_name <- paste0(path, "test", "_", file)
   train_name <- paste0(path, "train", "_", file)
+  cat("Train: ", train_name, "\n")
   print(dim(train_set))
 
   # write.csv(

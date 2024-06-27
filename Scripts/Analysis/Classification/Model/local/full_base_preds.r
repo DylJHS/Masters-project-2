@@ -1,4 +1,5 @@
-# This script is intended to generate the predictions for the all base models for the training/tuning of the meta model
+# This script is intended to generate the predictions for the all base models 
+# for the training/tuning of the meta model
 
 # Needs to be updated to reflect the changes that are made to the pred_p1 and pred_p2 scripts
 
@@ -17,15 +18,6 @@ input_path <- "Data/Model_input/"
 # Function to map factor levels to weights
 feature_digit_function <- function(factors) {
   sapply(factors, function(x) selected_weights[as.numeric(x)])
-}
-
-# Function to extract the fold indices from the folds
-combine_all_folds <- function(folds) {
-  all_indices <- c()
-  for (fold in folds) {
-    all_indices <- c(all_indices, fold)
-  }
-  return(all_indices)
 }
 
 # Set the constant variables
