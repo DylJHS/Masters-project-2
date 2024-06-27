@@ -4,16 +4,10 @@ To Do
 URGENT: 
 
 1. STACK the models
-- Create the meta learner train set made up of the oof predictions from the base learners
 - Tune the meta learner hyperparams on the meta learner train set
-- 
-
-
-
-
+- Need to repeat the entire pipeline for the specific cancer types with more than 300 samples
 
 - Figure out what the baseline model is (always predicts normal claass or follows the class frequency frequencies randomly)
-
 
 - Remove the cancer types with less than 300 samples
 - Loop over the different cancer types and tune the hyperparameters 

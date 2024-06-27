@@ -11,7 +11,7 @@ index <- as.numeric(args[1])
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 # Get the parameters from stored Parameters file
-parameters <- read.csv("Data/CIN_Features/XGB_cat_parameters.csv")
+parameters <- read.csv("Data/Model_input/CIN_Features/XGB_cat_parameters.csv")
 cat("\n Parameters: \n")
 print(dim(parameters))
 
@@ -50,7 +50,7 @@ rna_list <- list(
 
 rna_selection_name <- rna_list[[selected_rna_set]]
 
-rna_data_path <- "Data/RNA_Data/Model_Input/Train/train_"
+rna_data_path <- "Data/Model_input/RNA/Train/train_"
 
 rna_set <- read.csv(
   paste0(
@@ -130,8 +130,7 @@ rm(X)
 rm(y)
 
 grid <- expand.grid(
-  eta = seq(selected_eta - 0.1, selected_eta + 0.1, 0.1),
-  depth = seq(selected_depth, selected_depth + 2, 1)
+  min_child = seq(1, 10, 1)
 )
 
 for (j in 1:nrow(grid)) {
@@ -155,7 +154,7 @@ for (j in 1:nrow(grid)) {
     nrounds = selected_trees,
     objective = "multi:softmax",
     eval_metric = "mlogloss",
-    early_stopping_rounds =50,
+    early_stopping_rounds = 100,
     nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
@@ -163,7 +162,7 @@ for (j in 1:nrow(grid)) {
     gamma = selected_gamma,
     num_class = 3,
     stratified = TRUE,
-    print_every_n = 10
+    print_every_n = 20
   )
 
   best_iteration <- 0
@@ -233,7 +232,7 @@ datetime <- Sys.time() %>%
   str_replace_all("\\.", "_")
 
 name <- paste0(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical/",
+  "Data/Model_output/Hyperparams/Base_models/categorical/mlogloss_measures/",
   selected_feature, "_",
   index, "_",
   datetime, ".csv"

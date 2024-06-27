@@ -1,4 +1,6 @@
-# This script is intended to generate the predictions for the all base models 
+# This script is intended to generate the predictions for the all base models for the training/tuning of the meta model
+
+# Needs to be updated to reflect the changes that are made to the pred_p1 and pred_p2 scripts
 
 
 # Load the packages
