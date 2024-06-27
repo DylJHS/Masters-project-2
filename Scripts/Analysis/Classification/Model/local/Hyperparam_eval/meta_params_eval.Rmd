@@ -85,7 +85,7 @@ write.csv(best_loss, "Data/Model_output/Hyperparams/Meta_models/best_loss.csv", 
 
 Save as the hyperparameters to use
 ```{r}
-best_loss_final %>% 
+best_loss_final <- best_loss %>%
   select(Feature, Trees, Eta, Gamma, Max_depth, Child_weight) %>% 
   write.csv("Data/Model_input/Hyperparameters/meta_hyperparams.csv", row.names = FALSE)
 
@@ -110,7 +110,7 @@ rna_freq <- as.data.frame(table(best_loss$RNA_Set)) %>%
   merge(., 
         best_loss %>% 
           group_by(RNA_Set) %>% 
-          summarise(Test_mlogloss = mean(Test_mlogloss)), 
+          summarise(Test_result = mean(Test_result)), 
         by = "RNA_Set")
 ```
 
@@ -121,7 +121,7 @@ depth_freq <- as.data.frame(table(best_loss$Depth)) %>%
   merge(., 
         best_loss %>% 
           group_by(Depth) %>% 
-          summarise(Test_mlogloss = mean(Test_mlogloss)), 
+          summarise(Test_result = mean(Test_result)), 
         by = "Depth")
 ```
 
@@ -132,27 +132,29 @@ eta_freq <- as.data.frame(table(best_loss$Eta)) %>%
   merge(., 
         best_loss %>% 
           group_by(Eta) %>% 
-          summarise(Test_mlogloss = mean(Test_mlogloss)), 
+          summarise(Test_result = mean(Test_result)), 
         by = "Eta")
 ```
 
 Get the gamma in terms of mlogloss difference
 ```{r}
-gamma_dif_table <- best_loss %>% 
-  group_by(Gamma) %>% 
-  summarise(mlogloss_diff = mean(Test_mlogloss) - mean(Trained_mlogloss),
-            mean_test_mlogloss = mean(Test_mlogloss))
+gamma_dif_table <- full_df %>% 
+  group_by(Type, Feature, Gamma) %>% 
+  summarise(Result_dif = mean(Test_result) - mean(Train_result),
+            mean_Test_result = mean(Test_result))
 
 # plot the gamma difference and mean test mlogloss
 gamma_dif_table %>% 
-  ggplot(aes(x = Gamma, y = mlogloss_diff)) +
+  ggplot(aes(x = Gamma, y = Result_dif, colour = Feature)) +
   geom_point() +
   geom_line() +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  labs(title = "Gamma difference in terms of mlogloss",
+  labs(title = "Test-Train difference in terms of Gamma",
        x = "Gamma",
-       y = "mlogloss difference") +
-  theme_minimal()
+       y = "Eval difference") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  facet_wrap(~Type, scales = "free_y")
 ```
 
 

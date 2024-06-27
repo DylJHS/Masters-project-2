@@ -8,10 +8,9 @@ library(caTools)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
 
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 # Get the parameters from stored Parameters file
-parameters <- read.csv("Data/Model_input/CIN_Features/XGB_reg_parameters.csv")
+parameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/base_reg_hyperparams.csv")
 cat("\n Parameters: \n")
 print(dim(parameters))
 
@@ -19,6 +18,7 @@ print(dim(parameters))
 selected_parameters <- parameters[index, ]
 rm(parameters)
 cat("\n Parameters: \n")
+
 print(selected_parameters)
 cat("\n\n")
 
@@ -28,16 +28,16 @@ selected_trees <- as.numeric(selected_parameters$Trees) + 500
 selected_eta <- selected_parameters$Eta
 selected_gamma <- selected_parameters$Gamma
 selected_depth <- selected_parameters$Max_depth
+selected_min_child <- selected_parameters$Child_weight
 
 rm(selected_parameters)
 
 # Define the extra parameters
-selected_min_child <- 1
 selected_seed <- 99
 
 # Get the corresonding rna set
 rna_list <- list(
-  transcripts_per_million = "tpm_set",
+  transcripts_per_million = "tpm",
   scalled_transcripts_per_million = "scld_tpm",
   log_scalled_transcripts_per_million = "log_scld_tpm",
   log_transcripts_per_million = "log_tpm",
@@ -49,7 +49,7 @@ rna_list <- list(
 
 rna_selection_name <- rna_list[[selected_rna_set]]
 
-rna_data_path <- "Data/Model_input/RNA/Train/train_"
+rna_data_path <- "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/gbm_input/Train/train_"
 
 rna_set <- read.csv(
   paste0(
@@ -61,10 +61,10 @@ rna_set <- read.csv(
 )
 
 # HRD scores
-ori_hrd <- read_tsv("Data/CIN_Features/TCGA.HRD_withSampleID.txt")
+ori_hrd <- read_tsv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/TCGA.HRD_withSampleID.txt")
 
 # Pericentromeric CNVs
-peri_cnv <- read.csv("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/CIN_Features/CNV_Data/lim_alpha_incl_TCGA_pericentro.csv") %>%
+peri_cnv <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/lim_alpha_incl_TCGA_pericentro_cnv.csv") %>%
   mutate_all(~ replace(., is.na(.), 0)) %>%
   mutate(sampleID = gsub("-", ".", sampleID))
 cat("\n\n pericentromeric data: \n")
@@ -142,8 +142,7 @@ rm(y)
 
 
 grid <- expand.grid(
-  eta = seq(selected_eta - 0.01, selected_eta + 0.1, 0.1),
-  depth = seq(selected_depth - 2, selected_depth + 2, 1)
+  min_child = seq(1,10,1)
 )
 
 for (j in 1:nrow(grid)) {
@@ -167,8 +166,8 @@ for (j in 1:nrow(grid)) {
     nrounds = selected_trees,
     objective = "reg:squarederror",
     eval_metric = "rmse",
-    early_stopping_rounds = 10,
-    nfold = 2,
+    early_stopping_rounds = 150,
+    nfold = 5,
     max_depth = selected_depth,
     min_child_weight = selected_min_child,
     eta = selected_eta,
@@ -240,7 +239,7 @@ datetime <- Sys.time() %>%
   str_replace_all("\\.", "_")
 
 name <- paste0(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Model_output/categorical/",
+  "/hpc/shared/prekovic/dhaynessimmons/data/model_output/regression/Reg_xgb_metrics_params_",
   selected_feature, "_",
   index, "_",
   datetime, ".csv"

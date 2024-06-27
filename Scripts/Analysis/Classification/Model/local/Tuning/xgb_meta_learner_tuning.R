@@ -65,8 +65,8 @@ set.seed(selected_seed)
 hyper_grid <- expand.grid(
   # depth = seq(1, 6, 1),
   # min_child = seq(selected_min_child-1, selected_min_child+2, 1)
-  eta = seq(0.02, 0.2, 0.03)
-  # gamma = seq(0, 0.5, 0.05)
+  eta = seq(0.02, 0.2, 0.03),
+  gamma = seq(0, 0.5, 0.05)
 )
 
 # Start the model tuning based on the selected feature
@@ -110,8 +110,8 @@ if (selected_feature %in% cat_features) {
     xgb_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
-      nfold = 2,
-      early_stopping_rounds = 50,
+      nfold = 5,
+      early_stopping_rounds = 100,
       objective = "multi:softmax",
       eval_metric = "mlogloss",
       num_class = 3,
@@ -220,8 +220,8 @@ if (selected_feature %in% cat_features) {
     xgb_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
-      nfold = 2,
-      early_stopping_rounds = 50,
+      nfold = 5,
+      early_stopping_rounds = 100,
       objective = "reg:squarederror",
       eval_metric = "rmse",
       eta = selected_eta,

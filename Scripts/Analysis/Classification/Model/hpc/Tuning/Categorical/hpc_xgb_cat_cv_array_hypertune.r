@@ -9,7 +9,7 @@ args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
 
 # Get the parameters from stored Parameters file
-parameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/XGB_cat_parameters.csv")
+parameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/base_cat_hyperparams.csv")
 
 # select the parameters and weights corrsponding to the index
 selected_parameters <- parameters[index, ]
@@ -25,16 +25,16 @@ selected_eta <- selected_parameters$Eta
 selected_gamma <- selected_parameters$Gamma
 selected_depth <- selected_parameters$Max_depth
 selected_weights <- as.numeric(selected_parameters[c("Weight.loss", "Weight.normal", "Weight.gain")] )
-
+selected_min_child <- selected_parameters$Child_weight
 rm(selected_parameters)
 
 # Define the extra parameters
-selected_min_child <- 1
+
 selected_seed <- 99
 
 # Get the corresonding rna set
 rna_list <- list(
-  transcripts_per_million = "tpm",
+  transcripts_per_million = "tpm_set",
   scalled_transcripts_per_million = "scld_tpm",
   log_scalled_transcripts_per_million = "log_scld_tpm",
   log_transcripts_per_million = "log_tpm",
@@ -126,8 +126,7 @@ rm(X)
 rm(y)
 
 grid <- expand.grid(
-  eta = seq(selected_eta - 0.1, selected_eta + 0.1, 0.1),
-  depth = seq(selected_depth, selected_depth + 2, 1)
+  min_child = seq(1,10,1)
 )
 
 set.seed(selected_seed)

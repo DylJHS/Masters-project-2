@@ -1,12 +1,8 @@
-# """
-# Creation of the RNA sets in their different forms 
-# of the gbm hyperparameter tuning using array task
-# in hpc such that each task can just load the data instead of 
-# having to create it from scratch.
 
-# """
-
-
+# Creation of the RNA sets in their different types
+# for hyperparameter tuning of the xgb model
+#  and for the final model training
+# The sets are created for the SOI genes only
 
 library(dplyr)
 library(readr)
@@ -203,6 +199,8 @@ matching_cols_exp <- matching_cols_exp[!is.na(matching_cols_exp)]
 
 scld_cnts_exp <- round(sweep(exp_data[, matching_cols_exp], 2, Normfactors$norm.factors, "/"), 2)
 rm(exp_data)
+
+# Save the data in the different forms only selecting the SOI genes
 
 # Expected Counts
 exp_set <- data_complete_exp %>% # Raw expected counts

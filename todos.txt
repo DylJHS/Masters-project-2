@@ -4,8 +4,10 @@ To Do
 URGENT: 
 
 1. STACK the models
-- Tune the meta learner hyperparams on the meta learner train set
 - Need to repeat the entire pipeline for the specific cancer types with more than 300 samples
+
+- Writing the training script for the full model
+
 
 - Figure out what the baseline model is (always predicts normal claass or follows the class frequency frequencies randomly)
 
