@@ -10,6 +10,22 @@ library(xgboost)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
 
+# Get the parameters from stored Parameters file
+hyperparameters <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/meta_hyperparams.csv")
+
+# Define the constant hyperparameters
+selected_parameters <- hyperparameters[index, ]
+cat("\n\n Selected Hyperparameters: ")
+print(selected_parameters)
+
+selected_feature <- selected_parameters$Feature
+selected_trees <- selected_parameters$Trees + 500
+selected_eta <- selected_parameters$Eta
+selected_gamma <- selected_parameters$Gamma
+selected_depth <- selected_parameters$Max_depth
+selected_min_child <- selected_parameters$Child_weight
+selected_seed <- 99
+
 # Load the full prediction data
 predictions <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/base_predictions/Full_base_predictions.csv",
   row.names = 1
@@ -40,25 +56,14 @@ meta_model_metrics <- data.frame(
   "Seed" = integer()
 )
 
-# Define the constant hyperparameters
-selected_feature <- response_features[index]
-cat(
-  "\n\n Selected Feature: ", selected_feature, "\n"
-)
-
-selected_trees <- 10000
-selected_eta <- 0.3
-selected_gamma <- 0
-selected_seed <- 99
-
 set.seed(selected_seed)
 
 # Define the hyperparameter grid
 hyper_grid <- expand.grid(
-  depth = seq(1, 6, 1),
-  min_child = seq(1, 10, 1),
-  eta = seq(0.02, 0.2, 0.03),
-  gamma = seq(0, 0.5, 0.05)
+  # depth = seq(1, 6, 1),
+  min_child = seq(selected_min_child-2, selected_min_child+2, 1)
+  # eta = seq(0.02, 0.2, 0.03),
+  # gamma = seq(0, 0.5, 0.05)
 )
 
 # Start the model tuning based on the selected feature
@@ -287,12 +292,23 @@ if (selected_feature %in% cat_features) {
 }
 
 # Save the results
+date <- Sys.Date()
+current_time <- Sys.time()
+
+# Extract components from the timestamp
+seconds <- as.numeric(format(current_time, "%S"))
+minutes <- as.numeric(format(current_time, "%M"))
+day <- as.numeric(format(date, "%d"))
+
+set.seed(seconds * minutes* day)
+random_int <- sample(100:99999, 1)
+
 write.csv(
   meta_model_metrics,
   paste0(
     "/hpc/shared/prekovic/dhaynessimmons/data/model_output/meta_params/Hyperparams_",
-    selected_feature,
-    ".csv"
+    selected_feature, "_",
+    random_int, ".csv"
   ),
   row.names = FALSE
 )
