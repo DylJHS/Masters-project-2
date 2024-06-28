@@ -25,7 +25,7 @@ selected_trees <- as.numeric(selected_parameters$Trees)
 # selected_lr <- selected_parameters$Eta
 # selected_gamma <- 0
 selected_depth <- selected_parameters$Max_depth
-selected_weights <- as.numeric(selected_parameters[c("Weight.loss", "Weight.normal", "Weight.gain")] )
+selected_weights <- as.numeric(selected_parameters[c("Weight_loss", "Weight_normal", "Weight_gain")] )
 
 # Define the extra parameters
 selected_min_child <- 1

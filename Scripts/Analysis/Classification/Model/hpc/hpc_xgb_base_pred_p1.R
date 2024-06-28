@@ -251,9 +251,9 @@ if (feature %in% cat_features) {
   selected_depth <- selected_parameters$Max_depth
   selected_weights <- as.numeric(
     selected_parameters[c(
-      "Weight.loss",
-      "Weight.normal",
-      "Weight.gain"
+      "Weight_loss",
+      "Weight_normal",
+      "Weight_gain"
     )]
   )
   selected_min_child <- 1

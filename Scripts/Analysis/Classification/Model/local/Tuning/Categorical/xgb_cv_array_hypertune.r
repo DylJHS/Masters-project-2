@@ -28,7 +28,7 @@ selected_trees <- as.numeric(selected_parameters$Trees)
 selected_eta <- selected_parameters$Eta
 selected_gamma <- selected_parameters$Gamma
 selected_depth <- selected_parameters$Max_depth
-selected_weights <- as.numeric(selected_parameters[c("Weight.loss", "Weight.normal", "Weight.gain")])
+selected_weights <- as.numeric(selected_parameters[c("Weight_loss", "Weight_normal", "Weight_gain")])
 
 rm(selected_parameters)
 

@@ -135,7 +135,7 @@ selected_combination <- reg_hyperparam_df[index, ]
 selected_feature <- selected_combination$Feature
 selected_rna_set <- selected_combination$RNA_set
 selected_trees <- selected_combination$Trees
-selected_depth <- selected_combination$Max_Depth
+selected_depth <- selected_combination$Max_depth
 selected_eta <- selected_combination$Eta
 selected_child_weight <- 1
 
