@@ -189,11 +189,11 @@ scaled_data <- ceiling(scaled_data) # Round up
 
 ```{r}
 # Filter out non SOI genes
-filtered_scalled <- scaled_data[rownames(scaled_data) %in% soi_genes, ]
-print(dim(filtered_scalled))
+filtered_scaled <- scaled_data[rownames(scaled_data) %in% soi_genes, ]
+print(dim(filtered_scaled))
 
 # Log Transform the counts
-log_data <- apply(filtered_scalled, MARGIN = c(1,2), FUN = function(x) log(x + 1))
+log_data <- apply(filtered_scaled, MARGIN = c(1,2), FUN = function(x) log(x + 1))
 ```
 
 ```{r}

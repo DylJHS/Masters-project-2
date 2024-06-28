@@ -24,13 +24,13 @@ feature_digit_function <- function(factors) {
 # The RNA list
 rna_list <- list(
   transcripts_per_million = "tpm",
-  scalled_transcripts_per_million = "scld_tpm",
-  log_scalled_transcripts_per_million = "log_scld_tpm",
+  scaled_transcripts_per_million = "scld_tpm",
+  log_scaled_transcripts_per_million = "log_scld_tpm",
   log_transcripts_per_million = "log_tpm",
   expected_counts = "exp",
-  scalled_expected_counts = "scld",
+  scaled_expected_counts = "scld",
   log_expected_counts = "log",
-  log_scalled_expected_counts = "log_scld"
+  log_scaled_expected_counts = "log_scld"
 )
 
 # The CIN response features

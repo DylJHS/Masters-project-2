@@ -5,6 +5,9 @@ date: "2024-06-27"
 note: "This file is intended to be used for the full prediction of the XGB model 
 from the soi RNAseq data to the final predictions from the meta learners"
 ---
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir="/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
 
 
 ```{r}
@@ -19,8 +22,10 @@ library(caret)
 
 ```{r}
 print_every = 100
+early_stop = 50
 
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+
+# setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 input_path <- "Data/Model_input/"
 ```
@@ -49,13 +54,13 @@ combine_all_folds <- function(folds) {
 # The RNA list
 rna_list <- list(
   transcripts_per_million = "tpm",
-  scalled_transcripts_per_million = "scld_tpm",
-  log_scalled_transcripts_per_million = "log_scld_tpm",
+  scaled_transcripts_per_million = "scld_tpm",
+  log_scaled_transcripts_per_million = "log_scld_tpm",
   log_transcripts_per_million = "log_tpm",
   expected_counts = "exp",
-  scalled_expected_counts = "scld",
+  scaled_expected_counts = "scld",
   log_expected_counts = "log",
-  log_scalled_expected_counts = "log_scld"
+  log_scaled_expected_counts = "log_scld"
 )
 ```
 
@@ -249,7 +254,6 @@ oof_predictions <- cbind(oof_predictions, fold_labels) %>%
 for (feature in response_features){
 
   cat(
-    "\n index: ", index, "\n",
     "Feature: ", feature, "\n\n"
   )
   
@@ -265,13 +269,13 @@ for (feature in response_features){
     selected_trees <- as.numeric(selected_parameters$Trees)
     selected_eta <- selected_parameters$Eta
     selected_gamma <- selected_parameters$Gamma
-    selected_depth <- selected_parameters$Max_depth
+    selected_max_depth <- selected_parameters$Max_depth
     selected_min_child <- selected_parameters$Child_weight
     selected_weights <- as.numeric(
       selected_parameters[c(
-        "Weight.loss",
-        "Weight.normal",
-        "Weight.gain"
+        "Weight_loss",
+        "Weight_normal",
+        "Weight_gain"
       )]
     )
     
@@ -284,7 +288,7 @@ for (feature in response_features){
       "Trees: ", selected_trees, "\n",
       "Eta: ", selected_eta, "\n",
       "Gamma: ", selected_gamma, "\n",
-      "Max Depth: ", selected_depth, "\n",
+      "Max Depth: ", selected_max_depth, "\n",
       "Weights: ", selected_weights, "\n",
       "Min Child: ", selected_min_child, "\n",
       "Seed: ", selected_seed, "\n\n"
@@ -307,7 +311,7 @@ for (feature in response_features){
     )
     
     y <- as.integer(full_df[[selected_feature]])
-    X <- full_df %>% select(-c("Row.names", response_features))
+    X <- full_df %>% select(-c("Row.names", all_of(response_features)))
     
     train_y_factor <- factor(y, levels = c(0, 1, 2))
     weights <- as.numeric(feature_digit_function(train_y_factor))
@@ -320,8 +324,9 @@ for (feature in response_features){
       objective = "multi:softmax",
       eval_metric = "mlogloss",
       folds = folds,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
+      early_stopping_rounds = early_stop,
       eta = selected_eta,
       gamma = selected_gamma,
       num_class = 3,
@@ -343,7 +348,7 @@ for (feature in response_features){
     selected_trees <- as.numeric(selected_parameters$Trees)
     selected_eta <- selected_parameters$Eta
     selected_gamma <- selected_parameters$Gamma
-    selected_depth <- selected_parameters$Max_depth
+    selected_max_depth <- selected_parameters$Max_depth
     selected_min_child <- selected_parameters$Child_weight
     selected_seed <- 99
     
@@ -354,7 +359,7 @@ for (feature in response_features){
       "Trees: ", selected_trees, "\n",
       "Eta: ", selected_eta, "\n",
       "Gamma: ", selected_gamma, "\n",
-      "Max Depth: ", selected_depth, "\n",
+      "Max Depth: ", selected_max_depth, "\n",
       "Min Child: ", selected_min_child, "\n",
       "Seed: ", selected_seed, "\n\n"
     )
@@ -385,9 +390,9 @@ for (feature in response_features){
       nrounds = selected_trees,
       objective = "reg:squarederror",
       eval_metric = "rmse",
-      early_stopping_rounds = early_stopping,
+      early_stopping_rounds = early_stop,
       folds = folds,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       eta = selected_eta,
       gamma = selected_gamma,

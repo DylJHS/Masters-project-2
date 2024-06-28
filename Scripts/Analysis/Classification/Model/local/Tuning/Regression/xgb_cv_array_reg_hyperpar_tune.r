@@ -141,11 +141,11 @@ selected_child_weight <- 1
 
 rna_list <- list(
   transcripts_per_million = tpm_set,
-  scalled_transcripts_per_million = scld_tpm_set,
-  log_scalled_transcripts_per_million = log_scld_tpm,
+  scaled_transcripts_per_million = scld_tpm_set,
+  log_scaled_transcripts_per_million = log_scld_tpm,
   log_transcripts_per_million = log_tpm,
-  scalled_expected_counts = scld_exp_set,
-  log_scalled_expected_counts = log_scld_exp
+  scaled_expected_counts = scld_exp_set,
+  log_scaled_expected_counts = log_scld_exp
 )
 rna_names <- names(rna_list)
 

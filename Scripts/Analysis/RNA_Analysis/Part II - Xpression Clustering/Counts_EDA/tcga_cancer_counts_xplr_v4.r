@@ -162,12 +162,12 @@ scaled_data <- base::sweep(samples_to_use, 2, d0, "/") # scalling the genes (2 =
 scaled_data <- ceiling(scaled_data) # Round up
 
 # Filter out non SOI genes
-filtered_scalled <- scaled_data[rownames(scaled_data) %in% soi_genes, ]
+filtered_scaled <- scaled_data[rownames(scaled_data) %in% soi_genes, ]
 print("filtered data")
-print(dim(filtered_scalled))
+print(dim(filtered_scaled))
 
 # Log Transform the counts
-log_data <- apply(filtered_scalled, MARGIN = c(1,2), FUN = function(x) log(x + 1))
+log_data <- apply(filtered_scaled, MARGIN = c(1,2), FUN = function(x) log(x + 1))
 
 # 5.  MDS
 # Transpose the data 
