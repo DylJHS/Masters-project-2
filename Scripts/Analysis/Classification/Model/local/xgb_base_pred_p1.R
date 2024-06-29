@@ -16,8 +16,7 @@ early_stopping <- 100
 print_every <- 25
 cv <- 5
 
-
-input_path <- "/hpc/shared/prekovic/dhaynessimmons/data/"
+input_path <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/"
 
 # Load the functions
 # Function to map factor levels to weights
