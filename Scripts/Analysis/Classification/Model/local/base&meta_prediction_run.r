@@ -1,37 +1,18 @@
----
-title: "XGB full prediction"
-output: html_document
-date: "2024-06-27"
-note: "This file is intended to be used for the full prediction of the XGB model 
-from the soi RNAseq data to the final predictions from the meta learners"
----
-```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir="/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
-```
+# This script is intended to train the base and meta models for the CIN prediction and save the predictions in their original scale
 
-
-```{r}
 # Load the packages
 library(dplyr)
 library(readr)
 library(tidyverse)
 library(xgboost)
 library(caret)
-```
 
-
-```{r}
-print_every = 50
-early_stop = 50
-
-
-# setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+print_every <- 150
+early_stop <- 10
+fold_n <- 2
 
 input_path <- "Data/Model_input/"
-```
 
-
-```{r}
 # Load the functions
 # Function to map factor levels to weights
 feature_digit_function <- function(factors) {
@@ -47,135 +28,6 @@ combine_all_folds <- function(folds) {
   return(all_indices)
 }
 
-# Function to calculate the confusion matrix using the caret package and return the confusion matrix object
-calculate_confusion_matrix <- function(predictions_df, predicted_col, true_col) {
-  # Ensure the input columns exist in the predictions dataframe
-  if (!predicted_col %in% names(predictions_df) || !true_col %in% names(predictions_df)) {
-    stop("Specified columns do not exist in the provided dataframe")
-  }
-  
-  # Create the confusion matrix
-  cm <- confusionMatrix(
-    data = factor(predictions_df[[predicted_col]], levels = c(-1, 0, 1)),
-    reference = factor(predictions_df[[true_col]], levels = c(-1, 0, 1))
-  )
-  
-  # Return the confusion matrix object
-  return(cm)
-}
-
-# Function to extract the true positive rate from the confusion matrix and create the heatmap
-  tpr_confusion_matrix <- function(object, feature, learner_type) {
-   new_table <- pivot_wider(as.data.frame(object$table), names_from = Reference, values_from = Freq, values_fill = list(frequency = 0)) %>%
-     column_to_rownames("Prediction") %>%
-     sweep(., 2, colSums(.), "/") %>%
-     round(., 2) %>%
-     rownames_to_column("Prediction") %>% 
-     pivot_longer(., cols = -Prediction, names_to = "Reference", values_to = "TPR") %>%
-     mutate(TPR = round(TPR, 2))
-   
-   graph <- ggplot(new_table, aes(x = Reference, y = Prediction, fill = TPR)) +
-     geom_tile() +
-     geom_text(aes(label = TPR), vjust = 1) +
-     scale_fill_gradient(low = "#FFEBEE", high = "#B71C1C") +
-     theme_minimal() +
-     labs(
-       title = paste0(
-         learner_type, 
-         " Learner Performance for ",
-         feature),
-       x = "Actual Class",
-       y = "Predicted Class"
-     ) +
-     theme(
-       axis.text.x = element_text(hjust = 1), # Adjust text angle for better legibility
-       plot.title = element_text(hjust = 0.5)
-     )
-   # Save the heatmap
-    ggsave(
-      filename = paste0(
-        "Plots/Model_Plots/General_model/Confusion_Matrices/",
-        feature,"_",
-        learner_type,
-        "_TPR_Heatmap.png"
-      ),
-      plot = graph,
-      width = 10,
-      height = 10
-    )
-  } 
-  
-  # Function to get the stats from the confusion matrix object
-   create_confusion_matrix_data <- function(obj, type) {
-     as.data.frame(obj$byClass) %>% 
-       rownames_to_column("Class") %>%
-       mutate(Type = type) %>% 
-       select(-c("Pos Pred Value", "Neg Pred Value", 
-                 "Prevalence", "Detection Rate", 
-                 "Detection Prevalence", "Sensitivity")) %>%
-       pivot_longer(cols = -c(Type, Class), names_to = "Metric", values_to = "Value") %>% 
-       as.data.frame()
-   }
-  
-  
-  # Function to create the plot based on the confusion matrix stats by learner type
-  confusion_stat_plot <- function(data, feature) {
-    
-      metrics_plt <- data %>%
-        ggplot(aes(x = factor(Metric, levels = rev(c(
-          "Balanced Accuracy","F1", "Precision",
-          "Recall", "Specificity"))), y = Value, fill = Type)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        coord_flip() +
-        scale_fill_manual(values = c("#ABDDDE", "#CCEDB1", "#41B7C4")) +
-        facet_wrap(~Class, scales = "free_y") +
-        theme_minimal() +
-        labs(
-          title = paste0("Model Performance Stats for ", feature),
-          x = "Class",
-          y = "Value"
-        ) +
-         scale_y_continuous(breaks = seq(0, 1, by = 0.25))+
-        theme(
-          axis.text.x = element_text(angle = 45, hjust = 1),
-          plot.title = element_text(hjust = 0.5),
-          panel.grid.major.x = element_line(colour = "grey", 
-                                            linetype = 2),
-          panel.grid.major.y = element_blank(),
-          panel.grid.minor.x = element_blank()
-        ) 
-
-
-    # save the data
-    # write.csv(
-    #   confusion_matrix_data,
-    #   paste0(
-    #     "Data/Model_output/Confusion_Matrix_Stats_",
-    #     feature,
-    #     ".csv"
-    #   )
-    # )
-    # 
-    # # save the plot
-    # ggsave(
-    #   filename = paste0(
-    #     "Plots/Model_Plots/General_model/Confusion_Matrix_Stats/",
-    #     feature,
-    #     "_Confusion_Matrix_Stats.png"
-    #   ),
-    #   plot = confusion_matrix_data,
-    #   width = 10,
-    #   height = 10
-    # )
-    
-   
-  
-  } 
-  
-```
-
-
-```{r}
 # Set the constant variables
 # The RNA list
 rna_list <- list(
@@ -188,10 +40,7 @@ rna_list <- list(
   log_expected_counts = "log",
   log_scaled_expected_counts = "log_scld"
 )
-```
 
-
-```{r}
 # The CIN response features
 # Categorical features
 cat_cin <- read_tsv(
@@ -257,10 +106,7 @@ peri_cnv <- read.csv(
   column_to_rownames("sampleID")
 
 # print(dim(peri_cnv))
-```
 
-Load the hyperparameters for the models
-```{r}
 base_cat_parameters <- read.csv(
   paste0(
     input_path,
@@ -274,16 +120,6 @@ base_reg_parameters <- read.csv(
   )
 )
 
-meta_parameters <- read.csv(
-  paste0(
-    input_path,
-    "Hyperparameters/meta_hyperparams.csv"
-  )
-)
-```
-
-Define the large datasets
-```{r}
 reg_cin <- merge(
   hrd,
   peri_cnv,
@@ -318,12 +154,8 @@ cat(
 
 # rm(reg_cin)
 # rm(cat_cin)
-```
 
-
-```{r}
 # Create the folds to be used
-
 # Create the full data by merging the soi & cancerous RNA data with the CIN data
 full_data <- merge(
   read.csv(
@@ -341,7 +173,7 @@ cat("\n Full Data:  \n")
 print(head(full_data[1:5]))
 
 # Creating the folds and returning the indices for the out-of-fold predictions only
-folds <- createFolds(full_data[["1p"]], k = 2, list = TRUE, returnTrain = FALSE)
+folds <- createFolds(full_data[["1p"]], k = fold_n, list = TRUE, returnTrain = FALSE)
 cat("\n Folds # :", length(folds), "\n")
 
 # Create the empty dataframe that will store the out-of-fold predictions for each model
@@ -355,10 +187,8 @@ colnames(base_oof_predictions) <- paste0("pred_", response_features)
 
 cat("\n Predictions Dataframe:  \n")
 print(head(base_oof_predictions[1:5]))
-```
 
 
-```{r}
 # Get the actual (true) fold labels
 labels <- full_data %>%
   select(all_of(intersect(response_features, colnames(.)))) %>%
@@ -371,23 +201,20 @@ labels <- full_data %>%
 # making sure to keep the order of the original indices
 base_oof_predictions <- cbind(base_oof_predictions, labels) %>%
   arrange(act_index)
-```
 
 
-```{r}
-for (feature in response_features){
-
+for (feature in response_features) {
   cat(
     "Feature: ", feature, "\n\n"
   )
-  
+
   if (feature %in% cat_features) {
     # Get the parameters from stored Parameters file
     parameters <- base_cat_parameters
-    
+
     # select the parameters and weights corresponding to the index
     selected_parameters <- parameters[parameters$Feature == feature, ]
-    
+
     selected_feature <- selected_parameters$Feature
     selected_rna_set <- selected_parameters$RNA_set
     selected_trees <- as.numeric(selected_parameters$Trees)
@@ -402,7 +229,7 @@ for (feature in response_features){
         "Weight_gain"
       )]
     )
-    
+
     cat(
       "\n Selected Parameters: \n",
       "Feature: ", selected_feature, "\t",
@@ -414,7 +241,7 @@ for (feature in response_features){
       "Weights: ", selected_weights, "\t",
       "Min Child: ", selected_min_child, "\n"
     )
-    
+
     rna_selection_name <- rna_list[[selected_rna_set]]
     rna_set <- read.csv(
       paste0(
@@ -425,20 +252,20 @@ for (feature in response_features){
       ),
       row.names = 1
     )
-    
+
     full_df <- merge(rna_set,
-                     full_cin,
-                     by = "row.names"
+      full_cin,
+      by = "row.names"
     )
-    
+
     y <- as.integer(full_df[[selected_feature]])
     X <- full_df %>% select(-c("Row.names", all_of(response_features)))
-    
+
     train_y_factor <- factor(y, levels = c(0, 1, 2))
     weights <- as.numeric(feature_digit_function(train_y_factor))
-    
+
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
-    
+
     xgb_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
@@ -454,16 +281,16 @@ for (feature in response_features){
       print_every_n = print_every,
       prediction = TRUE
     )
-    
+
     # Store the predictions in the corresponding column
     base_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_model$pred[, 1]
   } else if (feature %in% reg_features) {
     # Get the parameters from stored Parameters file
     parameters <- base_reg_parameters
-    
+
     # select the parameters and weights corresponding to the index
     selected_parameters <- parameters[parameters$Feature == feature, ]
-    
+
     selected_feature <- selected_parameters$Feature
     selected_rna_set <- selected_parameters$RNA_set
     selected_trees <- as.numeric(selected_parameters$Trees)
@@ -471,7 +298,7 @@ for (feature in response_features){
     selected_gamma <- selected_parameters$Gamma
     selected_max_depth <- selected_parameters$Max_depth
     selected_min_child <- selected_parameters$Child_weight
-    
+
     cat(
       "\n Selected Parameters: \n",
       "Feature: ", selected_feature, "\t",
@@ -482,7 +309,7 @@ for (feature in response_features){
       "Max Depth: ", selected_max_depth, "\t",
       "Min Child: ", selected_min_child, "\n"
     )
-    
+
     rna_selection_name <- rna_list[[selected_rna_set]]
     rna_set <- read.csv(
       paste0(
@@ -493,17 +320,17 @@ for (feature in response_features){
       ),
       row.names = 1
     )
-    
+
     full_df <- merge(rna_set,
-                     full_cin,
-                     by = "row.names"
+      full_cin,
+      by = "row.names"
     )
-    
+
     y <- as.numeric(full_df[[selected_feature]])
     X <- full_df %>% select(-c("Row.names", all_of(response_features)))
-    
+
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
-    
+
     xgb_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
@@ -518,38 +345,43 @@ for (feature in response_features){
       print_every_n = print_every,
       prediction = TRUE
     )
-    
+
     # Store the predictions in the corresponding column
     base_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_model$pred
   } else {
     cat("Feature not found")
   }
 }
-write.csv(
-  base_oof_predictions,
-  paste0(
-    "Data/Model_output/Base_predictions/XGB_base_predictions_test",
-    feature,
-    ".csv"
-  )
-)
-
 cat("Training the base models complete")
 
-```
-Train the meta learners on the out-of-fold predictions
-```{r}
+# Reconvert the data into the original scale
+final_base_oof_predictions <- base_oof_predictions %>%
+  mutate(across(.cols = -SampleID, .fns = as.numeric)) %>%
+  mutate(across(.cols = -SampleID, ~ replace(., . == 0, -1))) %>%
+  mutate(across(.cols = -SampleID, ~ replace(., . == 1, 0))) %>%
+  mutate(across(.cols = -SampleID, ~ replace(., . == 2, 1)))
 
-base_oof_predictions <- read.csv(
+# # Save the predictions
+# write.csv(
+#   final_base_oof_predictions,
+#   paste0(
+#     "Data/Model_output/Base_predictions/Final_base_predictions.csv"
+#   )
+# )
+
+
+# Load the meta parameters and remove the base ones
+parameters <- read.csv(
   paste0(
     input_path,
-    "Base_predictions/Full_base_predictions.csv"
-  ),
-  row.names = 1
+    "Hyperparameters/meta_hyperparams.csv"
+  )
 )
+rm(base_cat_parameters)
+rm(base_reg_parameters)
 
 # Create the training folds
-meta_folds <- createFolds(base_oof_predictions[["act_1p"]], k = 2, list = TRUE, returnTrain = FALSE)
+meta_folds <- createFolds(base_oof_predictions[["act_1p"]], k = fold_n, list = TRUE, returnTrain = FALSE)
 
 # Create the empty dataframe that will store the out-of-fold predictions for each model of the meta learners
 meta_oof_predictions <- data.frame(
@@ -563,16 +395,12 @@ colnames(meta_oof_predictions) <- paste0("pred_", response_features)
 cat("\n Predictions Dataframe:  \n")
 print(head(meta_oof_predictions[1:5]))
 
-meta_oof_predictions <- cbind(meta_oof_predictions,
-                              labels) %>% 
-  arrange(act_index) %>% 
+meta_oof_predictions <- cbind(
+  meta_oof_predictions,
+  labels
+) %>%
+  arrange(act_index) %>%
   column_to_rownames("act_index")
-
-
-```
-
-
-```{r}
 
 # Create the predictor data for the meta learners
 meta_input_data <- base_oof_predictions %>%
@@ -582,36 +410,32 @@ for (feature in response_features) {
   cat(
     "Feature: ", feature, "\n\n"
   )
-  
-  # Get the parameters from stored Parameters file
-  parameters <- meta_parameters
-  
+
   # select the parameters and weights corresponding to the index
   selected_parameters <- parameters[parameters$Feature == feature, ]
-  
+
   selected_feature <- selected_parameters$Feature
   selected_trees <- as.numeric(selected_parameters$Trees)
   selected_eta <- selected_parameters$Eta
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth
   selected_min_child <- selected_parameters$Child_weight
-  
+
   cat(
-      "\n Selected Parameters: \n",
-      "Feature: ", selected_feature, "\t",
-      "Trees: ", selected_trees, "\t",
-      "Eta: ", selected_eta, "\n",
-      "Gamma: ", selected_gamma, "\t",
-      "Max Depth: ", selected_max_depth, "\t",
-      "Min Child: ", selected_min_child, "\n"
-    )
-  
+    "\n Selected Parameters: \n",
+    "Feature: ", selected_feature, "\t",
+    "Trees: ", selected_trees, "\t",
+    "Eta: ", selected_eta, "\n",
+    "Gamma: ", selected_gamma, "\t",
+    "Max Depth: ", selected_max_depth, "\t",
+    "Min Child: ", selected_min_child, "\n"
+  )
+
   y <- as.integer(base_oof_predictions[[paste0("act_", feature)]])
-    
+
   xgb_data <- xgb.DMatrix(data = as.matrix(meta_input_data), label = y)
-  
+
   if (feature %in% cat_features) {
-    
     xgb_meta_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
@@ -627,11 +451,10 @@ for (feature in response_features) {
       print_every_n = print_every,
       prediction = TRUE
     )
-    
+
     # Store the predictions in the corresponding column
     meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred[, 1]
   } else if (feature %in% reg_features) {
-    
     xgb_meta_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
@@ -646,7 +469,7 @@ for (feature in response_features) {
       print_every_n = print_every,
       prediction = TRUE
     )
-    
+
     # Store the predictions in the corresponding column
     meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred
   } else {
@@ -655,67 +478,16 @@ for (feature in response_features) {
 }
 
 cat("Training of the meta models complete")
-```
-
-Reconvert the data into the original scale
-```{r}
-# Reconvert the data into the original scale
-final_base_oof_predictions <- base_oof_predictions %>%
-  mutate(across(.cols = -SampleID, .fns = as.numeric)) %>%
-  mutate(across(.cols = -SampleID, ~ replace(., . == 0, -1))) %>%
-  mutate(across(.cols = -SampleID, ~ replace(., . == 1, 0))) %>%
-  mutate(across(.cols = -SampleID, ~ replace(., . == 2, 1)))
 
 final_meta_oof_predictions <- meta_oof_predictions %>%
   mutate_all(as.numeric) %>%
   mutate_all(~ replace(., . == 0, -1)) %>%
   mutate_all(~ replace(., . == 1, 0)) %>%
   mutate_all(~ replace(., . == 2, 1))
-```
 
-
-Assess the performance of the models
-```{r}
-
-# Assess the performance of the models
-for (feature in response_features) {
-
-  predicted <- paste0("pred_", feature)
-  labelled <- paste0("act_", feature)
-  
-  if (feature %in% cat_features) {
-    # Use Caret package to get the performance stats
-    cm_base <- calculate_confusion_matrix(final_base_oof_predictions, predicted, labelled)
-    cm_meta <- calculate_confusion_matrix(final_meta_oof_predictions, predicted, labelled)
-    
-    # Create the TPR confusion matrix and the heatmap
-    # tpr_mtrx_base <- tpr_confusion_matrix(cm_base, feature, "Base")
-    # tpr_mtrx_meta <- tpr_confusion_matrix(cm_meta, feature, "Meta")
-    
-    # Create the confusion matrix stats 
-    confusion_matrix_data <- rbind(
-      create_confusion_matrix_data(cm_meta, "Meta"),
-      create_confusion_matrix_data(cm_base, "Base")
-    ) 
-    
-    # Create the plot for the stats above 
-    metrics_plot <- confusion_stat_plot(confusion_matrix_data, feature)
-    
-  } 
-  # else if (feature %in% reg_features) {
-  #   y <- as.numeric(base_oof_predictions[[paste0("act_", feature)]])
-  #   y_pred <- meta_oof_predictions[[paste0("pred_", feature)]]
-  #   
-  #   cat(
-  #     "Feature: ", feature, "\n\n",
-  #     "RMSE: ", sqrt(mean((y - y_pred)^2)), "\n"
-  #   )
-  # } else {
-  #   cat("Feature not found")
-  # }
-}
-
-```
-
-
-
+write.csv(
+  final_meta_oof_predictions,
+  paste0(
+    "Data/Model_output/Meta_predictions/Final_meta_predictions.csv"
+  )
+)
