@@ -6,7 +6,13 @@ URGENT:
 1. STACK the models
 - Need to repeat the entire pipeline for the specific cancer types with more than 300 samples
 
-- Writing the training script for the full model
+- Write the training script for the full model
+
+- Load the full RNA data to the hpc so that i can create the cancer_specific data sets in all formats (log, scaled ...)
+
+- Need to create the cancer specific hyperparameters
+- Need the cancer-specific class weights
+
 
 
 - Figure out what the baseline model is (always predicts normal claass or follows the class frequency frequencies randomly)

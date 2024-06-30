@@ -13,12 +13,13 @@ library(caret)
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 
-predictions_folder <- "Data/Model_input/Base_predictions/indiv/"
+predictions_folder <- "Data/Model_output/Predictions/Base_predictions/indiv/"
 
 # Create the full empty predictions data frame
-predictions <- data.frame(
-  "act_index" = integer()
-)
+predictions <- read.csv(paste0(predictions_folder, "ref_data.csv"),
+  row.names = 1
+) %>%
+  select("act_index")
 
 # Loop over the individual predictions csv files
 for (file in list.files(predictions_folder)) {
@@ -42,6 +43,10 @@ predictions <- predictions %>%
   select("SampleID", everything())
 
 # Save the predictions with the row names since they represent the actual index
-write.csv(predictions, "Data/Model_input/Base_predictions/Full_base_predictions.csv",
+write.csv(predictions, "Data/Model_output/Predictions/Base_predictions/Full_base_predictions.csv",
   row.names = TRUE
+)
+
+write.csv(predictions, "Data/Model_input/Base_predictions/Full_base_predictions.csv",
+          row.names = TRUE
 )

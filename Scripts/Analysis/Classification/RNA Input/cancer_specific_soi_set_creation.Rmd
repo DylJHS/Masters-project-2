@@ -1,0 +1,51 @@
+---
+title: "Cancer Specific SOI RNA set creation"
+output: html_document
+date: "2024-06-30"
+Note: This script is for the generation of RNA sets that are cancer specific.
+---
+
+
+1.  SETUP
+
+1.1. SETUP
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+```
+
+1.2. Load the necessary libraries
+```{r}
+library(dplyr)
+library(tidyverse) 
+library(ggrepel)
+library(data.table)
+
+```
+
+1.3. Reusable functions
+```{r}
+extract_element <- function(strings, index) {
+  # Split each string by "." and extract the third element
+  element_list <- sapply(strsplit(strings, "\\."), function(x) x[index])
+  return(element_list)
+}
+```
+
+1.4. Load the necessary data
+```{r}
+# TCGA RNA data
+data_folder <- "Data/RNA_Data/Model_Input/Full"
+rna_set <- read.csv(file.path(data_folder, "tpm_soi.csv"), header = TRUE, sep = ",")
+
+# TCGA metadata
+meta_data_folder <- "Data/Other/TCGA_meta"
+tss_code_file <- read_tsv(file.path(meta_data_folder, "tissueSourceSite.tsv"), header = TRUE)
+abbreviations_file <- read_tsv(file.path(meta_data_folder, "diseaseStudy.tsv"), header = TRUE)
+
+```
+
+```{r}
+
+```
+
