@@ -89,15 +89,21 @@ for (cancer in unique(chr_cnv$Cancer)) {
   
   # Reorder the arms and save the weights as data frame
   n_arm_weights <- arm_weights[, arm_order] %>%
+    as.data.frame() %>%
     rownames_to_column("arm") %>%
-    mutate(arm = as.integer(arm)-1) %>%
-    column_to_rownames("arm") %>%
+    mutate(arm = case_when(
+      arm == "0" ~ "Weight_loss",
+      arm == "1" ~ "Weight_normal",
+      arm == "2" ~ "Weight_gain",
+      TRUE ~ arm  
+    )) %>%
+    column_to_rownames("arm") %>% 
     t() %>%
     as.data.frame()
   
   # Save the weights to a csv file
-  write.csv(n_arm_weights, 
-            paste0(data_folder,cancer, "_arm_weights.csv"), 
+  write.csv(n_arm_weights,
+            paste0(data_folder,cancer, "_arm_weights.csv"),
             row.names = TRUE)
 }
 

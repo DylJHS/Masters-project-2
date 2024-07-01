@@ -2074,7 +2074,7 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Plot some the training data over the rounds to see how the model performs/improves over iterations for the regression models and then the categorical models
 
 
- 12/06/24
+12/06/24
 
 - Running the hyperparameter tuning again for the Trees (aka nrounds, n_estimators)
 - This is since the number of trees = nrounds
@@ -2089,7 +2089,7 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Also increasing the time allocation from 18 to 20 hours
 
 
- 13/06/24
+13/06/24
 
 -  Need to assign the weights to the classes in the categorical models
 
@@ -2103,7 +2103,7 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Tuning the #trees is taking a while 
 
 
- 14/06/24
+14/06/24
 
 - Think it would be nice to visualise the difference/improvement in the categorical models foo
 
@@ -2122,7 +2122,8 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Validating the # of trees as the numbers that showed for the RNA-set validation indicated that then nrounds should be less than what was estimated previously (100-7000 nround 5 fold cv,500 step size)
 - Need to evaluate the predictions from the model not just ehe mlogloss that is output, so that I can generat the roc plot and AUC measures per class 
 
- 16/06/24
+
+16/06/24
 
 - When selecting the correct number of nrounds, selecting based on the iterations that generated the 3 lowest (best) RMSE values. Selected the iteration that is associated with the fewest nrounds (# trees) of the best 3. 
 - Tuning the gamma parameter, using the defined hyperparameters that have already been run (RNA_set, # Trees, Max Depth, Learning Rate)
@@ -2147,12 +2148,12 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Running the weight tuning script on the hpc for 5 fold cv with 1000 nrounds, 100 early stopping, for weights ranging from seq(0.05, 0.6, 0.1) for each of the 3 weights (loss, norm, gain)
 
 
-
 18/06/24
 
 - For the selection of gamma, will select the one that produces the lowest average gap between the train and test metrics (RMSE, auc/mlogloss) before seeing a drastic increase in the eval metric
 
 - Scripting the hyperparameter tuning script for the categorical models using the weighted data
+
 
 19/06/24
 
@@ -2172,6 +2173,7 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - For the RNA_sets to use for the categorical and regression models, decided to select the best set per feature from the top 3 performing sets
 - Even in case the best set for a particular model was not in the top 3 selected the best of those 3 for the feature 
 - The best 3 models for the categorical features on the weighted data are scaled_tpm, log_scaled_tpm and tpm
+
 
 20/06/24
 
@@ -2229,6 +2231,8 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - When using "softmax" the values are the same across columns and represent the most likely class
 - When using "softprob" the values are the probabilities of each class
 - For the "softmax" case, only one column matters the others can be ignored, the values will range from 0 (loss) to 2 (gain)
+
+
 24/06/24
 
 - In the stacking it could be possible and interesting to use the softprob objective and then use the probabilities as features for the second level model
@@ -2239,6 +2243,7 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Have created a categorical training & test set for the meta learner made of the predictions of the base categorical models on the training set.
 - Need to use this set to tune the hyperparameters of the meta learner.
 
+
 25/06/24
 - Need to write the scrit that will generate the meta learner training set using the predictions from all base models.
 
@@ -2248,5 +2253,74 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Need to use these to train the meta learner
 - Set createFolds returnTrain argument to False to obtain the out of fold predictions
 
+26/06/24
 
-26/
+- Creating the model for the meta learners 
+- Creating the script that combines the predictions of the base learners into a single dataset
+
+- Need to standardise the column names and the variable names as much as possible
+- the use of parentheses in the column names is not recommended
+
+- Running the hyperparameter tuning for the meta learners
+- Using 5 fold cross validation and 250 early stopping rounds
+- 10000 max rounds
+
+
+27/06/24
+
+- For the tuning switching to 100 early stopping rounds after the initial hyperparameters have been set
+- Selecting the hyperparameters that have the best performance on the validation set
+  
+- Need to use cv to train the base learners 
+- use the out of fold predictions to train the meta learners
+- Need to use the same cv folds for the base learners
+
+- Test the full model using the same set
+
+- Assess the performance of the base learners
+- Assess the performance of the meta learners
+
+- Quantify the improvement of the meta learners over the base learners
+
+- Rename the chromosome aneuploidies with a single arm feature (remove the parentheses)
+
+
+28/06/24
+
+- For the full model training, will use early stopping with 150 rounds so as to not overfit the model, speed up the training and reduce the memory usage while maintaining a fairly conservative approach
+
+- Change occurances of the "Depth" to "Max_depth"
+- Change occurances of the the "." in the weight feautures to "_"
+- Change the "scalled" to "scaled"
+
+
+29/06/24
+
+- Need to finish up on the final hyperparameter tuning for the min_child_weights on the base learners
+
+- Might need to integrate the class weights into the training of the meta learners
+- This is becuase the performance of the meta learners is not as good as the base learners when it comes to the minority classes
+- This is may be due to the class imbalance in the training set
+
+- Running the base & meta training on the full training dataset with 5 fold cross validation and 150 early stopping rounds
+- Saving the resulting predictions for the base and meta learners
+
+
+30/06/24
+
+- For the assessment of the regression models
+- For each feature plot the residuals plot of the predictions vs the true values (dots or lines) coloured by the learner type (meta or base)
+- And maybe a facetted plot of the RMSE/MAE in terms of the learner type for each feature model
+
+ 
+- For the tuning of the hyperparameters for the regression models based on the Min Child Weight 
+- The ones that have changed at this final stage is peri_2
+
+- Finished the regression tuning for the min child weight
+
+- Starting to edit the scripts to be able to handle specific cancer types
+- Starting with the RNA sets as these are the most neccessary for the rest of the pipeline
+- Creating the full sets (all genes and samples) in the different formats (log, scaled ...) that can be queried by the cancer type
+  
+- The cancer types with 300 samples or more include 12 cancer types
+- BLCA, BRCA, CESC, HNSC, LGG, LIHC, LUAD, LUSC, OV, PRAD, STAD and THCA
