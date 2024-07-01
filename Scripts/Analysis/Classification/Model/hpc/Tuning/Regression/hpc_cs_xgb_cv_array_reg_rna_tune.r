@@ -38,7 +38,8 @@ colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
   rename(loh_hrd = "hrd-loh") %>%
-  mutate(new = str_replace_all(rownames(.), "-", "\\."))
+  mutate(new = str_replace_all(rownames(.), "-", "\\.")) %>%
+  select(-HRD)
 
 rownames(hrd) <- hrd$new
 hrd <- hrd %>%
@@ -186,6 +187,29 @@ for (cancer in cancer_types){
     print(head(full_df[, 1:5], 3))
 
     y <- as.integer(full_df[[selected_feature]])
+
+    # Check that not all the values are the same
+    if (length(unique(y)) == 1) {
+      cat(paste0(
+        "Warning: All values for ", selected_feature,
+        " are the same. Skipping this feature.\n"
+      ))
+
+      # fill the aneu_reg_metrics_df with NA values
+      aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+        RNA_Set = selected_rna_set,
+        Trees = NA,
+        Feature = selected_feature,
+        Max_depth = NA,
+        Child_weight = NA,
+        Eta = NA,
+        Gamma = NA,
+        Trained_RMSE = NA,
+        Test_RMSE = NA
+      ))
+      next
+    }
+    
     cat("\n\n Y: \n")
     print(head(y))
 
@@ -214,7 +238,7 @@ for (cancer in cancer_types){
 
     best_iteration <- 0
 
-  # First, check if best_iteration is valid
+    # First, check if best_iteration is valid
     if (is.null(
       m_xgb_untuned$best_iteration
     ) ||

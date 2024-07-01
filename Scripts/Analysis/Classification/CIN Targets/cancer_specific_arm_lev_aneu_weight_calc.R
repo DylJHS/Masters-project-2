@@ -96,8 +96,11 @@ for (cancer in unique(chr_cnv$Cancer)) {
       arm == "1" ~ "Weight_normal",
       arm == "2" ~ "Weight_gain",
       TRUE ~ arm  
-    )) %>%
-    column_to_rownames("arm") %>% 
+    ),
+    # Replace the 0.00 with 0.01 so as not to generate errors during the training
+    across(-arm, ~ if_else(as.numeric(as.character(.)) == 0.00, 0.01, as.numeric(as.character(.))))
+    )%>%
+    column_to_rownames("arm") %>%
     t() %>%
     as.data.frame()
   

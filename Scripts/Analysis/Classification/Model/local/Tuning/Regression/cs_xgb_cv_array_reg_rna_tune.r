@@ -42,7 +42,8 @@ colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
   rename(loh_hrd = "hrd-loh") %>%
-  mutate(new = str_replace_all(rownames(.), "-", "\\."))
+  mutate(new = str_replace_all(rownames(.), "-", "\\.")) %>%
+  select(-HRD)
 
 rownames(hrd) <- hrd$new
 hrd <- hrd %>%

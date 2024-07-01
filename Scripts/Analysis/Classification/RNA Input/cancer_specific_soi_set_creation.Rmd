@@ -81,7 +81,8 @@ for (set in list.files(data_folder, pattern = ".csv")) {
     cat("\n Cancer: ", cancer, "\n")
     # Filter the RNA set for the cancer type
     cancer_rna_set <- rna_set %>% 
-      filter(Cancer == cancer) 
+      filter(Cancer == cancer) %>% 
+      select(-Cancer)
     
     if (nrow(cancer_rna_set) == 0) {
       next
