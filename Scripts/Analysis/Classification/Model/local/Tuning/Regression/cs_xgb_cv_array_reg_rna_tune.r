@@ -166,7 +166,7 @@ for (cancer in cancer_types){
   # MODELLING
 
     aneu_reg_metrics_df <- data.frame(
-    RNA_Set = character(),
+    RNA_set = character(),
     Trees = numeric(),
     Feature = character(),
     Max_depth = numeric(),
@@ -261,7 +261,7 @@ for (cancer in cancer_types){
     ))
 
     aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
-      RNA_Set = selected_rna_set,
+      RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
       Max_depth = selected_depth,

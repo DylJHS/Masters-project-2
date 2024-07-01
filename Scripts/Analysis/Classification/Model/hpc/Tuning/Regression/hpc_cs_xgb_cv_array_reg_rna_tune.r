@@ -38,8 +38,7 @@ colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
   rename(loh_hrd = "hrd-loh") %>%
-  mutate(new = str_replace_all(rownames(.), "-", "\\.")) %>%
-  select(-HRD)
+  mutate(new = str_replace_all(rownames(.), "-", "\\."))
 
 rownames(hrd) <- hrd$new
 hrd <- hrd %>%
@@ -162,7 +161,7 @@ for (cancer in cancer_types){
   # MODELLING
 
     aneu_reg_metrics_df <- data.frame(
-    RNA_Set = character(),
+    RNA_set = character(),
     Trees = numeric(),
     Feature = character(),
     Max_depth = numeric(),
@@ -197,7 +196,7 @@ for (cancer in cancer_types){
 
       # fill the aneu_reg_metrics_df with NA values
       aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
-        RNA_Set = selected_rna_set,
+        RNA_set = selected_rna_set,
         Trees = NA,
         Feature = selected_feature,
         Max_depth = NA,
@@ -280,7 +279,7 @@ for (cancer in cancer_types){
     ))
 
     aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
-      RNA_Set = selected_rna_set,
+      RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
       Max_depth = selected_depth,
