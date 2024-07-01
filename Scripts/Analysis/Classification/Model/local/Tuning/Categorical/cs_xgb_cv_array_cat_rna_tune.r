@@ -14,7 +14,7 @@ rna_data_path <- "Data/Cancer_specific_data/Model_input/RNA/"
 
 cat("The index for this run is: ", index, "\n")
 
-selected_depth <- 1
+selected_max_depth <- 5
 selected_min_child <- 1
 selected_eta <- 0.3
 selected_gamma <- 0
@@ -53,15 +53,13 @@ chr_cnv <- read_tsv(
   column_to_rownames("Sample")
 
 cat("\n\n CNV df: \n")
-print(head(chr_cnv[, 1:5]))
+print(head(chr_cnv[, 1:5], 3))
 
 # Define the features to be used
 aneu_cat_feature_list <- colnames(chr_cnv)
 selected_feature <- aneu_cat_feature_list[[index]]
 cat(paste0("\n\n Selected feature: ", selected_feature, "\n"))
 rm(aneu_cat_feature_list)
-
-
 
 # Loop over the cancer types
 for (cancer in cancer_types){
@@ -111,9 +109,6 @@ for (cancer in cancer_types){
     row.names = 1
   )
 
-  cat("\n\n TPM df: \n")
-  print(head(tpm_set[, 1:5]))
-
   scld_tpm_set <- read.csv(
     paste0(
       rna_folder,
@@ -154,14 +149,14 @@ for (cancer in cancer_types){
   # Load the cancer-specific class weights for the arms
   arm_weights <- read.csv(
     paste0(
-      "Data/Cancer_specific_data/Model_input/Hyperparams/Arm_class_weigths/",
+      "Data/Cancer_specific_data/Model_input/Parameters/Arm_class_weights/",
       cancer,
       "_arm_weights.csv"
     ),
     row.names = 1
   )
   cat("\n\n Arm Weights: \n")
-  print(head(arm_weights))
+  print(head(arm_weights, 3))
 
   # Determine the class weights for the target feature
   selected_weights <- arm_weights[selected_feature, ]
@@ -193,14 +188,14 @@ for (cancer in cancer_types){
     rna_data <- rna_list[[i]]
     selected_rna_set <- names(rna_list)[i]
     cat(paste0("\t", selected_rna_set, "\n"))
-    print(head(rna_data[, 1:5]))
+    print(head(rna_data[, 1:5], 3))
 
     full_df <- merge(rna_data,
       chr_cnv,
       by = "row.names"
     )
     cat("\n\n Full df: \n")
-    print(head(full_df[, 1:5]))
+    print(head(full_df[, 1:5], 3))
 
     y <- as.integer(full_df[[selected_feature]])
     cat("\n\n Y: \n")
@@ -216,7 +211,7 @@ for (cancer in cancer_types){
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
 
     cat(paste0(
-      "\t\t Max_depth: ", selected_depth,
+      "\t\t Max_depth: ", selected_max_depth,
       "\n"
     ))
 
@@ -227,7 +222,7 @@ for (cancer in cancer_types){
       eval_metric = "mlogloss",
       early_stopping_rounds = 250,
       nfold = 10,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       eta = selected_eta,
       gamma = selected_gamma,
       num_class = 3,
@@ -281,7 +276,7 @@ for (cancer in cancer_types){
       RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
-      Max_depth = selected_depth,
+      Max_depth = selected_max_depth,
       Child_weight = selected_min_child,
       Eta = selected_eta,
       Gamma = selected_gamma,
@@ -294,7 +289,7 @@ for (cancer in cancer_types){
   }
 
   new_dir <- paste0(
-    "Data/Cancer_specific_data/Model_input/Hyperparams/",
+    "Data/Cancer_specific_data/Model_output/Hyperparameters/",
     cancer,
     "/"
   )

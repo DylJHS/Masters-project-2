@@ -6,7 +6,7 @@ library(dplyr)
 library(tidyverse) 
 
 # Folder 
-data_folder <- "Data/Cancer_specific_data/Model_input/Hyperparams/Arm_class_weigths/"
+data_folder <- "Data/Cancer_specific_data/Model_input/Hyperparams/Arm_class_weights/"
 
 # TCGA metadata
 meta_data_folder <- "Data/Other/TCGA_meta"

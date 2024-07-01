@@ -10,7 +10,7 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 cat("The index for this run is: ", index, "\n")
 
-selected_depth <- 5
+selected_max_depth <- 5
 selected_min_child <- 1
 selected_eta <- 0.3
 selected_gamma <- 0
@@ -145,7 +145,7 @@ for (cancer in cancer_types){
   # Load the cancer-specific class weights for the arms
   arm_weights <- read.csv(
     paste0(
-      "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/Arm_class_weigths/",
+      "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/Arm_class_weights/",
       cancer,
       "_arm_weights.csv"
     ),
@@ -206,7 +206,7 @@ for (cancer in cancer_types){
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
 
     cat(paste0(
-      "\t\t Max_depth: ", selected_depth,
+      "\t\t Max_depth: ", selected_max_depth,
       "\n"
     ))
 
@@ -217,7 +217,7 @@ for (cancer in cancer_types){
       eval_metric = "mlogloss",
       early_stopping_rounds = 250,
       nfold = 10,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       eta = selected_eta,
       gamma = selected_gamma,
       num_class = 3,
@@ -271,7 +271,7 @@ for (cancer in cancer_types){
       RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
-      Max_depth = selected_depth,
+      Max_depth = selected_max_depth,
       Child_weight = selected_min_child,
       Eta = selected_eta,
       Gamma = selected_gamma,

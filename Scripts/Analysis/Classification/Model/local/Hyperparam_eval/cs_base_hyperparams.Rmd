@@ -87,15 +87,15 @@ for (cancer_folder in list.files(hyper_folder)){
   
   write.csv(best_reg_loss, paste0(save_folder, cancer_folder ,"/Best_reg_loss.csv"), row.names = FALSE)
   write.csv(best_cat_loss, paste0(save_folder, cancer_folder ,"/Best_cat_loss.csv"), row.names = FALSE)
-  
-  
+
+
   # Save the final hyperparameters
-  final_best_reg_loss <- best_reg_loss %>% 
-  select(Feature, RNA_set, Trees, Max_depth, Eta, Gamma, Child_weight) %>% 
+  final_best_reg_loss <- best_reg_loss %>%
+  select(Feature, RNA_set, Trees, Max_depth, Eta, Gamma, Child_weight) %>%
   write.csv(paste0(save_folder, cancer_folder ,"/base_reg_hyperparams.csv"), row.names = FALSE)
-  
-  final_best_cat_loss <- best_cat_loss %>% 
-  select(Feature, RNA_set, Trees, Max_depth, Eta, Gamma, Child_weight) %>% 
+
+  final_best_cat_loss <- best_cat_loss %>%
+  select(Feature, RNA_set, Trees, Max_depth, Eta, Gamma, Child_weight, Weight_loss, Weight_normal, Weight_gain) %>%
   write.csv(paste0(save_folder, cancer_folder ,"/base_cat_hyperparams.csv"), row.names = FALSE)
 }
 ```
