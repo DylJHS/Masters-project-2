@@ -79,8 +79,8 @@ weight_loss_freq <- as.data.frame(table(best_loss$Weight_loss)) %>%
   rename(Weight_loss = Var1)
 weight_gain_freq <- as.data.frame(table(best_loss$Weight_gain)) %>% 
   rename(Weight_gain = Var1)
-weight_norm_freq <- as.data.frame(table(best_loss$Weight_norm)) %>% 
-  rename(Weight_norm = Var1)
+weight_norm_freq <- as.data.frame(table(best_loss$Weight_normal)) %>% 
+  rename(Weight_normal = Var1)
 combo_freq <- as.data.frame(table(best_loss$combo)) %>%
   rename(combo = Var1)
 ```

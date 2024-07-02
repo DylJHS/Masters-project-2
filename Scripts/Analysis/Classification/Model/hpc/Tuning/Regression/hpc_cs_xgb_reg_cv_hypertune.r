@@ -72,7 +72,7 @@ rm(aneu_reg_feature_list)
 
 # Loop over the cancer types
 for (cancer in cancer_types) {
-  cat(paste0("\n\n\t\t\t\t\t\t\t\t Processing for cancer: ", cancer, "\n"))
+  cat(paste0("\n\n\n\t\t\t\t\t\t\t\t\t Processing for cancer: ", cancer, "\n"))
 
   hyperparam_file <- paste0(
     "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/",
@@ -153,7 +153,8 @@ for (cancer in cancer_types) {
     Eta = numeric(),
     Gamma = numeric(),
     Trained_RMSE = numeric(),
-    Test_RMSE = numeric()
+    Test_RMSE = numeric(),
+    Seed = numeric()
   )
 
   full_df <- merge(rna_set,
@@ -169,6 +170,32 @@ for (cancer in cancer_types) {
   y <- as.integer(full_df[[selected_feature]])
   cat("\n\n Target: ", selected_feature, "\n")
   print(head(y))
+
+  # Check that not all the values are the same
+  y_look <- length(unique(y))
+  cat(paste0("\n\n\t Unique values for ", selected_feature, ": ", y_look, "\n"))
+
+  if (y_look == 1) {
+    cat(paste0(
+      "\n\t\t\t\t Warning: All values for ", selected_feature,
+      " are the same. Skipping this feature.\n"
+    ))
+
+    # fill the aneu_reg_metrics_df with NA values
+    aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+      RNA_set = selected_rna_set,
+      Trees = NA,
+      Feature = selected_feature,
+      Max_depth = NA,
+      Child_weight = NA,
+      Eta = NA,
+      Gamma = NA,
+      Trained_RMSE = NA,
+      Test_RMSE = NA,
+      Seed = NA
+    ))
+    next
+  }
 
   X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
   cat("\n\n Predictors: \n")
@@ -205,13 +232,13 @@ for (cancer in cancer_types) {
       nrounds = selected_trees,
       objective = "reg:squarederror",
       eval_metric = "rmse",
-      early_stopping_rounds = 10,
-      nfold = 2,
-      max_depth = selected_depth,
+      early_stopping_rounds = 250,
+      nfold = 10,
+      max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       eta = selected_eta,
       gamma = selected_gamma,
-      print_every_n = 10
+      print_every_n = 100
     )
 
     best_iteration <- 0
@@ -261,17 +288,18 @@ for (cancer in cancer_types) {
       RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
-      Max_depth = selected_depth,
+      Max_depth = selected_max_depth,
       Child_weight = selected_min_child,
       Eta = selected_eta,
       Gamma = selected_gamma,
       Trained_RMSE = best_rmse_trained,
-      Test_RMSE = best_rmse_test
+      Test_RMSE = best_rmse_test,
+      Seed = selected_seed
     ))
   }
 
   saved_dir <- paste0(
-    "/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/",
+    "/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/Hyperparameters/",
     cancer, 
     "/"
   )

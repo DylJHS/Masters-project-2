@@ -8,11 +8,12 @@ index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 cat("The index for this run is: ", index, "\n")
 
-selected_depth <- 5
+selected_max_depth <- 5
 selected_min_child <- 1
 selected_eta <- 0.3
 selected_gamma <- 0
 selected_trees <- 10000
+selected_seed <- 99 
 
 # cancer_types <- c("BLCA", "BRCA", "CESC", "HNSC", "LGG", "LIHC", "LUAD", "LUSC", "OV", "PRAD", "STAD", "THCA")
 cancer_types <- c("THCA")
@@ -172,10 +173,11 @@ for (cancer in cancer_types){
     Eta = numeric(),
     Gamma = numeric(),
     Weight_loss = numeric(),
-    Weight_norm = numeric(),
+    Weight_normal = numeric(),
     Weight_gain = numeric(),
     Trained_mlogloss = numeric(),
-    Test_mlogloss = numeric()
+    Test_mlogloss = numeric(),
+    Seed = numeric()
   )
 
   for (i in 1:length(rna_list)) {
@@ -183,6 +185,8 @@ for (cancer in cancer_types){
     selected_rna_set <- names(rna_list)[i]
     cat(paste0("\t", selected_rna_set, "\n"))
     print(head(rna_data[, 1:5], 3))
+
+    set.seed(selected_seed)
 
     full_df <- merge(rna_data,
       chr_cnv,
@@ -205,7 +209,7 @@ for (cancer in cancer_types){
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
 
     cat(paste0(
-      "\t\t Max_depth: ", selected_depth,
+      "\t\t Max_depth: ", selected_max_depth,
       "\n"
     ))
 
@@ -216,7 +220,7 @@ for (cancer in cancer_types){
       eval_metric = "mlogloss",
       early_stopping_rounds = 250,
       nfold = 10,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       eta = selected_eta,
       gamma = selected_gamma,
       num_class = 3,
@@ -270,15 +274,16 @@ for (cancer in cancer_types){
       RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
-      Max_depth = selected_depth,
+      Max_depth = selected_max_depth,
       Child_weight = selected_min_child,
       Eta = selected_eta,
       Gamma = selected_gamma,
       Weight_loss = selected_weights[1],
-      Weight_norm = selected_weights[2],
+      Weight_normal = selected_weights[2],
       Weight_gain = selected_weights[3],
       Trained_mlogloss = best_mlogloss_train,
-      Test_mlogloss = best_mlogloss_test
+      Test_mlogloss = best_mlogloss_test,
+      Seed = selected_seed
     ))
   }
 

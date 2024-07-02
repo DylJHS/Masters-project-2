@@ -14,7 +14,7 @@ rna_data_path <- "Data/Cancer_specific_data/Model_input/RNA/"
 
 cat("\n\n The index for this run is: ", index, "\n")
 
-selected_depth <- 5
+selected_max_depth <- 5
 selected_min_child <- 1
 selected_eta <- 0.3
 selected_gamma <- 0
@@ -199,7 +199,7 @@ for (cancer in cancer_types){
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
     cat(paste0(
-      "\t\t Max_depth: ", selected_depth,
+      "\t\t Max_depth: ", selected_max_depth,
       "\n"
     ))
 
@@ -210,7 +210,7 @@ for (cancer in cancer_types){
       eval_metric = "rmse",
       early_stopping_rounds = 250,
       nfold = 10,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       eta = selected_eta,
       gamma = selected_gamma,
@@ -264,7 +264,7 @@ for (cancer in cancer_types){
       RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
-      Max_depth = selected_depth,
+      Max_depth = selected_max_depth,
       Child_weight = selected_min_child,
       Eta = selected_eta,
       Gamma = selected_gamma,

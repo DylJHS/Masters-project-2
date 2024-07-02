@@ -138,7 +138,7 @@ aneu_cat_metrics_df <- data.frame(
   Learning_Rate = numeric(),
   Gamma = numeric(),
   Weight_loss = numeric(),
-  Weight_norm = numeric(),
+  Weight_normal = numeric(),
   Weight_gain = numeric(),
   Trained_mlogloss = numeric(),
   Test_mlogloss = numeric()
@@ -307,7 +307,7 @@ for (j in 1:nrow(grid)) { # nolint
     Learning_Rate = selected_lr,
     Gamma = selected_gamma,
     Weight_loss = selected_weights[1],
-    Weight_norm = selected_weights[2],
+    Weight_normal = selected_weights[2],
     Weight_gain = selected_weights[3],
     Trained_mlogloss = best_mlogloss_train,
     Test_mlogloss = best_mlogloss_test

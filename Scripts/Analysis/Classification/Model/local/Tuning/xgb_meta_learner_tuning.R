@@ -24,11 +24,11 @@ selected_feature <- selected_parameters$Feature
 selected_trees <- selected_parameters$Trees + 500
 selected_eta <- selected_parameters$Eta
 selected_gamma <- selected_parameters$Gamma
-selected_depth <- selected_parameters$Max_depth
+selected_max_depth <- selected_parameters$Max_depth
 selected_min_child <- selected_parameters$Child_weight
 selected_seed <- 99
 
-print(selected_depth)
+print(selected_max_depth)
 # Load the full base prediction data
 predictions <- read.csv("Data/Model_input/Base_predictions/Full_base_predictions.csv",
   row.names = 1
@@ -93,7 +93,7 @@ if (selected_feature %in% cat_features) {
       "Trees: ", selected_trees, "\n",
       "Eta: ", selected_eta, "\n",
       "Gamma: ", selected_gamma, "\n",
-      "Max Depth: ", selected_depth, "\n",
+      "Max Depth: ", selected_max_depth, "\n",
       "Min Child Weight: ", selected_min_child, "\n",
       "Seed: ", selected_seed, "\n\n"
     )
@@ -117,7 +117,7 @@ if (selected_feature %in% cat_features) {
       num_class = 3,
       eta = selected_eta,
       gamma = selected_gamma,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       stratified = TRUE,
       print_every_n = 25,
@@ -176,7 +176,7 @@ if (selected_feature %in% cat_features) {
         "Trees" = best_iteration,
         "Eta" = selected_eta,
         "Gamma" = selected_gamma,
-        "Max_depth" = selected_depth,
+        "Max_depth" = selected_max_depth,
         "Child_weight" = selected_min_child,
         "Train_result" = best_mlogloss_train,
         "Test_result" = best_mlogloss_test,
@@ -203,7 +203,7 @@ if (selected_feature %in% cat_features) {
       "Trees: ", selected_trees, "\n",
       "Eta: ", selected_eta, "\n",
       "Gamma: ", selected_gamma, "\n",
-      "Max Depth: ", selected_depth, "\n",
+      "Max Depth: ", selected_max_depth, "\n",
       "Min Child Weight: ", selected_min_child, "\n",
       "Seed: ", selected_seed, "\n\n"
     )
@@ -226,7 +226,7 @@ if (selected_feature %in% cat_features) {
       eval_metric = "rmse",
       eta = selected_eta,
       gamma = selected_gamma,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       print_every_n = 25,
       prediction = TRUE
@@ -284,7 +284,7 @@ if (selected_feature %in% cat_features) {
         "Trees" = best_iteration,
         "Eta" = selected_eta,
         "Gamma" = selected_gamma,
-        "Max_depth" = selected_depth,
+        "Max_depth" = selected_max_depth,
         "Child_weight" = selected_min_child,
         "Train_result" = best_rmse_train,
         "Test_result" = best_rmse_test,

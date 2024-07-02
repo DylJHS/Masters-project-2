@@ -24,7 +24,7 @@ selected_rna_set <- selected_parameters$RNA_set
 selected_trees <- as.numeric(selected_parameters$Trees)
 # selected_lr <- selected_parameters$Eta
 # selected_gamma <- 0
-selected_depth <- selected_parameters$Max_depth
+selected_max_depth <- selected_parameters$Max_depth
 selected_weights <- as.numeric(selected_parameters[c("Weight_loss", "Weight_normal", "Weight_gain")] )
 
 # Define the extra parameters
@@ -84,7 +84,7 @@ aneu_cat_metrics_df <- data.frame(
   Learning_Rate = numeric(),
   Gamma = numeric(),
   Weight_loss = numeric(),
-  Weight_norm = numeric(),
+  Weight_normal = numeric(),
   Weight_gain = numeric(),
   Trained_mlogloss = numeric(),
   Test_mlogloss = numeric(),
@@ -127,7 +127,7 @@ rm(rna_set)
 cat(paste0(
   "\t\t eta: ", selected_lr,
   "\t\t gamma: ", selected_gamma,
-  "\t\t depth: ", selected_depth,
+  "\t\t depth: ", selected_max_depth,
   "\t\t trees: ", selected_trees,
   "\t\t child_weight: ", selected_min_child,
   "\n"
@@ -142,7 +142,7 @@ m_xgb_untuned <- xgb.cv(
   eval_metric = "mlogloss",
   early_stopping_rounds = 250,
   nfold = 5,
-  max_depth = selected_depth,
+  max_depth = selected_max_depth,
   min_child_weight = selected_min_child,
   eta = selected_lr,
   gamma = selected_gamma,
@@ -197,12 +197,12 @@ if (is.null(
     RNA_Set = selected_rna_set,
     Trees = selected_trees,
     Feature = selected_feature,
-    Depth = selected_depth,
+    Depth = selected_max_depth,
     Child_weight = selected_min_child,
     Learning_Rate = selected_lr,
     Gamma = selected_gamma,
     Weight_loss = selected_weights[1],
-    Weight_norm = selected_weights[2],
+    Weight_normal = selected_weights[2],
     Weight_gain = selected_weights[3],
     Trained_mlogloss = best_mlogloss_train,
     Test_mlogloss = best_mlogloss_test,

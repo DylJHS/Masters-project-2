@@ -10,7 +10,7 @@ index <- as.numeric(args[1])
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
-selected_depth <- 1
+selected_max_depth <- 1
 selected_min_child <- 1
 selected_lr <- 0.03
 selected_gamma <- 0
@@ -115,7 +115,7 @@ xgb_params <- list(
   objective = "multi:softmax",
   eval_metric = "mlogloss",
   num_class = 3,
-  max_depth = selected_depth,
+  max_depth = selected_max_depth,
   eta = selected_lr,
   gamma = selected_gamma,
   min_child_weight = selected_min_child

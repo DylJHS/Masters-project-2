@@ -7,6 +7,7 @@ library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
+index <- 5
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
@@ -174,6 +175,31 @@ for (cancer in cancer_types) {
   cat("\n\n Target: ", selected_feature, "\n")
   print(head(y))
 
+  # Check that not all the values are the same
+  y_look <- length(unique(y))
+  cat(paste0("\n\n\t Unique values for ", selected_feature, ": ", y_look, "\n"))
+
+  if (y_look == 1) {
+    cat(paste0(
+      "\n\t\t\t\t Warning: All values for ", selected_feature,
+      " are the same. Skipping this feature.\n"
+    ))
+
+    # fill the aneu_reg_metrics_df with NA values
+    aneu_reg_metrics_df <- rbind(aneu_reg_metrics_df, data.frame(
+      RNA_set = selected_rna_set,
+      Trees = NA,
+      Feature = selected_feature,
+      Max_depth = NA,
+      Child_weight = NA,
+      Eta = NA,
+      Gamma = NA,
+      Trained_RMSE = NA,
+      Test_RMSE = NA
+    ))
+    next
+  }
+
   X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
   cat("\n\n Predictors: \n")
 
@@ -211,7 +237,7 @@ for (cancer in cancer_types) {
       eval_metric = "rmse",
       early_stopping_rounds = 10,
       nfold = 2,
-      max_depth = selected_depth,
+      max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       eta = selected_eta,
       gamma = selected_gamma,
@@ -265,7 +291,7 @@ for (cancer in cancer_types) {
       RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
-      Max_depth = selected_depth,
+      Max_depth = selected_max_depth,
       Child_weight = selected_min_child,
       Eta = selected_eta,
       Gamma = selected_gamma,
@@ -298,11 +324,11 @@ for (cancer in cancer_types) {
     str_replace_all(" ", "_") %>%
     str_replace_all(":", "_")
 
-  write.csv(
-    aneu_reg_metrics_df,
-    file = name,
-    row.names = FALSE
-  )
+  # write.csv(
+  #   aneu_reg_metrics_df,
+  #   file = name,
+  #   row.names = FALSE
+  # )
 }
 
 cat(paste0("\n\n\t\t\t\t Completed processing for index: ", index, "\n"))

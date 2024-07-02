@@ -55,12 +55,12 @@ best_loss <- full_df %>%
   group_by(Feature) %>% 
   slice_min(Test_mlogloss, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
-  mutate(combo = paste(Weight_loss, Weight_norm, Weight_gain, sep = "_")) %>%
+  mutate(combo = paste(Weight_loss, Weight_normal, Weight_gain, sep = "_")) %>%
   mutate(Feature = factor(Feature, levels = arm_order)) %>%
   arrange(Feature) %>%
   as.data.frame() %>% 
   rename(., Max_depth = Depth) %>%
-  select(Feature, RNA_Set, Trees, Max_depth, Child_weight, Eta, Gamma, Weight_loss, Weight_norm , Weight_gain, Trained_mlogloss, Test_mlogloss, Seed)
+  select(Feature, RNA_Set, Trees, Max_depth, Child_weight, Eta, Gamma, Weight_loss, Weight_normal , Weight_gain, Trained_mlogloss, Test_mlogloss, Seed)
 # 
 # # Save the best to a csv
 write.csv(best_loss, "Data/Model_output/Hyperparams/Base_models/categorical/best_loss.csv", row.names = FALSE)
@@ -72,8 +72,8 @@ weight_loss_freq <- as.data.frame(table(best_loss$Weight_loss)) %>%
   rename(Weight_loss = Var1)
 weight_gain_freq <- as.data.frame(table(best_loss$Weight_gain)) %>% 
   rename(Weight_gain = Var1)
-weight_norm_freq <- as.data.frame(table(best_loss$Weight_norm)) %>% 
-  rename(Weight_norm = Var1)
+weight_norm_freq <- as.data.frame(table(best_loss$Weight_normal)) %>% 
+  rename(Weight_normal = Var1)
 combo_freq <- as.data.frame(table(best_loss$combo)) %>%
   rename(combo = Var1)
 ```
