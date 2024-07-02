@@ -6,25 +6,21 @@ library(caret)
 library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
-index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
-index <- 1
+index <- as.numeric(args[1])
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
-rna_data_path <- "Data/Cancer_specific_data/Model_input/RNA/"
-
-cat("\n\n The index for this run is: ", index, "\n")
-
-selected_depth <- 5
-selected_min_child <- 1
-selected_eta <- 0.3
-selected_gamma <- 0
-selected_trees <- 10000
 
 cancer_types <- c("BLCA", "BRCA", "CESC", "HNSC", "LGG", "LIHC", "LUAD", "LUSC", "OV", "PRAD", "STAD", "THCA")
 
+# Function to map factor levels to weights
+feature_digit_function <- function(factors) {
+  sapply(factors, function(x) selected_weights[as.numeric(x)])
+}
+
 # Load the constant data
 ## HRD scores
-ori_hrd <- read_tsv("Data/Cancer_specific_data/Model_input/CIN/TCGA.HRD_withSampleID.txt")
+ori_hrd <- read_tsv("Data/Cancer_specific_data/Model_input/CIN/TCGA.HRD_withSampleID.txt",
+  show_col_types = FALSE)
 
 # Pericentromeric CNVs
 peri_cnv <- read.csv("Data/Cancer_specific_data/Model_input/CIN/lim_alpha_incl_TCGA_pericentro.csv") %>%
@@ -79,93 +75,80 @@ cat(paste0("\n\n Selected feature: ", selected_feature, "\n"))
 rm(aneu_reg_feature_list)
 
 # Loop over the cancer types
-for (cancer in cancer_types){
-  cat(paste0("\n\n Processing for cancer type: ", cancer, "\n"))
-  rna_folder <- paste0(rna_data_path, cancer, "/")
+for (cancer in cancer_types) {
+  cat(paste0("\n\n\t\t\t\t\t\t\t\t Processing for cancer: ", cancer, "\n"))
 
-  # RNA SOI SETS
-  # Expected Counts
-  exp_set <- read.csv(
-    paste0(
-      rna_folder,
-      "exp_soi.csv"
-    ),
-    row.names = 1
+  hyperparam_file <- paste0(
+    "Data/Cancer_specific_data/Model_input/Parameters/Hyperparameters/",
+    cancer,
+    "/base_reg_hyperparams.csv"
+  )
+  rna_folder <- paste0(
+    "Data/Cancer_specific_data/Model_input/RNA/",
+    cancer,
+    "/"
   )
 
-  scld_exp_set <- read.csv(
-    paste0(
-      rna_folder,
-      "scld_exp_soi.csv"
-    ),
-    row.names = 1
-  )
+  # Get the parameters from stored Parameters file
+  parameters <- read.csv(hyperparam_file, header = TRUE)
 
-  log_exp <- read.csv(
-    paste0(
-      rna_folder,
-      "log_exp_soi.csv"
-    ),
-    row.names = 1
-  )
+  # select the parameters and weights corresponding to the selected feature
+  selected_parameters <- parameters[parameters$Feature == selected_feature,]
+  rm(parameters)
+  cat("\n Parameters: \n")
+  print(selected_parameters)
+  cat("\n\n")
 
-  log_scld_exp <- read.csv(
-    paste0(
-      rna_folder,
-      "log_scld_exp_soi.csv"
-    ),
-    row.names = 1
-  )
+  if (selected_feature != selected_parameters$Feature) {
+    cat(
+      "Warning: Selected feature does not match the feature in the parameters file.\n"
+    )
+    # stop the script for this feature
+    stop("Stopping the process for this feature.")
 
-  # Transcripts Per Million
-  tpm_set <- read.csv(
-    paste0(
-      rna_folder,
-      "tpm_soi.csv"
-    ),
-    row.names = 1
-  )
+  }
 
-  scld_tpm_set <- read.csv(
-    paste0(
-      rna_folder,
-      "scld_tpm_soi.csv"
-    ),
-    row.names = 1
-  )
+  selected_feature <- selected_parameters$Feature
+  selected_rna_set <- selected_parameters$RNA_set
+  # selected_trees <- as.numeric(selected_parameters$Trees) + 500
+  selected_trees <- 2500
+  selected_eta <- selected_parameters$Eta
+  selected_gamma <- selected_parameters$Gamma
+  selected_max_depth <- selected_parameters$Max_depth
 
-  log_tpm <- read.csv(
-    paste0(
-      rna_folder,
-      "log_tpm_soi.csv"
-    ),
-    row.names = 1
-  )
+  rm(selected_parameters)
 
-  log_scld_tpm <- read.csv(
-    paste0(
-      rna_folder,
-      "log_scld_tpm_soi.csv"
-    ),
-    row.names = 1
-  )
+  # Define the extra parameters
+  selected_seed <- 99
 
+  # Get the corresonding rna set
   rna_list <- list(
-    transcripts_per_million = tpm_set,
-    scaled_transcripts_per_million = scld_tpm_set,
-    log_scaled_transcripts_per_million = log_scld_tpm,
-    log_transcripts_per_million = log_tpm,
-    expected_counts = exp_set,
-    scaled_expected_counts = scld_exp_set,
-    log_expected_counts = log_exp,
-    log_scaled_expected_counts = log_scld_exp
+    transcripts_per_million = "tpm",
+    scaled_transcripts_per_million = "scld_tpm",
+    log_scaled_transcripts_per_million = "log_scld_tpm",
+    log_transcripts_per_million = "log_tpm",
+    expected_counts = "exp",
+    scaled_expected_counts = "scld_exp",
+    log_expected_counts = "log_exp",
+    log_scaled_expected_counts = "log_scld_exp"
   )
 
-  rna_names <- names(rna_list)
+  rna_selection_name <- rna_list[[selected_rna_set]]
+
+  rna_set <- read.csv(
+    paste0(
+      rna_folder,
+      rna_selection_name,
+      "_soi.csv"
+    ),
+    row.names = 1
+  )
+  cat("\n RNA df: \n")
+  print(head(rna_set[, 1:5], 3))
 
   # MODELLING
 
-    aneu_reg_metrics_df <- data.frame(
+  aneu_reg_metrics_df <- data.frame(
     RNA_set = character(),
     Trees = numeric(),
     Feature = character(),
@@ -177,29 +160,47 @@ for (cancer in cancer_types){
     Test_RMSE = numeric()
   )
 
-  for (i in 1:length(rna_list)) {
-    rna_data <- rna_list[[i]]
-    selected_rna_set <- names(rna_list)[i]
-    cat(paste0("\n\t", selected_rna_set, "\n"))
-    print(head(rna_data[, 1:5], 3))
+  full_df <- merge(rna_set,
+    full_cin,
+    by = "row.names"
+  )
 
-    full_df <- merge(rna_data,
-      full_cin,
-      by = "row.names"
-    )
-    cat("\n\n Full df: \n")
-    print(head(full_df[, 1:5], 3))
+  rm(rna_set)
+  cat("\n\n full_df: \n")
+  print(head(full_df[, 1:5], 3))
+  cat("\n\n")
 
-    y <- as.integer(full_df[[selected_feature]])
-    cat("\n\n Y: \n")
-    print(head(y))
+  y <- as.integer(full_df[[selected_feature]])
+  cat("\n\n Target: ", selected_feature, "\n")
+  print(head(y))
 
-    X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
+  X <- full_df %>% select(-c("Row.names", colnames(full_cin)))
+  cat("\n\n Predictors: \n")
 
-    xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
+  # print(head(X[, 1:5]))
+
+  xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
+  rm(X)
+  rm(y)
+
+  grid <- expand.grid(
+    min_child = seq(1, 9, 3),
+    max_depth = seq(1, 9, 3)
+  )
+
+  for (j in 1:nrow(grid)) {
+    for (param in names(grid)) {
+      assign(paste0("selected_", param), grid[j, param])
+    }
+
+    set.seed(selected_seed)
 
     cat(paste0(
-      "\t\t Max_depth: ", selected_depth,
+      "\t\t eta: ", selected_eta,
+      "\t\t gamma: ", selected_gamma,
+      "\t\t depth: ", selected_max_depth,
+      "\t\t trees: ", selected_trees,
+      "\t\t child_weight: ", selected_min_child,
       "\n"
     ))
 
@@ -208,18 +209,18 @@ for (cancer in cancer_types){
       nrounds = selected_trees,
       objective = "reg:squarederror",
       eval_metric = "rmse",
-      early_stopping_rounds = 250,
-      nfold = 10,
+      early_stopping_rounds = 10,
+      nfold = 2,
       max_depth = selected_depth,
       min_child_weight = selected_min_child,
       eta = selected_eta,
       gamma = selected_gamma,
-      print_every_n = 15
+      print_every_n = 10
     )
 
     best_iteration <- 0
 
-  # First, check if best_iteration is valid
+    # First, check if best_iteration is valid
     if (is.null(
       m_xgb_untuned$best_iteration
     ) ||
@@ -256,7 +257,7 @@ for (cancer in cancer_types){
     }
 
     cat(paste0(
-      "The best iteration occurs with tree #: ",
+      "\t\t The best iteration occurs with tree #: ",
       best_iteration, "\n\n"
     ))
 
@@ -273,23 +274,23 @@ for (cancer in cancer_types){
     ))
   }
 
-  new_dir <- paste0(
-    "Data/Cancer_specific_data/Model_input/Hyperparams/",
-    cancer,
+  saved_dir <- paste0(
+    "Data/Cancer_specific_data/Model_output/Hyperparameters/",
+    cancer, 
     "/"
   )
 
-  if (!dir.exists(new_dir)) {
-    dir.create(new_dir)
+  if (!dir.exists(saved_dir)) {
+    dir.create(saved_dir)
   }
 
-  datetime <- as.character(Sys.time()) %>%
+  datetime <- Sys.time() %>%
     str_replace_all(" ", "_") %>%
     str_replace_all(":", "_") %>%
     str_replace_all("\\.", "_")
 
-  file_name <- paste0(
-    new_dir,
+  name <- paste0(
+    saved_dir,
     selected_feature, "_",
     index, "_",
     datetime, ".csv"
@@ -299,10 +300,9 @@ for (cancer in cancer_types){
 
   write.csv(
     aneu_reg_metrics_df,
-    file = file_name,
+    file = name,
     row.names = FALSE
   )
-  cat(paste0("\n Completed processing for cancer type: ", cancer, "\n"))
 }
 
-cat(paste0("\n Completed processing for feature: ", selected_feature, "\n"))
+cat(paste0("\n\n\t\t\t\t Completed processing for index: ", index, "\n"))

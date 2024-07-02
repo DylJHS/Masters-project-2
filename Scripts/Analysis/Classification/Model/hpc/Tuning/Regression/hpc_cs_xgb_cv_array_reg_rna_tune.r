@@ -2,8 +2,6 @@ library(dplyr)
 library(readr)
 library(tidyverse)
 library(xgboost)
-library(caret)
-library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
@@ -75,7 +73,7 @@ rm(aneu_reg_feature_list)
 
 # Loop over the cancer types
 for (cancer in cancer_types){
-  cat(paste0("\n\n Processing for cancer type: ", cancer, "\n"))
+  cat(paste0("\n\n\t\t\t\t\t\t Processing for cancer type: ", cancer, "\n"))
   rna_folder <- paste0("/hpc/shared/prekovic/dhaynessimmons/data/mRNA/cancer_specific/", cancer, "/")
 
   # RNA SOI SETS
@@ -232,7 +230,7 @@ for (cancer in cancer_types){
       min_child_weight = selected_min_child,
       eta = selected_eta,
       gamma = selected_gamma,
-      print_every_n = 15
+      print_every_n = 100
     )
 
     best_iteration <- 0
@@ -292,7 +290,7 @@ for (cancer in cancer_types){
   }
 
   new_dir <- paste0(
-    "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/",
+    "/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/",
     cancer,
     "/"
   )

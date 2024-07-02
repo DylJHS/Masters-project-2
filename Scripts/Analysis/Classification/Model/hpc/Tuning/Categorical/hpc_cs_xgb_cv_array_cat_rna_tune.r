@@ -2,21 +2,20 @@ library(dplyr)
 library(readr)
 library(tidyverse)
 library(xgboost)
-library(caret)
-library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # This is the SLURM_ARRAY_TASK_ID
 
 cat("The index for this run is: ", index, "\n")
 
-selected_max_depth <- 5
+selected_depth <- 5
 selected_min_child <- 1
 selected_eta <- 0.3
 selected_gamma <- 0
 selected_trees <- 10000
 
-cancer_types <- c("BLCA", "BRCA", "CESC", "HNSC", "LGG", "LIHC", "LUAD", "LUSC", "OV", "PRAD", "STAD", "THCA")
+# cancer_types <- c("BLCA", "BRCA", "CESC", "HNSC", "LGG", "LIHC", "LUAD", "LUSC", "OV", "PRAD", "STAD", "THCA")
+cancer_types <- c("THCA")
 
 # Function to map factor levels to weights
 feature_digit_function <- function(factors) {
@@ -145,7 +144,7 @@ for (cancer in cancer_types){
   # Load the cancer-specific class weights for the arms
   arm_weights <- read.csv(
     paste0(
-      "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/Arm_class_weights/",
+      "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/Arm_class_weigths/",
       cancer,
       "_arm_weights.csv"
     ),
@@ -206,7 +205,7 @@ for (cancer in cancer_types){
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
 
     cat(paste0(
-      "\t\t Max_depth: ", selected_max_depth,
+      "\t\t Max_depth: ", selected_depth,
       "\n"
     ))
 
@@ -217,7 +216,7 @@ for (cancer in cancer_types){
       eval_metric = "mlogloss",
       early_stopping_rounds = 250,
       nfold = 10,
-      max_depth = selected_max_depth,
+      max_depth = selected_depth,
       eta = selected_eta,
       gamma = selected_gamma,
       num_class = 3,
@@ -271,7 +270,7 @@ for (cancer in cancer_types){
       RNA_set = selected_rna_set,
       Trees = best_iteration,
       Feature = selected_feature,
-      Max_depth = selected_max_depth,
+      Max_depth = selected_depth,
       Child_weight = selected_min_child,
       Eta = selected_eta,
       Gamma = selected_gamma,
@@ -284,7 +283,7 @@ for (cancer in cancer_types){
   }
 
   new_dir <- paste0(
-    "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/",
+    "/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/",
     cancer,
     "/"
   )

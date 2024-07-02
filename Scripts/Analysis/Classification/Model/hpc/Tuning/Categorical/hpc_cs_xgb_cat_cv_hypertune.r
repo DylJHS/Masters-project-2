@@ -2,13 +2,9 @@ library(dplyr)
 library(readr)
 library(tidyverse)
 library(xgboost)
-library(caret)
-library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
-
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 cancer_types <- c("BLCA", "BRCA", "CESC", "HNSC", "LGG", "LIHC", "LUAD", "LUSC", "OV", "PRAD", "STAD", "THCA")
 
@@ -20,7 +16,7 @@ feature_digit_function <- function(factors) {
 # Load the constant data
 # Arm Level Aneuploidies
 chr_cnv <- read_tsv(
-  "Data/Cancer_specific_data/Model_input/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+  "/hpc/shared/prekovic/dhaynessimmons/data/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
 ) %>%
   replace(is.na(.), 0) %>%
   select(-c("Type", "Aneuploidy Score")) %>%
@@ -44,7 +40,7 @@ chr_cnv <- read_tsv(
   column_to_rownames("Sample")
 
 cat("\n\n CNV df: \n")
-print(head(chr_cnv[, 1:5]))
+print(head(chr_cnv[, 1:5], 3))
 
 # Define the features to be used
 aneu_cat_feature_list <- colnames(chr_cnv)
@@ -54,14 +50,15 @@ rm(aneu_cat_feature_list)
 
 # Loop over the cancer types
 for (cancer in cancer_types) {
-  cat(paste0("\n\n\t\t\t Processing for cancer: ", cancer, "\n"))
+  cat(paste0("\n\n\n\t\t\t\t\t\t\t Processing for cancer: ", cancer, "\n"))
+  
   hyperparam_file <- paste0(
-    "Data/Cancer_specific_data/Model_input/Parameters/Hyperparameters/",
+    "/hpc/shared/prekovic/dhaynessimmons/data/hyperparameters/cancer_specific/",
     cancer,
     "/base_cat_hyperparams.csv"
   )
   rna_folder <- paste0(
-    "Data/Cancer_specific_data/Model_input/RNA/",
+    "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/cancer_specific/",
     cancer,
     "/"
   )
@@ -72,7 +69,7 @@ for (cancer in cancer_types) {
   cat("\n Parameters: \n")
   print(dim(parameters))
 
-  # select the parameters and weights corresponding to the selected feature
+  # select the parameters and weights corrsponding to the index
   selected_parameters <- parameters[parameters$Feature == selected_feature,]
   rm(parameters)
   cat("\n Parameters: \n")
@@ -210,8 +207,8 @@ for (cancer in cancer_types) {
       nrounds = selected_trees,
       objective = "multi:softmax",
       eval_metric = "mlogloss",
-      early_stopping_rounds = 20,
-      nfold = 2,
+      early_stopping_rounds = 250,
+      nfold = 10,
       max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       eta = selected_eta,
@@ -282,14 +279,23 @@ for (cancer in cancer_types) {
     }
   }
 
+  saved_dir <- paste0(
+    "/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/",
+    cancer, 
+    "/"
+  )
+
+  if (!dir.exists(saved_dir)) {
+    dir.create(saved_dir)
+  }
+
   datetime <- Sys.time() %>%
     str_replace_all(" ", "_") %>%
     str_replace_all(":", "_") %>%
     str_replace_all("\\.", "_")
 
   name <- paste0(
-    "Data/Cancer_specific_data/Model_output/Hyperparameters/",
-    cancer, "/",
+    saved_dir,
     selected_feature, "_",
     index, "_",
     datetime, ".csv"
@@ -297,11 +303,11 @@ for (cancer in cancer_types) {
     str_replace_all(" ", "_") %>%
     str_replace_all(":", "_")
 
-  # write.csv(
-  #   aneu_cat_metrics_df,
-  #   file = name,
-  #   row.names = FALSE
-  # )
+  write.csv(
+    aneu_cat_metrics_df,
+    file = name,
+    row.names = FALSE
+  )
 }
 
-cat(paste0("\n Completed processing for index: ", index, "\n"))
+cat(paste0("\n\t\t\t\t\t Completed processing for index: ", index, "\n"))
