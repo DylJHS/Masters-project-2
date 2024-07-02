@@ -182,13 +182,18 @@ for (cancer in cancer_types) {
   rm(y)
 
   grid <- expand.grid(
-    min_child = seq(1, 9, 3),
-    max_depth = seq(1, 9, 3)
+    min_child = seq(selected_min_child - 2, selected_min_child +2, 1),
+    max_depth = seq(selected_max_depth - 2, selected_max_depth +2, 1)
   )
 
   for (j in 1:nrow(grid)) {
     for (param in names(grid)) {
-      assign(paste0("selected_", param), grid[j, param])
+      param_value <- grid[j, param]
+      assign(paste0("selected_", param), param_value)
+
+      if (param_value <= 0) {
+        assign(paste0("selected_", param), 1)
+      }
     }
 
     set.seed(selected_seed)
