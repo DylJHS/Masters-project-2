@@ -83,7 +83,7 @@ for (cancer in cancer_types) {
   rna_folder <- paste0(
     "/hpc/shared/prekovic/dhaynessimmons/data/mRNA/cancer_specific/",
     cancer,
-    "/"
+    "/Train/"
   )
 
   # Get the parameters from stored Parameters file
@@ -108,7 +108,23 @@ for (cancer in cancer_types) {
   selected_rna_set <- selected_parameters$RNA_set
   selected_trees <- as.numeric(selected_parameters$Trees) + 500
   selected_min_child <- selected_parameters$Child_weight
-  selected_eta <- selected_parameters$Eta
+  selected_eta <- ifelse(
+    selected_trees > 8000,
+    selected_parameters$Eta * 5,
+    ifelse(
+      selected_trees > 5000,
+      selected_parameters$Eta * 2,
+      ifelse(
+        selected_trees < 600,
+        selected_parameters$Eta - 0.05,
+        ifelse(
+          selected_trees < 3000,
+          selected_parameters$Eta - 0.025,
+          selected_parameters$Eta
+        )
+      )
+    )
+  )
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth
 
@@ -134,6 +150,7 @@ for (cancer in cancer_types) {
   rna_set <- read.csv(
     paste0(
       rna_folder,
+      "train_",
       rna_selection_name,
       "_soi.csv"
     ),
@@ -207,8 +224,8 @@ for (cancer in cancer_types) {
   rm(y)
 
   grid <- expand.grid(
-    min_child = seq(selected_min_child - 2, selected_min_child + 2, 1),
-    max_depth = seq(selected_max_depth - 2, selected_max_depth + 2, 1)
+    min_child = seq(selected_min_child - 1, selected_min_child + 1, 2),
+    max_depth = seq(selected_max_depth - 1, selected_max_depth + 1, 2)
   )
 
   for (j in 1:nrow(grid)) {
@@ -232,6 +249,18 @@ for (cancer in cancer_types) {
       "\t\t child_weight: ", selected_min_child,
       "\n"
     ))
+
+    if (nrow(aneu_reg_metrics_df) > 0) {
+      if (any(
+        aneu_reg_metrics_df$Max_depth == selected_max_depth &
+          aneu_reg_metrics_df$Child_weight == selected_min_child &
+          aneu_reg_metrics_df$Eta == selected_eta &
+          aneu_reg_metrics_df$Gamma == selected_gamma
+      )) {
+        cat("\n\t\t\t Hyperparameters already tuned. Skipping.\n\n")
+        next
+      }
+    }
 
     m_xgb_untuned <- xgb.cv(
       data = xgb_data,
@@ -304,14 +333,9 @@ for (cancer in cancer_types) {
     ))
   }
 
-  saved_dir <- paste0(
-    "/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/Hyperparameters/",
-    cancer,
-    "/"
-  )
-
+  saved_dir <- file.path("/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/Hyperparameters", cancer)
   if (!dir.exists(saved_dir)) {
-    dir.create(saved_dir)
+    dir.create(saved_dir, recursive = TRUE)
   }
 
   datetime <- Sys.time() %>%

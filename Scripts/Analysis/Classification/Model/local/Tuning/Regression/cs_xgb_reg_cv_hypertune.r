@@ -5,7 +5,7 @@ library(xgboost)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
-index <- 5
+index <- 17
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
@@ -19,7 +19,8 @@ feature_digit_function <- function(factors) {
 # Load the constant data
 ## HRD scores
 ori_hrd <- read_tsv("Data/Cancer_specific_data/Model_input/CIN/TCGA.HRD_withSampleID.txt",
-  show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 # Pericentromeric CNVs
 peri_cnv <- read.csv("Data/Cancer_specific_data/Model_input/CIN/lim_alpha_incl_TCGA_pericentro.csv") %>%
@@ -82,17 +83,18 @@ for (cancer in cancer_types) {
     cancer,
     "/base_reg_hyperparams.csv"
   )
+
   rna_folder <- paste0(
     "Data/Cancer_specific_data/Model_input/RNA/",
     cancer,
-    "/"
+    "/Train/"
   )
 
   # Get the parameters from stored Parameters file
   parameters <- read.csv(hyperparam_file, header = TRUE)
 
   # select the parameters and weights corresponding to the selected feature
-  selected_parameters <- parameters[parameters$Feature == selected_feature,]
+  selected_parameters <- parameters[parameters$Feature == selected_feature, ]
   rm(parameters)
   cat("\n Parameters: \n")
   print(selected_parameters)
@@ -104,14 +106,21 @@ for (cancer in cancer_types) {
     )
     # stop the script for this feature
     stop("Stopping the process for this feature.")
-
   }
 
   selected_feature <- selected_parameters$Feature
   selected_rna_set <- selected_parameters$RNA_set
   selected_trees <- as.numeric(selected_parameters$Trees) + 500
   selected_min_child <- selected_parameters$Child_weight
-  selected_eta <- selected_parameters$Eta
+  selected_eta <- ifelse(
+    selected_trees > 5000,
+    selected_parameters$Eta * 2,
+    ifelse(
+      selected_trees < 100,
+      selected_parameters$Eta - 0.05,
+      selected_parameters$Eta
+    )
+  )
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth
 
@@ -137,6 +146,7 @@ for (cancer in cancer_types) {
   rna_set <- read.csv(
     paste0(
       rna_folder,
+      "train_",
       rna_selection_name,
       "_soi.csv"
     ),
@@ -208,7 +218,7 @@ for (cancer in cancer_types) {
   rm(y)
 
   grid <- expand.grid(
-    min_child = seq(1, 9, 3),
+    min_child = seq(-3, 9, 1),
     max_depth = seq(1, 9, 3)
   )
 
@@ -233,6 +243,19 @@ for (cancer in cancer_types) {
       "\n"
     ))
 
+    # Check that the tuning has not been done before for the exact same parameters
+    if (nrow(aneu_reg_metrics_df) > 0) {
+      if (any(
+        aneu_reg_metrics_df$Max_depth == selected_max_depth &
+          aneu_reg_metrics_df$Child_weight == selected_min_child &
+          aneu_reg_metrics_df$Eta == selected_eta &
+          aneu_reg_metrics_df$Gamma == selected_gamma
+      )) {
+        cat("\n\t\t\t Hyperparameters already tuned. Skipping.\n\n")
+        next
+      }
+    }
+
     m_xgb_untuned <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
@@ -244,7 +267,7 @@ for (cancer in cancer_types) {
       min_child_weight = selected_min_child,
       eta = selected_eta,
       gamma = selected_gamma,
-      print_every_n = 10
+      print_every_n = 25
     )
 
     best_iteration <- 0
@@ -305,7 +328,7 @@ for (cancer in cancer_types) {
 
   saved_dir <- paste0(
     "Data/Cancer_specific_data/Model_output/Hyperparameters/",
-    cancer, 
+    cancer,
     "/"
   )
 

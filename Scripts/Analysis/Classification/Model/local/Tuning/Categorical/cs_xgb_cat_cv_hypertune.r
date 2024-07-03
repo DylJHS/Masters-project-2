@@ -2,8 +2,6 @@ library(dplyr)
 library(readr)
 library(tidyverse)
 library(xgboost)
-library(caret)
-library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
@@ -64,7 +62,7 @@ for (cancer in cancer_types) {
   rna_folder <- paste0(
     "Data/Cancer_specific_data/Model_input/RNA/",
     cancer,
-    "/"
+    "/Train/"
   )
 
   # Get the parameters from stored Parameters file
@@ -74,7 +72,7 @@ for (cancer in cancer_types) {
   print(dim(parameters))
 
   # select the parameters and weights corresponding to the selected feature
-  selected_parameters <- parameters[parameters$Feature == selected_feature,]
+  selected_parameters <- parameters[parameters$Feature == selected_feature, ]
   rm(parameters)
   cat("\n Parameters: \n")
   print(selected_parameters)
@@ -86,14 +84,21 @@ for (cancer in cancer_types) {
     )
     # stop the script for this feature
     stop("Stopping the process for this feature.")
-
   }
 
   selected_feature <- selected_parameters$Feature
   selected_rna_set <- selected_parameters$RNA_set
   selected_trees <- as.numeric(selected_parameters$Trees) + 500
-  selected_min_child <- selected_parameters$Min_child
-  selected_eta <- selected_parameters$Eta
+  selected_min_child <- selected_parameters$Child_weight
+  selected_eta <- ifelse(
+    selected_trees > 5000,
+    selected_parameters$Eta * 2,
+    ifelse(
+      selected_trees < 100,
+      selected_parameters$Eta - 0.05,
+      selected_parameters$Eta
+    )
+  )
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth
   selected_weights <- as.numeric(selected_parameters[c("Weight_loss", "Weight_normal", "Weight_gain")])
@@ -120,6 +125,7 @@ for (cancer in cancer_types) {
   rna_set <- read.csv(
     paste0(
       rna_folder,
+      "train_",
       rna_selection_name,
       "_soi.csv"
     ),
@@ -134,7 +140,7 @@ for (cancer in cancer_types) {
     RNA_set = character(),
     Trees = numeric(),
     Feature = character(),
-    Depth = numeric(),
+    Max_depth = numeric(),
     Child_weight = numeric(),
     Eta = numeric(),
     Gamma = numeric(),
@@ -186,8 +192,8 @@ for (cancer in cancer_types) {
   rm(y)
 
   grid <- expand.grid(
-    min_child = seq(selected_min_child - 2, selected_min_child +2, 1),
-    max_depth = seq(selected_max_depth - 2, selected_max_depth +2, 1)
+    min_child = seq(selected_min_child - 5, selected_min_child + 2, 1),
+    max_depth = seq(selected_max_depth - 2, selected_max_depth + 2, 1)
   )
 
   for (j in 1:nrow(grid)) {
@@ -211,6 +217,20 @@ for (cancer in cancer_types) {
       "\n"
     ))
 
+    # Check that the tuning has not been done before for the exact same parameters
+    if (nrow(aneu_cat_metrics_df) > 0) {
+      if (any(
+        aneu_cat_metrics_df$Max_depth == selected_max_depth &
+          aneu_cat_metrics_df$Child_weight == selected_min_child &
+          aneu_cat_metrics_df$Eta == selected_eta &
+          aneu_cat_metrics_df$Gamma == selected_gamma
+      )) {
+        cat("\n\t\t\t Hyperparameters already tuned. Skipping.\n\n")
+        next
+      }
+    }
+
+
     m_xgb_untuned <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
@@ -224,7 +244,7 @@ for (cancer in cancer_types) {
       gamma = selected_gamma,
       num_class = 3,
       stratified = TRUE,
-      print_every_n = 100
+      print_every_n = 25
     )
 
     best_iteration <- 0
@@ -274,7 +294,7 @@ for (cancer in cancer_types) {
         RNA_set = selected_rna_set,
         Trees = best_iteration,
         Feature = selected_feature,
-        Depth = selected_max_depth,
+        Max_depth = selected_max_depth,
         Child_weight = selected_min_child,
         Eta = selected_eta,
         Gamma = selected_gamma,

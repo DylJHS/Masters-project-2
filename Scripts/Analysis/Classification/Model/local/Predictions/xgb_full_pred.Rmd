@@ -27,7 +27,7 @@ early_stop = 150
 
 # setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
-input_path <- "Data/Model_input/"
+input_path <- "Data/Gen_Model_input/"
 ```
 
 FUNCTIONS
@@ -521,7 +521,11 @@ for (feature in response_features){
 }
 # write.csv(
 #   base_oof_predictions,
-#     "Data/Model_output/Base_predictions/Full_base_predictions.csv"
+#     "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
+# )
+# write.csv(
+#   base_oof_predictions,
+#     "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
 # )
 
 cat("Training the base models complete")
@@ -530,7 +534,7 @@ cat("Training the base models complete")
 
 META MODEL INITIALIZATION
 ```{r}
-
+# Upload the base predictions
 base_oof_predictions <- read.csv(
   paste0(
     input_path,
@@ -646,16 +650,29 @@ for (feature in response_features) {
 
 cat("Training of the meta models complete")
 
-# Save the predictions
+# Save the out-of-fold predictions
 write.csv(
   meta_oof_predictions,
-  "Data/Model_output/Predictions/Meta_predictions/Full_meta_predictions.csv"
+  "Data/Gen_model_output/Predictions/Meta_predictions/Full_meta_predictions.csv"
+)
+write.csv(
+  meta_oof_predictions,
+  "Data/Gen_model_input/Meta_predictions/Full_meta_predictions.csv"
 )
   
 ```
 
 Reconvert the data into the original scale
 ```{r}
+#Upload the meta predictions
+meta_oof_predictions <- read.csv(
+  paste0(
+    input_path,
+    "Meta_predictions/Full_meta_predictions.csv"
+  ),
+  row.names = 1
+)
+
 # columns to not convert
 regression_columns <- c(
                         paste("pred_", reg_features, sep = ""), 
