@@ -110,15 +110,15 @@ for (cancer in cancer_types) {
   selected_min_child <- selected_parameters$Child_weight
   selected_eta <- ifelse(
     selected_trees > 8000,
-    selected_parameters$Eta * 5,
+    selected_parameters$Eta * 10,
     ifelse(
       selected_trees > 5000,
-      selected_parameters$Eta * 2,
+      selected_parameters$Eta * 5,
       ifelse(
         selected_trees < 600,
         selected_parameters$Eta - 0.05,
         ifelse(
-          selected_trees < 3000,
+          selected_trees < 4000,
           selected_parameters$Eta - 0.025,
           selected_parameters$Eta
         )
@@ -224,8 +224,8 @@ for (cancer in cancer_types) {
   rm(y)
 
   grid <- expand.grid(
-    min_child = seq(selected_min_child - 1, selected_min_child + 1, 2),
-    max_depth = seq(selected_max_depth - 1, selected_max_depth + 1, 2)
+    min_child = seq(selected_min_child - 1, selected_min_child + 1, 1),
+    max_depth = seq(selected_max_depth - 1, selected_max_depth + 1, 1)
   )
 
   for (j in 1:nrow(grid)) {
@@ -345,6 +345,7 @@ for (cancer in cancer_types) {
 
   name <- paste0(
     saved_dir,
+    "/",
     selected_feature, "_",
     index, "_",
     datetime, ".csv"

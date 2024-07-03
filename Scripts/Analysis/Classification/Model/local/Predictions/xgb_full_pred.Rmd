@@ -93,10 +93,17 @@ calculate_confusion_matrix <- function(predictions_df, predicted_col, true_col) 
        plot.title = element_text(hjust = 0.5),
        legend.title = element_blank()
      )
+   
+   # save the plot
+    filefold = file.path("Plots/Model_Plots/General_model/Results/Categorical/Confusion_matrices")
+    if (!dir.exists(filefold)) {
+    dir.create(filefold, recursive = TRUE)
+    }
+    
    # Save the heatmap
     ggsave(
       filename = paste0(
-        "Plots/Model_Plots/General_model/Results/Categorical/Confusion_matrices/",
+        filefold,
         feature,"_",
         learner_type,
         "_TPR_Heatmap.png"
@@ -150,20 +157,23 @@ calculate_confusion_matrix <- function(predictions_df, predicted_col, true_col) 
         panel.grid.minor.x = element_blank(),
         panel.spacing = unit(4, "lines")
       ) 
+    
     # save the plot
+    filefold = file.path("Plots/Model_Plots/General_model/Results/Categorical/Stat_metrics")
+    if (!dir.exists(filefold)) {
+    dir.create(filefold, recursive = TRUE)
+    }
+    
     ggsave(
-      filename = paste0(
-        "Plots/Model_Plots/General_model/Results/Categorical/Stat_metrics/",
+      filename = file.path(filefold, paste0(
         Feature,
         "_Stats.pdf"
+        )
       ),
       plot = metrics_plt,
       width = 10,
       height = 10
     )
-    
-   
-  
   } 
   
 ```
@@ -717,7 +727,8 @@ Cat_general_metrics <- data.frame(
 Reg_general_metrics <- data.frame(
   Feature = character(),
   Type = character(),
-  RMSE = numeric()
+  RMSE = numeric(),
+  MAE = numeric()
 )
 
 # Assess the performance of the models
@@ -748,8 +759,8 @@ for (feature in response_features) {
       Cat_general_metrics,
       cat_base_metrics,
       cat_meta_metrics
-    )
-    
+      )
+      
     # # Create the TPR confusion matrix and the heatmap
     # tpr_mtrx_base <- tpr_confusion_matrix(cm_base, feature, "Base")
     # tpr_mtrx_meta <- tpr_confusion_matrix(cm_meta, feature, "Meta")
@@ -770,10 +781,81 @@ for (feature in response_features) {
     
   } 
   else if (feature %in% reg_features) { # Regression models
+    # evaluate the performance of the regression models with caret
+    
+    # Calculate the RMSE for the regression models
+    rmse_base <- caret::RMSE(
+      final_base_oof_predictions[[predicted]],
+      final_base_oof_predictions[[labelled]]
+    )
+    rmse_meta <- caret::RMSE(
+      final_meta_oof_predictions[[predicted]],
+      final_meta_oof_predictions[[labelled]]
+    )
+    
+    # Calulate the MAE for the regression models
+    mae_base <- caret::MAE(
+      final_base_oof_predictions[[predicted]],
+      final_base_oof_predictions[[labelled]]
+    )
+    mae_meta <- caret::MAE(
+      final_meta_oof_predictions[[predicted]],
+      final_meta_oof_predictions[[labelled]]
+    )
+    
+    # Calculate the R2 for the regression models
+    r2_base <- caret::R2(
+      final_base_oof_predictions[[predicted]],
+      final_base_oof_predictions[[labelled]]
+    ) %>% round(., 2)
+    
+    r2_meta <- caret::R2(
+      final_meta_oof_predictions[[predicted]],
+      final_meta_oof_predictions[[labelled]]
+    ) %>% round(., 2)
     
     
+    # Update the general metrics dataframe
+    Reg_general_metrics <- rbind(
+      Reg_general_metrics,
+      data.frame(
+        Feature = feature,
+        Type = "Base",
+        RMSE = rmse_base,
+        MAE = mae_base,
+        R_squared = r2_base
+      ),
+      data.frame(
+        Feature = feature,
+        Type = "Meta",
+        RMSE = rmse_meta,
+        MAE = mae_meta,
+        R_squared = r2_meta
+      )
+    )
   }
 }
+
+# Reset the indices of the dataframes to row number
+Cat_general_metrics <- Cat_general_metrics %>% 
+  rownames_to_column("Index") %>% 
+  select(-Index) %>% 
+  distinct() %>% 
+  select(Feature, Type, Accuracy, Kappa, AccuracyNull, AccuracyPValue)
+
+Reg_general_metrics <- Reg_general_metrics %>%
+  rownames_to_column("Index") %>% 
+  select(-Index) %>% 
+  distinct()
+
+Class_metrics_df <- Class_metrics_df %>%
+  distinct()
+
+# Save the dataframes
+write.csv(
+  Cat_general_metrics,
+  "Data/Gen_model_output/Results/General_metrics.csv"
+)
 
 ```
 
