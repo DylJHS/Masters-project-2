@@ -89,10 +89,14 @@ for (set in list.files(data_folder, pattern = ".csv")) {
     }
     cat("\t Number of samples: ", nrow(cancer_rna_set), "\n")
     
+    subfolder <- paste0("Data/Cancer_specific_data/Model_input/RNA/", cancer, "/Full")
+    if (!dir.exists(subfolder)) {
+      dir.create(subfolder)
+    }
+    
     # Save the RNA set
     write.csv(cancer_rna_set,
-              paste0("Data/Cancer_specific_data/Model_input/RNA/",
-                     cancer, "/",
+              paste0(subfolder, "/",
                      set),
               row.names = TRUE)
   }

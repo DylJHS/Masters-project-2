@@ -91,8 +91,8 @@ for (cancer in cancer_types) {
 
   selected_feature <- selected_parameters$Feature
   selected_rna_set <- selected_parameters$RNA_set
-  # selected_trees <- as.numeric(selected_parameters$Trees) + 500
-  selected_trees <- 2500
+  selected_trees <- as.numeric(selected_parameters$Trees) + 500
+  selected_min_child <- selected_parameters$Min_child
   selected_eta <- selected_parameters$Eta
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth

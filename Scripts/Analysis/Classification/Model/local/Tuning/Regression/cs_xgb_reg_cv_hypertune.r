@@ -2,8 +2,6 @@ library(dplyr)
 library(readr)
 library(tidyverse)
 library(xgboost)
-library(caret)
-library(caTools)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
@@ -111,8 +109,8 @@ for (cancer in cancer_types) {
 
   selected_feature <- selected_parameters$Feature
   selected_rna_set <- selected_parameters$RNA_set
-  # selected_trees <- as.numeric(selected_parameters$Trees) + 500
-  selected_trees <- 2500
+  selected_trees <- as.numeric(selected_parameters$Trees) + 500
+  selected_min_child <- selected_parameters$Child_weight
   selected_eta <- selected_parameters$Eta
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth
@@ -216,7 +214,12 @@ for (cancer in cancer_types) {
 
   for (j in 1:nrow(grid)) {
     for (param in names(grid)) {
-      assign(paste0("selected_", param), grid[j, param])
+      param_value <- grid[j, param]
+      assign(paste0("selected_", param), param_value)
+
+      if (param_value <= 0) {
+        assign(paste0("selected_", param), 1)
+      }
     }
 
     set.seed(selected_seed)

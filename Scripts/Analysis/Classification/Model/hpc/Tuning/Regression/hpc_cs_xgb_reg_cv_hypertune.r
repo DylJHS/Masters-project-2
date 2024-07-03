@@ -16,7 +16,8 @@ feature_digit_function <- function(factors) {
 # Load the constant data
 ## HRD scores
 ori_hrd <- read_tsv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/TCGA.HRD_withSampleID.txt",
-  show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 # Pericentromeric CNVs
 peri_cnv <- read.csv("/hpc/shared/prekovic/dhaynessimmons/data/CIN/lim_alpha_incl_TCGA_pericentro_cnv.csv") %>%
@@ -89,7 +90,7 @@ for (cancer in cancer_types) {
   parameters <- read.csv(hyperparam_file, header = TRUE)
 
   # select the parameters and weights corresponding to the selected feature
-  selected_parameters <- parameters[parameters$Feature == selected_feature,]
+  selected_parameters <- parameters[parameters$Feature == selected_feature, ]
   rm(parameters)
   cat("\n Parameters: \n")
   print(selected_parameters)
@@ -101,13 +102,12 @@ for (cancer in cancer_types) {
     )
     # stop the script for this feature
     stop("Stopping the process for this feature.")
-
   }
 
   selected_feature <- selected_parameters$Feature
   selected_rna_set <- selected_parameters$RNA_set
-  # selected_trees <- as.numeric(selected_parameters$Trees) + 500
-  selected_trees <- 2500
+  selected_trees <- as.numeric(selected_parameters$Trees) + 500
+  selected_min_child <- selected_parameters$Child_weight
   selected_eta <- selected_parameters$Eta
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth
@@ -207,8 +207,8 @@ for (cancer in cancer_types) {
   rm(y)
 
   grid <- expand.grid(
-    min_child = seq(selected_min_child - 2, selected_min_child +2, 1),
-    max_depth = seq(selected_max_depth - 2, selected_max_depth +2, 1)
+    min_child = seq(selected_min_child - 2, selected_min_child + 2, 1),
+    max_depth = seq(selected_max_depth - 2, selected_max_depth + 2, 1)
   )
 
   for (j in 1:nrow(grid)) {
@@ -224,7 +224,8 @@ for (cancer in cancer_types) {
     set.seed(selected_seed)
 
     cat(paste0(
-      "\t\t eta: ", selected_eta,
+      "\t\t\t\t\t selected_feature: ", selected_feature,
+      "\n\t\t eta: ", selected_eta,
       "\t\t gamma: ", selected_gamma,
       "\t\t depth: ", selected_max_depth,
       "\t\t trees: ", selected_trees,
@@ -305,7 +306,7 @@ for (cancer in cancer_types) {
 
   saved_dir <- paste0(
     "/hpc/shared/prekovic/dhaynessimmons/data/model_output/cancer_specific/Hyperparameters/",
-    cancer, 
+    cancer,
     "/"
   )
 
