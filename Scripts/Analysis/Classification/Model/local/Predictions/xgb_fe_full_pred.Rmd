@@ -23,7 +23,7 @@ library(ggplot2)
 
 ```{r}
 print_every = 100
-early_stop = 250
+early_stop = 25
 
 
 # setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
@@ -380,7 +380,10 @@ base_oof_predictions <- cbind(base_oof_predictions, labels) %>%
 
 BASE TRAINING
 ```{r}
-for (feature in response_features){
+# Create the full feature importance dataframe
+full_feature_imp_df <- data.frame()
+
+for (feature in response_features[32:33]){
 
   cat(
     "Feature: ", feature, "\n\n"
@@ -439,36 +442,62 @@ for (feature in response_features){
     y <- as.integer(full_df[[selected_feature]])
     X <- full_df %>% select(-c("Row.names", all_of(response_features)))
     
-    train_y_factor <- factor(y, levels = c(0, 1, 2))
-    weights <- as.numeric(feature_digit_function(train_y_factor))
+    # Create the out-of-fold predictions column
+    oof_predictions <- numeric(nrow(X))
     
-    xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y, weight = weights)
+    # Create df to store the importance matrix
+    feature_imp_df <- data.frame()
     
-    xgb_model <- xgb.cv(
-      data = xgb_data,
-      nrounds = selected_trees,
-      objective = "multi:softmax",
-      eval_metric = "mlogloss",
-      folds = folds,
-      max_depth = selected_max_depth,
-      min_child_weight = selected_min_child,
-      early_stopping_rounds = early_stop,
-      eta = selected_eta,
-      gamma = selected_gamma,
-      num_class = 3,
-      print_every_n = print_every,
-      prediction = TRUE
-    )
-    
+    # Fold-wise training
+    for (fold_index in seq_along(folds)) {
+      cat(
+        "Fold: ", fold_index, "\n")
+      train_indices <- setdiff(seq_len(nrow(full_df)), folds[[fold_index]])
+      valid_indices <- folds[[fold_index]]
+      
+      train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
+      valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
+      
+      
+      train_y_factor <- factor(y[train_indices], levels = c(0, 1, 2))
+      weights <- as.numeric(feature_digit_function(train_y_factor))
+      setinfo(train_data, "weight", weights)
+      
+      xgb_model <- xgb.train(
+        data = train_data,
+        nrounds = selected_trees,
+        objective = "multi:softmax",
+        eval_metric = "mlogloss",
+        max_depth = selected_max_depth,
+        min_child_weight = selected_min_child,
+        early_stopping_rounds = early_stop,
+        eta = selected_eta,
+        gamma = selected_gamma,
+        watchlist = list(eval = valid_data),
+        num_class = 3,
+        print_every_n = print_every,
+      )
+      
+      # Store OOF predictions
+      oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
+      
+      # Create the feature importance matrix
+      importance_matrix <- xgb.importance(feature_names = colnames(X), model = xgb_model)
+      
+      # Store the importance matrix in the dataframe
+      feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
+    }
+
     # Store the predictions in the corresponding column
-    base_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_model$pred[, 1]
+    base_oof_predictions[[paste0("pred_", selected_feature)]] <- oof_predictions
+    
   } else if (feature %in% reg_features) {
     # Get the parameters from stored Parameters file
     parameters <- base_reg_parameters
-    
+
     # select the parameters and weights corresponding to the index
     selected_parameters <- parameters[parameters$Feature == feature, ]
-    
+
     selected_feature <- selected_parameters$Feature
     selected_rna_set <- selected_parameters$RNA_set
     selected_trees <- as.numeric(selected_parameters$Trees)
@@ -476,7 +505,7 @@ for (feature in response_features){
     selected_gamma <- selected_parameters$Gamma
     selected_max_depth <- selected_parameters$Max_depth
     selected_min_child <- selected_parameters$Child_weight
-    
+
     cat(
       "\n Selected Parameters: \n",
       "Feature: ", selected_feature, "\t",
@@ -487,7 +516,7 @@ for (feature in response_features){
       "Max Depth: ", selected_max_depth, "\t",
       "Min Child: ", selected_min_child, "\n"
     )
-    
+
     rna_selection_name <- rna_list[[selected_rna_set]]
     rna_set <- read.csv(
       paste0(
@@ -498,50 +527,112 @@ for (feature in response_features){
       ),
       row.names = 1
     )
-    
+
     full_df <- merge(rna_set,
                      full_cin,
                      by = "row.names"
     )
-    
+
     y <- as.numeric(full_df[[selected_feature]])
     X <- full_df %>% select(-c("Row.names", all_of(response_features)))
+
+    # Create the out-of-fold predictions column
+    oof_predictions <- numeric(nrow(X))
     
-    xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
+    # Create df to store the importance matrix
+    feature_imp_df <- data.frame()
     
-    xgb_model <- xgb.cv(
-      data = xgb_data,
-      nrounds = selected_trees,
-      objective = "reg:squarederror",
-      eval_metric = "rmse",
-      early_stopping_rounds = early_stop,
-      folds = folds,
-      max_depth = selected_max_depth,
-      min_child_weight = selected_min_child,
-      eta = selected_eta,
-      gamma = selected_gamma,
-      print_every_n = print_every,
-      prediction = TRUE
-    )
+    # Fold-wise training
+    for (fold_index in seq_along(folds)) {
+      cat(
+        "Fold: ", fold_index, "\n")
+      train_indices <- setdiff(seq_len(nrow(full_df)), folds[[fold_index]])
+      valid_indices <- folds[[fold_index]]
+      
+      train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
+      valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
+      
+      xgb_model <- xgb.train(
+        data = train_data,
+        nrounds = selected_trees,
+        objective = "reg:squarederror",
+        eval_metric = "rmse",
+        max_depth = selected_max_depth,
+        min_child_weight = selected_min_child,
+        early_stopping_rounds = early_stop,
+        eta = selected_eta,
+        gamma = selected_gamma,
+        watchlist = list(eval = valid_data),
+        print_every_n = print_every,
+      )
+      
+       # Store OOF predictions
+      oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
+      
+      # Create the feature importance matrix
+      importance_matrix <- xgb.importance(feature_names = colnames(X), model = xgb_model)
+      
+      # Store the importance matrix in the dataframe
+      feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix)) 
+    }
     
     # Store the predictions in the corresponding column
-    base_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_model$pred
+    base_oof_predictions[[paste0("pred_", selected_feature)]] <- oof_predictions
+    
+    # Modify the feature importance matrix
+    feature_imp_df <- feature_imp_df %>% 
+        group_by(Feature) %>%
+        summarise_all(mean) %>% 
+        # create the combined normalised importance
+        mutate(
+          Combined = rowSums(across(.cols = -Feature))
+        ) %>% 
+        mutate(
+          Normalised = Combined / sum(Combined),
+          Target = feature
+        ) %>% 
+        arrange(desc(Normalised))
+    
+    # Add the feature importance matrix to the full dataframe
+    full_feature_imp_df <- rbind(full_feature_imp_df, feature_imp_df)
+    
+    # Save the feature importance df
+    write.csv(
+      feature_imp_df,
+      paste0(
+        "Data/Gen_model_output/Results/Feature_importance/",
+        feature,
+        "_feature_importance.csv"
+      )
+    )
+    
   } else {
     cat("Feature not found")
   }
 }
-# write.csv(
-#   base_oof_predictions,
-#     "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
-# )
-# write.csv(
-#   base_oof_predictions,
-#     "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
-# )
+# Save the predictions
+write.csv(
+  base_oof_predictions,
+    "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
+)
+write.csv(
+  base_oof_predictions,
+    "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
+)
+
+# Save the full feature importance dataframe
+write.csv(
+  full_feature_imp_df,
+  "Data/Gen_model_output/Results/Feature_importance/Full_feature_importance.csv"
+)
 
 cat("Training the base models complete")
 
 ```
+
+
+```
+
 
 META MODEL INITIALIZATION
 ```{r}
@@ -838,7 +929,7 @@ for (feature in response_features) {
     # Create the actual vs predicted plot f
     # Function to create a predicted vs actual plot
     create_pred_vs_actual_plot <- function(data, feature, type, plot_title_prefix = "Predicted vs Actual for ") {
-      plt <- ggplot(data, aes_string(
+      ggplot(data, aes_string(
         x = paste0("pred_", feature),  # Predicted on x-axis
         y = paste0("act_", feature)   # Actual on y-axis
       )) +
@@ -858,26 +949,6 @@ for (feature in response_features) {
           panel.grid.major = element_line(color = "gray20", size = 0.2),
           panel.grid.minor = element_line(color = "gray85", size = 0.1)
         )
-      
-      # Save the plot
-      filefold = file.path("Plots/Model_Plots/General_model/Results/Regression/Residual_plts/")
-      if (!dir.exists(filefold)) {
-        dir.create(filefold, recursive = TRUE)
-      }
-      ggplot2::ggsave(
-        filename = paste0(
-          filefold,
-          feature,
-          "_",
-          type,
-          "_Residual_plt.pdf"
-        ),
-        plot = plt,
-        width = 10,
-        height = 10
-      )
-      
-      return(plt)
     }
     
     plot_base_reg <- create_pred_vs_actual_plot(
@@ -894,6 +965,7 @@ for (feature in response_features) {
       "Meta model residuals for "
     )
     
+    print(plot_meta_reg)
   }
 }
 
