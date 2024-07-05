@@ -8,10 +8,8 @@ URGENT:
 
 - Write the training script for the full model
 
-- Load the full RNA data to the hpc so that i can create the cancer_specific data sets in all formats (log, scaled ...)
+- Need to add the FI (Feature Importance) plotting from the fi_xgb_base_pred to the full xgb prediction scripts
 
-- Need to create the cancer specific hyperparameters
-- Need the cancer-specific class weights
 
 
 

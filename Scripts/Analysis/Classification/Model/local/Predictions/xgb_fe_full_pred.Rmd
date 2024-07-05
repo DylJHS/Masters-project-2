@@ -6,7 +6,7 @@ note: "This file is intended to be used for the full prediction of the XGB model
 from the soi RNAseq data to the final predictions from the meta learners"
 ---
 ```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir="/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 ```
 
 
@@ -22,8 +22,8 @@ library(ggplot2)
 
 
 ```{r}
-print_every = 100
-early_stop = 25
+print_every <- 100
+early_stop <- 25
 
 
 # setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
@@ -54,129 +54,134 @@ calculate_confusion_matrix <- function(predictions_df, predicted_col, true_col) 
   if (!predicted_col %in% names(predictions_df) || !true_col %in% names(predictions_df)) {
     stop("Specified columns do not exist in the provided dataframe")
   }
-  
+
   # Create the confusion matrix
   cm <- confusionMatrix(
     data = factor(predictions_df[[predicted_col]], levels = c(-1, 0, 1)),
     reference = factor(predictions_df[[true_col]], levels = c(-1, 0, 1))
   )
-  
+
   # Return the confusion matrix object
   return(cm)
 }
 
 # Function to extract the true positive rate from the confusion matrix and create the heatmap
-  tpr_confusion_matrix <- function(object, feature, learner_type) {
-   new_table <- pivot_wider(as.data.frame(object$table), names_from = Reference, values_from = Freq, values_fill = list(frequency = 0)) %>%
-     column_to_rownames("Prediction") %>%
-     sweep(., 2, colSums(.), "/") %>%
-     round(., 2) %>%
-     rownames_to_column("Prediction") %>% 
-     pivot_longer(., cols = -Prediction, names_to = "Reference", values_to = "TPR") %>%
-     mutate(TPR = round(TPR, 2))
-   
-   graph <- ggplot(new_table, aes(x = Reference, y = Prediction, fill = TPR)) +
-     geom_tile() +
-     geom_text(aes(label = TPR), vjust = 1) +
-     scale_fill_gradient(low = "#FFEBEE", high = "#B71C1C",
-                         limits = c(0, 1)) +
-     theme_minimal() +
-     labs(
-       title = paste0(
-         learner_type, 
-         " Learner Performance for ",
-         feature),
-       x = "Actual Class",
-       y = "Predicted Class"
-     ) +
-     theme(
-       axis.text.x = element_text(hjust = 1), # Adjust text angle for better legibility
-       plot.title = element_text(hjust = 0.5),
-       legend.title = element_blank()
-     )
-   
-   # save the plot
-    filefold = file.path("Plots/Model_Plots/General_model/Results/Categorical/Confusion_matrices")
-    if (!dir.exists(filefold)) {
-    dir.create(filefold, recursive = TRUE)
-    }
-    
-   # Save the heatmap
-    ggsave(
-      filename = paste0(
-        filefold,
-        feature,"_",
+tpr_confusion_matrix <- function(object, feature, learner_type) {
+  new_table <- pivot_wider(as.data.frame(object$table), names_from = Reference, values_from = Freq, values_fill = list(frequency = 0)) %>%
+    column_to_rownames("Prediction") %>%
+    sweep(., 2, colSums(.), "/") %>%
+    round(., 2) %>%
+    rownames_to_column("Prediction") %>%
+    pivot_longer(., cols = -Prediction, names_to = "Reference", values_to = "TPR") %>%
+    mutate(TPR = round(TPR, 2))
+
+  graph <- ggplot(new_table, aes(x = Reference, y = Prediction, fill = TPR)) +
+    geom_tile() +
+    geom_text(aes(label = TPR), vjust = 1) +
+    scale_fill_gradient(
+      low = "#FFEBEE", high = "#B71C1C",
+      limits = c(0, 1)
+    ) +
+    theme_minimal() +
+    labs(
+      title = paste0(
         learner_type,
-        "_TPR_Heatmap.png"
+        " Learner Performance for ",
+        feature
       ),
-      plot = graph,
-      width = 10,
-      height = 10
+      x = "Actual Class",
+      y = "Predicted Class"
+    ) +
+    theme(
+      axis.text.x = element_text(hjust = 1), # Adjust text angle for better legibility
+      plot.title = element_text(hjust = 0.5),
+      legend.title = element_blank()
     )
-  } 
-  
-  # Function to get the stats from the confusion matrix object
-   create_confusion_matrix_data <- function(obj, type) {
-     as.data.frame(obj$byClass) %>% 
-       rownames_to_column("Class") %>%
-       mutate(Type = type) %>% 
-       select(-c("Pos Pred Value", "Neg Pred Value", 
-                 "Prevalence", "Detection Rate", 
-                 "Detection Prevalence", "Sensitivity")) %>%
-       pivot_longer(cols = -c(Type, Class), names_to = "Metric", values_to = "Value") %>% 
-       as.data.frame()
-   }
-  
-  
-  # Function to create the plot based on the confusion matrix stats by learner type
-  confusion_stat_plot <- function(data) {
-    
-    Feature <- data$Feature[1]
-    
-    metrics_plt <- data %>%
-      ggplot(aes(x = factor(Metric, levels = rev(c(
-        "Balanced Accuracy","F1", "Precision",
-        "Recall", "Specificity"))), y = Value, fill = Type)) +
-      geom_bar(stat = "identity", position = "dodge") +
-      coord_flip() +
-      scale_fill_manual(values = c("#ABDDDE", "#CCEDB1", "#41B7C4")) +
-      facet_wrap(~Class) +
-      theme_minimal() +
-      labs(
-        title = paste0("Model Performance Stats for ", Feature),
-        x = "Class",
-        y = "Value"
-      ) +
-      scale_y_continuous(breaks = seq(0, 1, by = 0.25))+
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        plot.title = element_text(hjust = 0.5),
-        panel.grid.major.x = element_line(colour = "grey", 
-                                          linetype = 2),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.spacing = unit(4, "lines")
-      ) 
-    
-    # save the plot
-    filefold = file.path("Plots/Model_Plots/General_model/Results/Categorical/Stat_metrics")
-    if (!dir.exists(filefold)) {
+
+  # save the plot
+  filefold <- file.path("Plots/Model_Plots/General_model/Results/Categorical/Confusion_matrices")
+  if (!dir.exists(filefold)) {
     dir.create(filefold, recursive = TRUE)
-    }
-    
-    ggsave(
-      filename = file.path(filefold, paste0(
-        Feature,
-        "_Stats.pdf"
-        )
+  }
+
+  # Save the heatmap
+  ggsave(
+    filename = paste0(
+      filefold,
+      feature, "_",
+      learner_type,
+      "_TPR_Heatmap.png"
+    ),
+    plot = graph,
+    width = 10,
+    height = 10
+  )
+}
+
+# Function to get the stats from the confusion matrix object
+create_confusion_matrix_data <- function(obj, type) {
+  as.data.frame(obj$byClass) %>%
+    rownames_to_column("Class") %>%
+    mutate(Type = type) %>%
+    select(-c(
+      "Pos Pred Value", "Neg Pred Value",
+      "Prevalence", "Detection Rate",
+      "Detection Prevalence", "Sensitivity"
+    )) %>%
+    pivot_longer(cols = -c(Type, Class), names_to = "Metric", values_to = "Value") %>%
+    as.data.frame()
+}
+
+
+# Function to create the plot based on the confusion matrix stats by learner type
+confusion_stat_plot <- function(data) {
+  Feature <- data$Feature[1]
+
+  metrics_plt <- data %>%
+    ggplot(aes(x = factor(Metric, levels = rev(c(
+      "Balanced Accuracy", "F1", "Precision",
+      "Recall", "Specificity"
+    ))), y = Value, fill = Type)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    coord_flip() +
+    scale_fill_manual(values = c("#ABDDDE", "#CCEDB1", "#41B7C4")) +
+    facet_wrap(~Class) +
+    theme_minimal() +
+    labs(
+      title = paste0("Model Performance Stats for ", Feature),
+      x = "Class",
+      y = "Value"
+    ) +
+    scale_y_continuous(breaks = seq(0, 1, by = 0.25)) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.y = element_text(size = 10, face = "bold"),
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.major.x = element_line(
+        colour = "grey",
+        linetype = 2
       ),
-      plot = metrics_plt,
-      width = 10,
-      height = 10
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      panel.spacing = unit(4, "lines")
     )
-  } 
-  
+
+  # save the plot
+  filefold <- file.path("Plots/Model_Plots/General_model/Results/Categorical/Stat_metrics")
+  if (!dir.exists(filefold)) {
+    dir.create(filefold, recursive = TRUE)
+  }
+
+  ggsave(
+    filename = file.path(filefold, paste0(
+      Feature,
+      "_Stats.pdf"
+    )),
+    plot = metrics_plt,
+    width = 10,
+    height = 10
+  )
+}
 ```
 
 RNA SETS
@@ -383,19 +388,18 @@ BASE TRAINING
 # Create the full feature importance dataframe
 full_feature_imp_df <- data.frame()
 
-for (feature in response_features[32:33]){
-
+for (feature in response_features) {
   cat(
     "Feature: ", feature, "\n\n"
   )
-  
+
   if (feature %in% cat_features) {
     # Get the parameters from stored Parameters file
     parameters <- base_cat_parameters
-    
+
     # select the parameters and weights corresponding to the index
     selected_parameters <- parameters[parameters$Feature == feature, ]
-    
+
     selected_feature <- selected_parameters$Feature
     selected_rna_set <- selected_parameters$RNA_set
     selected_trees <- as.numeric(selected_parameters$Trees)
@@ -410,7 +414,7 @@ for (feature in response_features[32:33]){
         "Weight_gain"
       )]
     )
-    
+
     cat(
       "\n Selected Parameters: \n",
       "Feature: ", selected_feature, "\t",
@@ -422,7 +426,7 @@ for (feature in response_features[32:33]){
       "Weights: ", selected_weights, "\t",
       "Min Child: ", selected_min_child, "\n"
     )
-    
+
     rna_selection_name <- rna_list[[selected_rna_set]]
     rna_set <- read.csv(
       paste0(
@@ -433,36 +437,37 @@ for (feature in response_features[32:33]){
       ),
       row.names = 1
     )
-    
+
     full_df <- merge(rna_set,
-                     full_cin,
-                     by = "row.names"
+      full_cin,
+      by = "row.names"
     )
-    
+
     y <- as.integer(full_df[[selected_feature]])
     X <- full_df %>% select(-c("Row.names", all_of(response_features)))
-    
+
     # Create the out-of-fold predictions column
     oof_predictions <- numeric(nrow(X))
-    
+
     # Create df to store the importance matrix
     feature_imp_df <- data.frame()
-    
+
     # Fold-wise training
     for (fold_index in seq_along(folds)) {
       cat(
-        "Fold: ", fold_index, "\n")
+        "Fold: ", fold_index, "\n"
+      )
       train_indices <- setdiff(seq_len(nrow(full_df)), folds[[fold_index]])
       valid_indices <- folds[[fold_index]]
-      
+
       train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
       valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
-      
-      
+
+
       train_y_factor <- factor(y[train_indices], levels = c(0, 1, 2))
       weights <- as.numeric(feature_digit_function(train_y_factor))
       setinfo(train_data, "weight", weights)
-      
+
       xgb_model <- xgb.train(
         data = train_data,
         nrounds = selected_trees,
@@ -477,20 +482,19 @@ for (feature in response_features[32:33]){
         num_class = 3,
         print_every_n = print_every,
       )
-      
+
       # Store OOF predictions
       oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
-      
+
       # Create the feature importance matrix
       importance_matrix <- xgb.importance(feature_names = colnames(X), model = xgb_model)
-      
+
       # Store the importance matrix in the dataframe
       feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
     }
 
     # Store the predictions in the corresponding column
     base_oof_predictions[[paste0("pred_", selected_feature)]] <- oof_predictions
-    
   } else if (feature %in% reg_features) {
     # Get the parameters from stored Parameters file
     parameters <- base_reg_parameters
@@ -529,8 +533,8 @@ for (feature in response_features[32:33]){
     )
 
     full_df <- merge(rna_set,
-                     full_cin,
-                     by = "row.names"
+      full_cin,
+      by = "row.names"
     )
 
     y <- as.numeric(full_df[[selected_feature]])
@@ -538,20 +542,21 @@ for (feature in response_features[32:33]){
 
     # Create the out-of-fold predictions column
     oof_predictions <- numeric(nrow(X))
-    
+
     # Create df to store the importance matrix
     feature_imp_df <- data.frame()
-    
+
     # Fold-wise training
     for (fold_index in seq_along(folds)) {
       cat(
-        "Fold: ", fold_index, "\n")
+        "Fold: ", fold_index, "\n"
+      )
       train_indices <- setdiff(seq_len(nrow(full_df)), folds[[fold_index]])
       valid_indices <- folds[[fold_index]]
-      
+
       train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
       valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
-      
+
       xgb_model <- xgb.train(
         data = train_data,
         nrounds = selected_trees,
@@ -565,37 +570,37 @@ for (feature in response_features[32:33]){
         watchlist = list(eval = valid_data),
         print_every_n = print_every,
       )
-      
-       # Store OOF predictions
+
+      # Store OOF predictions
       oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
-      
+
       # Create the feature importance matrix
       importance_matrix <- xgb.importance(feature_names = colnames(X), model = xgb_model)
-      
+
       # Store the importance matrix in the dataframe
-      feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix)) 
+      feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
     }
-    
+
     # Store the predictions in the corresponding column
     base_oof_predictions[[paste0("pred_", selected_feature)]] <- oof_predictions
-    
+
     # Modify the feature importance matrix
-    feature_imp_df <- feature_imp_df %>% 
-        group_by(Feature) %>%
-        summarise_all(mean) %>% 
-        # create the combined normalised importance
-        mutate(
-          Combined = rowSums(across(.cols = -Feature))
-        ) %>% 
-        mutate(
-          Normalised = Combined / sum(Combined),
-          Target = feature
-        ) %>% 
-        arrange(desc(Normalised))
-    
+    feature_imp_df <- feature_imp_df %>%
+      group_by(Feature) %>%
+      summarise_all(mean) %>%
+      # create the combined normalised importance
+      mutate(
+        Combined = rowSums(across(.cols = -Feature))
+      ) %>%
+      mutate(
+        Normalised = Combined / sum(Combined),
+        Target = feature
+      ) %>%
+      arrange(desc(Normalised))
+
     # Add the feature importance matrix to the full dataframe
     full_feature_imp_df <- rbind(full_feature_imp_df, feature_imp_df)
-    
+
     # Save the feature importance df
     write.csv(
       feature_imp_df,
@@ -605,7 +610,6 @@ for (feature in response_features[32:33]){
         "_feature_importance.csv"
       )
     )
-    
   } else {
     cat("Feature not found")
   }
@@ -613,11 +617,11 @@ for (feature in response_features[32:33]){
 # Save the predictions
 write.csv(
   base_oof_predictions,
-    "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
+  "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
 )
 write.csv(
   base_oof_predictions,
-    "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
+  "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
 )
 
 # Save the full feature importance dataframe
@@ -627,7 +631,6 @@ write.csv(
 )
 
 cat("Training the base models complete")
-
 ```
 
 
@@ -660,12 +663,12 @@ colnames(meta_oof_predictions) <- paste0("pred_", response_features)
 cat("\n Predictions Dataframe:  \n")
 print(head(meta_oof_predictions[1:5]))
 
-meta_oof_predictions <- cbind(meta_oof_predictions,
-                              labels) %>% 
-  arrange(act_index) %>% 
+meta_oof_predictions <- cbind(
+  meta_oof_predictions,
+  labels
+) %>%
+  arrange(act_index) %>%
   column_to_rownames("act_index")
-
-
 ```
 
 META TRAINING
@@ -674,60 +677,95 @@ META TRAINING
 meta_input_data <- base_oof_predictions %>%
   select(starts_with("pred_"))
 
+# Create the full feature importance dataframe
+full_feature_imp_df <- data.frame()
+
 for (feature in response_features) {
   cat(
     "Feature: ", feature, "\n\n"
   )
-  
+
   # Get the parameters from stored Parameters file
   parameters <- meta_parameters
-  
+
   # select the parameters and weights corresponding to the index
   selected_parameters <- parameters[parameters$Feature == feature, ]
-  
+
   selected_feature <- selected_parameters$Feature
   selected_trees <- as.numeric(selected_parameters$Trees) + 500
   selected_eta <- selected_parameters$Eta
   selected_gamma <- selected_parameters$Gamma
   selected_max_depth <- selected_parameters$Max_depth
   selected_min_child <- selected_parameters$Child_weight
-  
+
   cat(
-      "\n Selected Parameters: \n",
-      "Feature: ", selected_feature, "\t",
-      "Trees: ", selected_trees, "\t",
-      "Eta: ", selected_eta, "\n",
-      "Gamma: ", selected_gamma, "\t",
-      "Max Depth: ", selected_max_depth, "\t",
-      "Min Child: ", selected_min_child, "\n"
-    )
-  
+    "\n Selected Parameters: \n",
+    "Feature: ", selected_feature, "\t",
+    "Trees: ", selected_trees, "\t",
+    "Eta: ", selected_eta, "\n",
+    "Gamma: ", selected_gamma, "\t",
+    "Max Depth: ", selected_max_depth, "\t",
+    "Min Child: ", selected_min_child, "\n"
+  )
+
   y <- as.integer(base_oof_predictions[[paste0("act_", feature)]])
-    
-  xgb_data <- xgb.DMatrix(data = as.matrix(meta_input_data), label = y)
-  
+  X <- meta_input_data
+
+  # Create the out-of-fold predictions column
+  oof_predictions <- numeric(nrow(X))
+
+  # Create df to store the importance matrix
+  feature_imp_df <- data.frame()
   if (feature %in% cat_features) {
-    
-    xgb_meta_model <- xgb.cv(
-      data = xgb_data,
-      nrounds = selected_trees,
-      objective = "multi:softmax",
-      eval_metric = "mlogloss",
-      folds = meta_folds,
-      max_depth = selected_max_depth,
-      min_child_weight = selected_min_child,
-      early_stopping_rounds = early_stop,
-      eta = selected_eta,
-      gamma = selected_gamma,
-      num_class = 3,
-      print_every_n = print_every,
-      prediction = TRUE
-    )
-    
+
+    # Set the weights
+    selected_weights <- base_cat_parameters[base_cat_parameters$Feature == feature, c("Weight_loss", "Weight_normal", "Weight_gain")]
+
+    # Fold-wise training
+    for (fold_index in seq_along(folds)) {
+      cat(
+        "Fold: ", fold_index, "\n"
+      )
+      train_indices <- setdiff(seq_len(nrow(full_df)), folds[[fold_index]])
+      valid_indices <- folds[[fold_index]]
+
+      train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
+      valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
+
+      train_y_factor <- factor(y[train_indices], levels = c(0, 1, 2))
+      weights <- as.numeric(feature_digit_function(train_y_factor))
+      setinfo(train_data, "weight", weights)
+
+      xgb_model <- xgb.train(
+        data = train_data,
+        nrounds = selected_trees,
+        objective = "multi:softmax",
+        eval_metric = "mlogloss",
+        max_depth = selected_max_depth,
+        min_child_weight = selected_min_child,
+        early_stopping_rounds = early_stop,
+        eta = selected_eta,
+        gamma = selected_gamma,
+        watchlist = list(eval = valid_data),
+        num_class = 3,
+        print_every_n = print_every,
+      )
+
+      # Store OOF predictions
+      oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
+
+      # Create the feature importance matrix
+      importance_matrix <- xgb.importance(feature_names = colnames(X), model = xgb_model)
+
+      # Store the importance matrix in the dataframe
+      feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
+    }
+
     # Store the predictions in the corresponding column
-    meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred[, 1]
+    meta_oof_predictions[[paste0("pred_", selected_feature)]] <- oof_predictions
+
   } else if (feature %in% reg_features) {
-    
+
     xgb_meta_model <- xgb.cv(
       data = xgb_data,
       nrounds = selected_trees,
@@ -742,7 +780,7 @@ for (feature in response_features) {
       print_every_n = print_every,
       prediction = TRUE
     )
-    
+
     # Store the predictions in the corresponding column
     meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred
   } else {
@@ -761,12 +799,11 @@ write.csv(
   meta_oof_predictions,
   "Data/Gen_model_input/Meta_predictions/Full_meta_predictions.csv"
 )
-  
 ```
 
 Reconvert the data into the original scale
 ```{r}
-#Upload the meta predictions
+# Upload the meta predictions
 meta_oof_predictions <- read.csv(
   paste0(
     input_path,
@@ -777,8 +814,8 @@ meta_oof_predictions <- read.csv(
 
 # columns to not convert
 regression_columns <- c(
-                        paste("pred_", reg_features, sep = ""), 
-                        paste("act_", reg_features, sep = "")
+  paste("pred_", reg_features, sep = ""),
+  paste("act_", reg_features, sep = "")
 )
 
 # Reconvert the data into the original scale
@@ -798,7 +835,6 @@ final_meta_oof_predictions <- meta_oof_predictions %>%
 
 Assess the performance of the models
 ```{r}
-
 Class_metrics_df <- data.frame(
   Feature = character(),
   Class = character(),
@@ -825,56 +861,53 @@ Reg_general_metrics <- data.frame(
 
 # Assess the performance of the models
 for (feature in response_features) {
-
   predicted <- paste0("pred_", feature)
   labelled <- paste0("act_", feature)
-  
+
   if (feature %in% cat_features) { # Categorical features
     # Use Caret package to get the performance stats
     cm_base <- calculate_confusion_matrix(final_base_oof_predictions, predicted, labelled)
     cm_meta <- calculate_confusion_matrix(final_meta_oof_predictions, predicted, labelled)
-    
+
     # Update the general metrics dataframeß
-    cat_base_metrics <- as.data.frame(cm_base$overall) %>% 
-      t() %>% 
+    cat_base_metrics <- as.data.frame(cm_base$overall) %>%
+      t() %>%
       as.data.frame() %>%
       mutate(Feature = feature, Type = "Base") %>%
       select(Feature, Type, everything())
-    
-    cat_meta_metrics <- as.data.frame(cm_meta$overall) %>% 
-      t() %>% 
+
+    cat_meta_metrics <- as.data.frame(cm_meta$overall) %>%
+      t() %>%
       as.data.frame() %>%
       mutate(Feature = feature, Type = "Meta") %>%
       select(Feature, Type, everything())
-    
+
     Cat_general_metrics <- rbind(
       Cat_general_metrics,
       cat_base_metrics,
       cat_meta_metrics
-      )
-      
+    )
+
     # # Create the TPR confusion matrix and the heatmap
     # tpr_mtrx_base <- tpr_confusion_matrix(cm_base, feature, "Base")
     # tpr_mtrx_meta <- tpr_confusion_matrix(cm_meta, feature, "Meta")
 
-    # Create the confusion matrix stats 
+    # Create the confusion matrix stats
     confusion_matrix_data <- rbind(
       create_confusion_matrix_data(cm_meta, "Meta"),
       create_confusion_matrix_data(cm_base, "Base")
-    ) %>% 
-      mutate(Feature = feature) %>% 
+    ) %>%
+      mutate(Feature = feature) %>%
       select(Feature, everything())
-    
+
     # Update the class metrics dataframe
     Class_metrics_df <- rbind(Class_metrics_df, confusion_matrix_data)
-    
-    # Create the plot for the stats above 
+
+    # Create the plot for the stats above
     metrics_plot <- confusion_stat_plot(confusion_matrix_data)
-    
-  } 
-  else if (feature %in% reg_features) { # Regression models
+  } else if (feature %in% reg_features) { # Regression models
     # evaluate the performance of the regression models with caret
-    
+
     # Calculate the RMSE for the regression models
     rmse_base <- caret::RMSE(
       final_base_oof_predictions[[predicted]],
@@ -884,7 +917,7 @@ for (feature in response_features) {
       final_meta_oof_predictions[[predicted]],
       final_meta_oof_predictions[[labelled]]
     )
-    
+
     # Calulate the MAE for the regression models
     mae_base <- caret::MAE(
       final_base_oof_predictions[[predicted]],
@@ -894,19 +927,19 @@ for (feature in response_features) {
       final_meta_oof_predictions[[predicted]],
       final_meta_oof_predictions[[labelled]]
     )
-    
+
     # Calculate the R2 for the regression models
     r2_base <- caret::R2(
       final_base_oof_predictions[[predicted]],
       final_base_oof_predictions[[labelled]]
     ) %>% round(., 2)
-    
+
     r2_meta <- caret::R2(
       final_meta_oof_predictions[[predicted]],
       final_meta_oof_predictions[[labelled]]
     ) %>% round(., 2)
-    
-    
+
+
     # Update the general metrics dataframe
     Reg_general_metrics <- rbind(
       Reg_general_metrics,
@@ -925,13 +958,13 @@ for (feature in response_features) {
         R_squared = r2_meta
       )
     )
-    
+
     # Create the actual vs predicted plot f
     # Function to create a predicted vs actual plot
     create_pred_vs_actual_plot <- function(data, feature, type, plot_title_prefix = "Predicted vs Actual for ") {
       ggplot(data, aes_string(
-        x = paste0("pred_", feature),  # Predicted on x-axis
-        y = paste0("act_", feature)   # Actual on y-axis
+        x = paste0("pred_", feature), # Predicted on x-axis
+        y = paste0("act_", feature) # Actual on y-axis
       )) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE, color = "blue") +
@@ -950,35 +983,35 @@ for (feature in response_features) {
           panel.grid.minor = element_line(color = "gray85", size = 0.1)
         )
     }
-    
+
     plot_base_reg <- create_pred_vs_actual_plot(
       final_base_oof_predictions,
       feature,
       "base",
       "Base model residuals for "
     )
-    
+
     plot_meta_reg <- create_pred_vs_actual_plot(
       final_meta_oof_predictions,
       feature,
       "meta",
       "Meta model residuals for "
     )
-    
+
     print(plot_meta_reg)
   }
 }
 
 # Reset the indices of the dataframes to row number
-Cat_general_metrics <- Cat_general_metrics %>% 
-  rownames_to_column("Index") %>% 
-  select(-Index) %>% 
-  distinct() %>% 
+Cat_general_metrics <- Cat_general_metrics %>%
+  rownames_to_column("Index") %>%
+  select(-Index) %>%
+  distinct() %>%
   select(Feature, Type, Accuracy, Kappa, AccuracyNull, AccuracyPValue)
 
 Reg_general_metrics <- Reg_general_metrics %>%
-  rownames_to_column("Index") %>% 
-  select(-Index) %>% 
+  rownames_to_column("Index") %>%
+  select(-Index) %>%
   distinct()
 
 Class_metrics_df <- Class_metrics_df %>%
@@ -999,7 +1032,6 @@ write.csv(
   Class_metrics_df,
   "Data/Gen_model_output/Results/Gen_cat_class_metrics.csv"
 )
-
 ```
 
 

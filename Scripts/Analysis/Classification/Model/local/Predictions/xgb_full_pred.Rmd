@@ -285,6 +285,13 @@ meta_parameters <- read.csv(
     "Hyperparameters/meta_hyperparams.csv"
   )
 )
+
+try_meta_parameters <- read.csv(
+  paste0(
+    input_path,
+    "Hyperparameters/try_meta_hyperparams.csv"
+  )
+)
 ```
 
 FULL CIN DF
@@ -555,7 +562,7 @@ base_oof_predictions <- read.csv(
 )
 
 # Create the training folds
-meta_folds <- createFolds(base_oof_predictions[["act_1p"]], k = 5, list = TRUE, returnTrain = FALSE)
+meta_folds <- createFolds(base_oof_predictions[["act_1p"]], k = 10, list = TRUE, returnTrain = FALSE)
 
 # Create the empty dataframe that will store the out-of-fold predictions for each model of the meta learners
 meta_oof_predictions <- data.frame(
@@ -589,7 +596,7 @@ for (feature in response_features) {
   )
   
   # Get the parameters from stored Parameters file
-  parameters <- meta_parameters
+  parameters <- try_meta_parameters
   
   # select the parameters and weights corresponding to the index
   selected_parameters <- parameters[parameters$Feature == feature, ]
@@ -612,10 +619,21 @@ for (feature in response_features) {
     )
   
   y <- as.integer(base_oof_predictions[[paste0("act_", feature)]])
-    
-  xgb_data <- xgb.DMatrix(data = as.matrix(meta_input_data), label = y)
   
   if (feature %in% cat_features) {
+    
+    selected_weights <- as.numeric(
+      selected_parameters[c(
+        "Weight_loss",
+        "Weight_normal",
+        "Weight_gain"
+      )]
+    )
+    
+    train_y_factor <- factor(y, levels = c(0, 1, 2))
+    weights <- as.numeric(feature_digit_function(train_y_factor))
+    
+    xgb_data <- xgb.DMatrix(data = as.matrix(meta_input_data), label = y, weight = weights)
     
     xgb_meta_model <- xgb.cv(
       data = xgb_data,
@@ -636,6 +654,8 @@ for (feature in response_features) {
     # Store the predictions in the corresponding column
     meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred[, 1]
   } else if (feature %in% reg_features) {
+    
+    xgb_data <- xgb.DMatrix(data = as.matrix(meta_input_data), label = y)
     
     xgb_meta_model <- xgb.cv(
       data = xgb_data,
@@ -816,7 +836,7 @@ for (feature in response_features) {
     ) %>% round(., 2)
     
     
-    # Update the general metrics dataframe
+    # Update the general  metrics dataframe
     Reg_general_metrics <- rbind(
       Reg_general_metrics,
       data.frame(
