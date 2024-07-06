@@ -285,13 +285,6 @@ meta_parameters <- read.csv(
     "Hyperparameters/meta_hyperparams.csv"
   )
 )
-
-try_meta_parameters <- read.csv(
-  paste0(
-    input_path,
-    "Hyperparameters/try_meta_hyperparams.csv"
-  )
-)
 ```
 
 FULL CIN DF
@@ -596,7 +589,7 @@ for (feature in response_features) {
   )
   
   # Get the parameters from stored Parameters file
-  parameters <- try_meta_parameters
+  parameters <- meta_parameters
   
   # select the parameters and weights corresponding to the index
   selected_parameters <- parameters[parameters$Feature == feature, ]

@@ -7,128 +7,168 @@ library(tidyverse)
 library(xgboost)
 library(caret)
 
-input_path <- "Data/Gen_Model_input/"
-
 # Function to map factor levels to weights
-feature_digit_function <- function(factors) {
-  sapply(factors, function(x) selected_weights[as.numeric(x)])
+feature_digit_function <- function(factors, weight_ref) {
+  sapply(factors, function(x) weight_ref[as.numeric(x)])
 }
 
-# Function to extract the fold indices from the folds
-combine_all_folds <- function(folds) {
-  all_indices <- c()
-  for (fold in folds) {
-    all_indices <- c(all_indices, fold)
+feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
+  # Create the feature importance matrix
+  created_imp <- imp_df %>%
+    group_by(Feature) %>%
+    summarise_all(mean) %>%
+    # create the combined normalised importance
+    mutate(
+      Combined = rowSums(across(.cols = -Feature))
+    ) %>%
+    mutate(
+      Normalised = Combined / sum(Combined)
+    ) %>%
+    select(-Combined) %>%
+    arrange(desc(basis))
+  
+  type_file_folder <- ifelse(Type == "Meta", "Meta_feat_imp/", "Base_feat_imp/")
+  csv_filefold <- file.path("Data/Gen_model_output/Results/Feature_importance/",
+                            type_file_folder)
+  if (!dir.exists(csv_filefold)) {
+    csv_filefold  }
+  # Save the feature importance df
+  write.csv(
+    created_imp,
+    paste0(
+      csv_filefold,
+      feature,
+      "_feature_importance.csv"
+    )
+  )
+  
+  
+  # Create the plot for the top 10 features
+  top_genes <- created_imp %>%
+    select(Feature, basis) %>%
+    top_n(top_gene_num, basis) %>%
+    arrange(desc(basis))
+  
+  # Create the plot
+  top_genes_plot <- ggplot(top_genes[1:top_gene_num,],
+                           aes(x = reorder(Feature, .data[[basis]]), 
+                               y = .data[[basis]])
+  ) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    labs(
+      title = paste0("Top ", top_gene_num, " Features for ", feature),
+      x = "Feature",
+      y = basis
+    ) +
+    coord_flip() +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      plot.title = element_text(hjust = 0.5)
+    )
+  
+  # Save the plot
+  plt_filefold <- file.path("Plots/Model_Plots/General_model/Results/Feature_importance/",
+                            type_file_folder)
+  if (!dir.exists(plt_filefold)) {
+    dir.create(plt_filefold, recursive = TRUE)
   }
-  return(all_indices)
+  
+  ggsave(
+    filename = paste0(
+      plt_filefold,
+      feature,
+      "_Top_",
+      top_gene_num,
+      "_Features.pdf"
+    ),
+    plot = top_genes_plot,
+    width = 10,
+    height = 10
+  )
+  
+  return(list(feature_imp_df = created_imp, top_genes = top_genes))
+}feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
+  # Create the feature importance matrix
+  created_imp <- imp_df %>%
+    group_by(Feature) %>%
+    summarise_all(mean) %>%
+    # create the combined normalised importance
+    mutate(
+      Combined = rowSums(across(.cols = -Feature))
+    ) %>%
+    mutate(
+      Normalised = Combined / sum(Combined)
+    ) %>%
+    select(-Combined) %>%
+    arrange(desc(basis))
+  
+  type_file_folder <- ifelse(Type == "Meta", "Meta_feat_imp/", "Base_feat_imp/")
+  csv_filefold <- file.path("Data/Gen_model_output/Results/Feature_importance/",
+                            type_file_folder)
+  if (!dir.exists(csv_filefold)) {
+    csv_filefold  }
+  # Save the feature importance df
+  write.csv(
+    created_imp,
+    paste0(
+      csv_filefold,
+      feature,
+      "_feature_importance.csv"
+    )
+  )
+  
+  
+  # Create the plot for the top 10 features
+  top_genes <- created_imp %>%
+    select(Feature, basis) %>%
+    top_n(top_gene_num, basis) %>%
+    arrange(desc(basis))
+  
+  # Create the plot
+  top_genes_plot <- ggplot(top_genes[1:top_gene_num,],
+                           aes(x = reorder(Feature, .data[[basis]]), 
+                               y = .data[[basis]])
+                           ) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    labs(
+      title = paste0("Top ", top_gene_num, " Features for ", feature),
+      x = "Feature",
+      y = basis
+    ) +
+    coord_flip() +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      plot.title = element_text(hjust = 0.5)
+    )
+
+  # Save the plot
+  plt_filefold <- file.path("Plots/Model_Plots/General_model/Results/Feature_importance/",
+                        type_file_folder)
+  if (!dir.exists(plt_filefold)) {
+    dir.create(plt_filefold, recursive = TRUE)
+  }
+
+  ggsave(
+    filename = paste0(
+      plt_filefold,
+      feature,
+      "_Top_",
+      top_gene_num,
+      "_Features.pdf"
+    ),
+    plot = top_genes_plot,
+    width = 10,
+    height = 10
+  )
+  
+  return(list(feature_imp_df = created_imp, top_genes = top_genes))
 }
 
+input_path <- "Data/Gen_model_input/"
 
-meta_parameters <- read.csv(
-  paste0(
-    input_path,
-    "Hyperparameters/meta_hyperparams.csv"
-  )
-)
-
-# The CIN response features
-# Categorical features
-cat_cin <- read_tsv(
-  paste0(
-    input_path,
-    "CIN_Features/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
-  ),
-  show_col_types = FALSE
-) %>%
-  replace(is.na(.), 0) %>%
-  select(-c("Type", "Aneuploidy Score")) %>%
-  mutate(Sample = str_replace_all(Sample, "-", "\\.")) %>%
-  column_to_rownames("Sample") %>%
-  mutate_all(~ replace(., . == 1, 2)) %>%
-  mutate_all(~ replace(., . == 0, 1)) %>%
-  mutate_all(~ replace(., . == -1, 0)) %>%
-  rename(
-    "13q" = "13 (13q)",
-    "14q" = "14 (14q)",
-    "15q" = "15 (15q)",
-    "21q" = "21 (21q)",
-    "22q" = "22 (22q)"
-  )
-
-cat("\n Categorical CIN:  \n")
-print(head(cat_cin[20:30], 3))
-
-# Numerical features
-# HRD scores
-ori_hrd <- read_tsv(
-  paste0(input_path, "CIN_Features/TCGA.HRD_withSampleID.txt"),
-  show_col_types = FALSE
-)
-
-t_hrd <- as.data.frame(t(ori_hrd))
-first_hrd <- t_hrd
-colnames(first_hrd) <- t_hrd[1, ]
-hrd <- as.data.frame(first_hrd[-1, ]) %>%
-  mutate_all(as.numeric) %>%
-  rename(loh_hrd = "hrd-loh") %>%
-  select(-HRD) %>%
-  mutate(new = str_replace_all(rownames(.), "-", "\\."))
-
-rm(first_hrd)
-rm(ori_hrd)
-rm(t_hrd)
-
-rownames(hrd) <- hrd$new
-hrd <- hrd %>%
-  select(-new)
-
-# print(head(hrd))
-
-# Pericentromeric CNVs
-peri_cnv <- read.csv(
-  paste0(
-    input_path,
-    "/CIN_Features/lim_alpha_incl_TCGA_pericentro.csv"
-  )
-) %>%
-  mutate_all(~ replace(., is.na(.), 0)) %>%
-  mutate(sampleID = gsub("-", ".", sampleID)) %>%
-  column_to_rownames("sampleID")
-
-# print(dim(peri_cnv))
-
-reg_cin <- merge(
-  hrd,
-  peri_cnv,
-  by = "row.names"
-) %>%
-  mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
-  column_to_rownames("Row.names")
-cat("\n Regression CIN:  \n")
-print(head(reg_cin[1:5]))
-
-# rm(peri_cnv)
-# rm(hrd)
-
-full_cin <- merge(
-  cat_cin,
-  reg_cin,
-  by = "row.names"
-) %>%
-  column_to_rownames("Row.names")
-cat("\n Full CIN:  \n")
-print(head(full_cin[1:5], 3))
-
-# All response feature names
-response_features <- colnames(full_cin)
-reg_features <- colnames(reg_cin)
-cat_features <- colnames(cat_cin)
-cat(
-  "\n Response Features # :", length(response_features), "\n",
-  "Regression Features # :", length(reg_features), "\n",
-  "Categorical Features # :", length(cat_features), "\n"
-)
-
+# Upload the base predictions
 base_oof_predictions <- read.csv(
   paste0(
     input_path,
@@ -136,8 +176,14 @@ base_oof_predictions <- read.csv(
   ),
   row.names = 1
 )
-cat("\n Base OOF Predictions:  \n")
-print(head(base_oof_predictions[1:5], 3))
+
+# Load the meta parameters
+meta_parameters <- read.csv(
+  paste0(
+    input_path,
+    "Hyperparameters/meta_hyperparams.csv"
+  )
+)
 
 # Create the training folds
 meta_folds <- createFolds(base_oof_predictions[["act_1p"]], k = 10, list = TRUE, returnTrain = FALSE)
@@ -152,7 +198,7 @@ meta_oof_predictions <- data.frame(
 colnames(meta_oof_predictions) <- paste0("pred_", response_features)
 
 cat("\n Predictions Dataframe:  \n")
-print(head(meta_oof_predictions[1:5], 3))
+print(head(meta_oof_predictions[1:5]))
 
 meta_oof_predictions <- cbind(
   meta_oof_predictions,
@@ -161,91 +207,161 @@ meta_oof_predictions <- cbind(
   arrange(act_index) %>%
   column_to_rownames("act_index")
 
+# Create the empty dataframe that will store the importance matrix for each model of the meta learners
+full_meta_importance <- data.frame()
+
+# Get list of regression and categorical features
+cat_features <- response_features[str_detect(response_features, regex("^\\d"))]
+reg_features <- response_features[!response_features %in% cat_features]
+cat("\n\n Regression Features: \n")
+print(reg_features)
+cat("\n\n Categorical Features: \n")
+print(cat_features)
+
+# Create the predictor data for the meta learners
 meta_input_data <- base_oof_predictions %>%
-  select(starts_with("pred_"))
+  select(starts_with("pred_")) %>%
+  rename_all(~ gsub("pred_", "", .)) 
+
+cat("\n\n Meta Input Data: \n")
+print(head(meta_input_data[, 1:5], 3))
 
 for (feature in response_features) {
   cat(
-    "Feature: ", feature, "\n\n"
+    "\n\n\t\t\t\t\t\t Feature: ", feature, "\n\n"
   )
 
-  # Get the parameters from stored Parameters file
-  parameters <- meta_parameters
+  # Create df to store the importance matrix
+  feature_imp_df <- data.frame()
 
-  # select the parameters and weights corresponding to the index
-  selected_parameters <- parameters[parameters$Feature == feature, ]
+  # Create the out-of-fold predictions column
+  oof_predictions <- numeric(nrow(base_oof_predictions))
 
-  selected_feature <- selected_parameters$Feature
-  selected_trees <- as.numeric(selected_parameters$Trees)
-  selected_eta <- selected_parameters$Eta
-  selected_gamma <- selected_parameters$Gamma
-  selected_max_depth <- selected_parameters$Max_depth
-  selected_min_child <- selected_parameters$Child_weight
-
-  cat(
-    "\n Selected Parameters: \n",
-    "Feature: ", selected_feature, "\t",
-    "Trees: ", selected_trees, "\t",
-    "Eta: ", selected_eta, "\n",
-    "Gamma: ", selected_gamma, "\t",
-    "Max Depth: ", selected_max_depth, "\t",
-    "Min Child: ", selected_min_child, "\n"
-  )
-
-  y <- as.integer(base_oof_predictions[[paste0("act_", feature)]])
-
-  xgb_data <- xgb.DMatrix(data = as.matrix(meta_input_data), label = y)
-
-  if (feature %in% cat_features) {
-    xgb_meta_model <- xgb.cv(
-      data = xgb_data,
-      nrounds = selected_trees,
-      objective = "multi:softmax",
-      eval_metric = "mlogloss",
-      folds = meta_folds,
-      max_depth = selected_max_depth,
-      min_child_weight = selected_min_child,
-      early_stopping_rounds = early_stop,
-      eta = selected_eta,
-      gamma = selected_gamma,
-      num_class = 3,
-      print_every_n = print_every,
-      prediction = TRUE
-    )
-
-    # Store the predictions in the corresponding column
-    meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred[, 1]
-  } else if (feature %in% reg_features) {
-    xgb_meta_model <- xgb.cv(
-      data = xgb_data,
-      nrounds = selected_trees,
-      objective = "reg:squarederror",
-      eval_metric = "rmse",
-      early_stopping_rounds = early_stop,
-      folds = meta_folds,
-      max_depth = selected_max_depth,
-      min_child_weight = selected_min_child,
-      eta = selected_eta,
-      gamma = selected_gamma,
-      print_every_n = print_every,
-      prediction = TRUE
-    )
-
-    # Store the predictions in the corresponding column
-    meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred
+  # Determine parameter set based on feature type
+  parameters <- if (feature %in% meta_parameters$Feature) {
+    meta_parameters
   } else {
     cat("Feature not found")
+    next
   }
+
+  # Select the parameters and weights corresponding to the feature
+  selected_parameters <- parameters[parameters$Feature == feature, ]
+
+  if (nrow(selected_parameters) == 0) {
+    cat("No parameters found for feature: ", feature, "\n")
+    next
+  }
+
+  # Print selected parameters
+  cat("\n Selected Parameters:\n")
+  print(selected_parameters)
+
+  y <- ifelse(feature %in% cat_features, as.integer, as.numeric)(meta_input_data[[feature]])
+  cat("\n Y: ")
+  print(head(y))
+
+  # Fold-wise training
+  for (fold_index in seq_along(folds)) {
+    cat(
+      "\n\t\t\t\t Fold: ", fold_index, "\n"
+    )
+    train_indices <- setdiff(seq_len(nrow(meta_input_data)), folds[[fold_index]])
+    valid_indices <- folds[[fold_index]]
+
+    train_data <- xgb.DMatrix(data = as.matrix(meta_input_data[train_indices, ]), label = y[train_indices])
+    cat("\n Train Data: \n")
+    print(head(y[train_indices], 10))
+
+    valid_data <- xgb.DMatrix(data = as.matrix(meta_input_data[valid_indices, ]), label = y[valid_indices])
+
+    if (feature %in% cat_features) {
+      selected_ref <- as.numeric(
+        selected_parameters[c(
+          "Weight_loss",
+          "Weight_normal",
+          "Weight_gain"
+        )]
+      )
+      weights <- as.numeric(feature_digit_function(factor(y[train_indices], levels = c(0, 1, 2)), selected_ref))
+      setinfo(train_data, "weight", weights)
+
+      cat(
+        "\n\n Weight Loss: ", selected_ref[1], "\n",
+        "Weight Normal: ", selected_ref[2], "\n",
+        "Weight Gain: ", selected_ref[3], "\n\n")
+
+      cat("\n Weights: \n")
+      print(head(weights, 10))
+      cat("\n\n")
+  
+    }
+
+    # Adjust weights for categorical features
+
+    # Train model
+    params_list <- list(
+      data = train_data,
+      nrounds = selected_parameters$Trees,
+      objective = ifelse(feature %in% cat_features, "multi:softmax", "reg:squarederror"),
+      eval_metric = ifelse(feature %in% cat_features, "mlogloss", "rmse"),
+      max_depth = selected_parameters$Max_depth,
+      min_child_weight = selected_parameters$Child_weight,
+      early_stopping_rounds = early_stop,
+      eta = selected_parameters$Eta,
+      gamma = selected_parameters$Gamma,
+      watchlist = list(eval = valid_data),
+      print_every_n = print_every
+    )
+
+    # Only add num_class for categorical features
+    if (feature %in% cat_features) {
+      params_list$num_class <- 3
+    }
+
+    xgb_model <- do.call(xgb.train, params_list)
+
+    # Store OOF predictions
+    oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
+    cat(
+      "\n OOF Predictions: \n"
+    )
+    print(head(oof_predictions, 10))
+
+    # Create the feature importance matrix
+    importance_matrix <- xgb.importance(
+      feature_names = colnames(meta_input_data),
+      model = xgb_model
+    )
+
+    # Store the importance matrix in the dataframe
+    feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
+  }
+
+  # Store the predictions in the corresponding column
+  meta_oof_predictions[[paste0("pred_", selected_feature)]] <- oof_predictions
+
+  # get the feature imp df
+  imp <- feat_imp(imp_df = feature_imp_df, top_gene_num = 3)
+
+  top_genes <- imp$top_genes
+
+  full_meta_importance <- rbind(
+    full_meta_importance,
+    imp$feature_imp_df %>%
+      mutate(Target = feature)
+  ) %>%
+    arrange(desc(Gain))
 }
 
 cat("Training of the meta models complete")
 
 # Save the out-of-fold predictions
-# write.csv(
-#   meta_oof_predictions,
-#   "Data/Gen_model_output/Predictions/Meta_predictions/Full_meta_predictions.csv"
-# )
-# write.csv(
-#   meta_oof_predictions,
-#   "Data/Gen_model_input/Meta_predictions/Full_meta_predictions.csv"
-# )
+write.csv(
+  meta_oof_predictions,
+  "Data/Gen_model_output/Predictions/Meta_predictions/Full_meta_predictions.csv"
+)
+write.csv(
+  meta_oof_predictions,
+  "Data/Gen_model_input/Meta_predictions/Full_meta_predictions.csv"
+)
