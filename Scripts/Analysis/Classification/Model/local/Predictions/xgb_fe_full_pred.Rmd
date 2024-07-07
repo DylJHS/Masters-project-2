@@ -18,6 +18,7 @@ library(tidyverse)
 library(xgboost)
 library(caret)
 library(ggplot2)
+library(pheatmap)
 ```
 
 
@@ -585,7 +586,7 @@ for (feature in response_features[32:48]) {
   print(base_oof_predictions[[paste0("pred_", feature)]][1:10])
   
   # get the feature imp df
-  imp <- feat_imp(imp_df = feature_imp_df)
+  imp <- feat_imp(imp_df = feature_imp_df, top_gene_num = 10, basis = "Gain", Type = "Base")
   
   top_genes <- imp$top_genes
   
@@ -596,28 +597,42 @@ for (feature in response_features[32:48]) {
   ) %>% 
     arrange(desc(Gain))
   
-  }
-# # Save the predictions
-# write.csv(
-#   base_oof_predictions,
-#   "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
-# )
-# write.csv(
-#   base_oof_predictions,
-#   "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
-# )
+  
+}
+
+# Save the feature importance df
+write.csv(
+  full_feature_imp,
+  "Data/Gen_model_output/Results/Feature_importance/Full_base_feature_importance.csv"
+)
+
+# Save the predictions
+write.csv(
+  base_oof_predictions,
+  "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
+)
+write.csv(
+  base_oof_predictions,
+  "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
+)
 
 cat("\n\n Training the base models complete")
 ```
 General Feature Importance Plot
 ```{r}
+# import the feature importance df
+full_feature_imp <- read.csv(
+  "Data/Gen_model_output/Results/Feature_importance/Full_base_feature_importance.csv",
+  row.names = 1
+)
+
 # Plot of the top feature for each target
 top_gene_each <- full_feature_imp %>%
   group_by(Target) %>%
-  top_n(2, Gain) %>%
+  top_n(1, Gain) %>%
   arrange(desc(Gain))
 
-top_barplt <- ggplot(top_gene_each, aes(x = reorder(Feature, Gain), y = Gain)) +
+top_barplt <- ggplot(top_gene_each, aes(x = reorder(Target, Gain), y = Gain)) +
   geom_bar(stat = "identity") +
   labs(
     title = "Top Feature for each Target",
@@ -629,7 +644,7 @@ top_barplt <- ggplot(top_gene_each, aes(x = reorder(Feature, Gain), y = Gain)) +
     axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5)
   ) +
-  geom_text(aes(label = Target ), vjust = 1.5 , size = 3)
+  geom_text(aes(label = Feature ), vjust = 1.5 , size = 3)
 
 print(top_barplt)
 
@@ -641,7 +656,41 @@ top_genes_complete <- full_feature_imp %>%
   replace(is.na(.), 0) %>% 
   column_to_rownames("Target")
 
-pheatmap(top_genes_complete, cluster_rows = FALSE, cluster_cols = TRUE, border_color = "black", show_colnames = TRUE, show_rownames = TRUE, main = "Top Target Features", )
+# Assume your desired midpoint is 0.5 (change this as needed)
+midpoint <-1/length(unique(full_feature_imp$Feature))
+
+# Calculate the range of your data
+data_range <- range(top_genes_complete, na.rm = TRUE)
+
+# Create a sequence of breaks from min to max, ensuring midpoint is directly included
+num_breaks <- 101  # An odd number ensures a break directly at the midpoint
+breaks <- seq(from = data_range[1], to = data_range[2], length.out = num_breaks)
+
+# Adjust midpoint_index to make sure the exact midpoint is one of the breaks
+midpoint_index <- which.min(abs(breaks - midpoint))
+# Ensure midpoint is directly included and centered
+if (breaks[midpoint_index] != midpoint) {
+  breaks[midpoint_index] <- midpoint
+}
+
+# Define the color palette with white at the midpoint
+colors_below_midpoint <- colorRampPalette(c("#A4AAAB", "#F4F9FC"))(midpoint_index - 1)
+colors_above_midpoint <- colorRampPalette(c("#F4F9FC", "#7F000D"))(num_breaks - midpoint_index)
+
+colors <- c(colors_below_midpoint,"#F4F9FC", colors_above_midpoint)
+
+pheatmap(
+  top_genes_complete, 
+  color = colors,
+  breaks = breaks,
+  cluster_rows = FALSE, 
+  cluster_cols = TRUE, 
+  border_color = "black", 
+  show_colnames = TRUE, 
+  show_rownames = TRUE, 
+  main = "Top Target Features",
+  
+  )
 
 
 ```
