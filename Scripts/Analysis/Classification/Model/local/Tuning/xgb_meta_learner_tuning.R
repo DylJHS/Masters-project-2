@@ -1,5 +1,5 @@
 # This script is the third part of the base model prediction pipeline.
-# Its goal is to tune the hyperparameters for the meta leaners.
+# Its goal is to tune the hyperparameters for the meta learner models.
 
 # Load the packages
 library(dplyr)

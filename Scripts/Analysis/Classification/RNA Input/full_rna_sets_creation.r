@@ -4,10 +4,17 @@
 # The approach removes the non-cancerous samples before calculating the normalisation factors
 # The final sets contain all the genes with expression across all cancerous samples
 
+data_path <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/"
+setwd(data_path)
 
-Path_to_metadata <- ""
-Path_to_complete_RNA_data <- ""
-Path_to_save <- ""
+# path to the meta data files for the TCGA (tissueSourceSite.tsv, diseaseStudy.tsv, TCGA_PanCan_TPM_Gene_Annotations.txt)
+path2meta <- file.path("Data/Other/TCGA_meta")
+# path to the complete RNA data (TPM and Expected counts)
+path2tpm <- "Data/RNA_data/TCGA_TPM/TCGA_mRNA_TPM_Full.csv"
+path2exp <- "Data/RNA_Data/TCGA_Norm/tcga_mRNA_expected_count.cvs"
+
+# path to folder to save the different RNA sets
+path2save <- "Data/RNA_data/"
 
 library(dplyr)
 library(readr)
@@ -38,22 +45,23 @@ transform_tpm <- function(x) { # Function to convert the log transformed counts 
   return(log2(x + 0.001))
 }
 
+
 # Loading the meta data that will be used to filter the samples based on the condition and ca
 
 # Sample meta
 tss_meta <- read.csv(
-  paste0(Path_to_metadata, "tissueSourceSite.tsv"),
+  file.path(path2meta, "tissueSourceSite.tsv"),
   sep = "\t"
 )
 
 abbrv_meta <- read.csv(
-  paste0(Path_to_metadata, "diseaseStudy.tsv"),
+  file.path(path2meta, "diseaseStudy.tsv"),
   sep = "\t"
 )
 
 # Gene Metadata
-gene_ids <- read.delim(paste0(
-  Path_to_metadata,
+gene_ids <- read.delim(file.path(
+  path2meta,
   "TCGA_PanCan_TPM_Gene_Annotations.txt"
 ))
 
@@ -77,7 +85,7 @@ rm(abbrv_meta)
 
 # TPM counts
 ori_tpm <- read.csv(
-  paste0(Path_to_complete_RNA_data, "all_tcga_gene_tpm.csv")
+  path2tpm
 )
 
 order_tpm <- ori_tpm[, order(colnames(ori_tpm))] %>%
@@ -152,6 +160,7 @@ groups_tpm <- as.data.frame(grouped_tpm)
 rm(grouped_exp)
 rm(grouped_tpm)
 
+
 exp_data <- distinct(groups_exp) %>%
   column_to_rownames(var = "Gene")
 tpm_data <- distinct(groups_tpm) %>%
@@ -159,22 +168,23 @@ tpm_data <- distinct(groups_tpm) %>%
 rm(groups_exp)
 rm(groups_tpm)
 
-# Remove samples (cols) with 0 values throughout
+# Find samples (cols) with 0 values throughout
 cols_zeros_tpm <- which(apply(tpm_data, 2, function(x) all(x == 0)))
 cols_zeros_exp <- which(apply(exp_data, 2, function(x) all(x == 0)))
 
+# Remove those samples with expression values of 0
 if (length(cols_zeros_tpm) > 0) {
   data_complete_tpm <- tpm_data[, -cols_zeros_tpm]
 } else {
   data_complete_tpm <- tpm_data
 }
-
 if (length(cols_zeros_exp) > 0) {
   data_complete_exp <- exp_data[, -cols_zeros_exp]
 } else {
   data_complete_exp <- exp_data
 }
 
+# Only using the expected counts to calculate the normalisation factors
 # Identify genes with 0 expression across all samples
 zero_genes_exp <- rowSums(data_complete_exp == 0) == ncol(data_complete_exp)
 
@@ -196,19 +206,30 @@ rm(d_exp)
 Normfactors <- as.data.frame(Normfact_exp$samples) %>% select("norm.factors")
 rm(Normfact_exp)
 
+
 # match the column names from the normalisation factor df
-# with that of the other dfs to  to divide the count values
-# by the library size factors for the correct samples  # nolint
+# with that of the other dfs to divide the count values
+# by the library size factors for the correct samples 
 matching_cols_tpm <- colnames(tpm_data)[
   match(rownames(Normfactors), colnames(tpm_data))
 ]
 
 matching_cols_tpm <- matching_cols_tpm[!is.na(matching_cols_tpm)]
 
+# Check that the elements in the matching columns are the same 
+# in the normalisation factors and their orders match
+if (!all(rownames(Normfactors) == matching_cols_tpm)) {
+  stop("The matching columns are not the same")
+}else{
+  print("The matching columns are the same")
+}
+
 scld_cnts_tpm <- round(
   sweep(tpm_data[, matching_cols_tpm], 2, Normfactors$norm.factors, "/"),
   2
 )
+
+
 rm(tpm_data)
 
 matching_cols_exp <- colnames(exp_data)[
@@ -230,7 +251,7 @@ exp_set <- data_complete_exp %>% # Raw expected counts
 rm(data_complete_exp)
 write.csv(
   exp_set,
-  paste0(path_to_save, "exp_set.csv")
+  paste0(path2save, "exp_set.csv")
 )
 
 scld_exp_set <- scld_cnts_exp %>%
@@ -240,14 +261,14 @@ scld_exp_set <- scld_cnts_exp %>%
 rm(scld_cnts_exp)
 write.csv(
   scld_exp_set,
-  paste0(path_to_save, "scld_exp_set.csv")
+  paste0(path2save, "scld_exp_set.csv")
 )
 
 log_exp <- exp_set %>% # Log transformed expected counts
   mutate_at(vars(everything()), transform_exp)
 write.csv(
   log_exp,
-  paste0(path_to_save, "log_exp_set.csv")
+  paste0(path2save, "log_exp_set.csv")
 )
 rm(log_exp)
 rm(exp_set)
@@ -257,7 +278,7 @@ log_scld_exp <- scld_exp_set %>%
   mutate_at(vars(everything()), transform_exp)
 write.csv(
   log_scld_exp,
-  paste0(path_to_save, "log_scld_exp_set.csv")
+  paste0(path2save, "log_scld_exp_set.csv")
 )
 rm(log_scld_exp)
 rm(scld_exp_set)
@@ -268,8 +289,8 @@ tpm_set <- data_complete_tpm %>% # Raw TPM counts
   as.data.frame()
 rm(data_complete_tpm)
 write.csv(
-  tpm_set,
-  paste0(path_to_save, "tpm_set.csv")
+  tpm_set, 
+  paste0(path2save, "tpm_set.csv")
 )
 
 scld_tpm_set <- scld_cnts_tpm %>% # Library size normalised TPM counts
@@ -278,14 +299,14 @@ scld_tpm_set <- scld_cnts_tpm %>% # Library size normalised TPM counts
 rm(scld_cnts_tpm)
 write.csv(
   scld_tpm_set,
-  paste0(path_to_save, "scld_tpm_set.csv")
+  paste0(path2save, "scld_tpm_set.csv")
 )
 
 log_tpm <- tpm_set %>% # Log transformed TPM counts
   mutate_at(vars(everything()), transform_tpm)
 write.csv(
   log_tpm,
-  paste0(path_to_save, "log_tpm_set.csv")
+  paste0(path2save, "log_tpm_set.csv")
 )
 rm(log_tpm)
 rm(tpm_set)
@@ -295,5 +316,5 @@ log_scld_tpm <- scld_tpm_set %>%
   mutate_at(vars(everything()), transform_tpm)
 write.csv(
   log_scld_tpm,
-  paste0(path_to_save, "log_scld_tpm_set.csv")
+  paste0(path2save, "log_scld_tpm_set.csv")
 )

@@ -10,6 +10,10 @@ URGENT:
 
 - Need to add the FI (Feature Importance) plotting from the fi_xgb_base_pred to the full xgb prediction scripts
 
+- Integrate the STRING portion of the pipeline into the full model pipeline
+
+- Test the predictions using the test set
+
 
 
 
