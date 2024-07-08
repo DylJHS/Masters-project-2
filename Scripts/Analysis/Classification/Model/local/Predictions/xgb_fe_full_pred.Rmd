@@ -24,7 +24,7 @@ library(pheatmap)
 
 ```{r}
 print_every <- 100
-early_stop <- 25
+early_stop <- 150
 
 
 # setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
@@ -263,6 +263,48 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
   
   return(list(feature_imp_df = created_imp, top_genes = top_genes))
 }
+
+ # Function to create a predicted vs actual plot
+    pred_vs_actual_plot <- function(data, feature, type, plot_title_prefix = "Predicted vs Actual for ") {
+      plt <- ggplot(data, aes_string(
+        x = paste0("pred_", feature), # Predicted on x-axis
+        y = paste0("act_", feature) # Actual on y-axis
+      )) +
+        geom_point() +
+        geom_smooth(method = "lm", se = FALSE, color = "blue") +
+        labs(
+          title = paste0(plot_title_prefix, str_replace_all(feature, "_", " ")),
+          x = "Predicted",
+          y = "Actual",
+          caption = paste0("Linear Regression R² = ", get(paste0("r2_", type)))
+        ) +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+          axis.title = element_text(size = 14),
+          panel.border = element_rect(linetype = "solid", color = "black", fill = NA, size = 0.5),
+          panel.grid.major = element_line(color = "gray20", size = 0.2),
+          panel.grid.minor = element_line(color = "gray85", size = 0.1)
+        )
+      
+      # Save the plot
+      filefold <- file.path("Plots/Model_Plots/General_model/Results/Regression/Residual_plts/")
+      if (!dir.exists(filefold)) {
+        dir.create(filefold, recursive = TRUE)
+      }
+      
+      ggsave(
+        filename = paste0(
+          filefold,
+          type, "_",
+          feature,
+          "_Pred_vs_Actual.pdf"
+        ),
+        plot = plt,
+        width = 10,
+        height = 10
+      )
+    }
 ```
 
 RNA SETS
@@ -618,7 +660,7 @@ write.csv(
 
 cat("\n\n Training the base models complete")
 ```
-General Feature Importance Plot
+General Base_layer Feature Importance Plot
 ```{r}
 # import the feature importance df
 full_feature_imp <- read.csv(
@@ -705,7 +747,11 @@ base_oof_predictions <- read.csv(
     "Base_predictions/Full_base_predictions.csv"
   ),
   row.names = 1
-)
+) %>% 
+  merge(
+    labels,
+    by = "act_index"
+  )
 
 # Create the training folds
 meta_folds <- createFolds(base_oof_predictions[["act_1p"]], k = 5, list = TRUE, returnTrain = FALSE)
@@ -733,116 +779,143 @@ meta_oof_predictions <- cbind(
 META TRAINING
 ```{r}
 # Create the predictor data for the meta learners
-meta_input_data <- base_oof_predictions %>%
-  select(starts_with("pred_"))
+meta_input_data <- base_oof_predictions %>% 
+  select(starts_with("pred_")) %>% 
+  rename_with(~ str_replace(., "pred_", ""))
+
+label_data <- base_oof_predictions %>% 
+  select(starts_with("act_")) %>% 
+  select(-act_index) %>%
+  rename_with(~ str_replace(., "act_", ""))
 
 # Create the full feature importance dataframe
 full_feature_imp_df <- data.frame()
 
 for (feature in response_features) {
   cat(
-    "Feature: ", feature, "\n\n"
+    "\n\n\t\t\t\t\t\t Feature: ", feature, "\n\n"
   )
-
-  # Get the parameters from stored Parameters file
-  parameters <- meta_parameters
-
-  # select the parameters and weights corresponding to the index
-  selected_parameters <- parameters[parameters$Feature == feature, ]
-
-
-
-  y <- as.integer(base_oof_predictions[[paste0("act_", feature)]])
-  X <- meta_input_data
-
-  # Create the out-of-fold predictions column
-  oof_predictions <- numeric(nrow(X))
 
   # Create df to store the importance matrix
   feature_imp_df <- data.frame()
-  if (feature %in% cat_features) {
 
-    # Set the weights
-    selected_weights <- base_cat_parameters[base_cat_parameters$Feature == feature, c("Weight_loss", "Weight_normal", "Weight_gain")]
+  # Create the out-of-fold predictions column
+  oof_predictions <- numeric(nrow(base_oof_predictions))
 
-    # Fold-wise training
-    for (fold_index in seq_along(folds)) {
-      cat(
-        "Fold: ", fold_index, "\n"
-      )
-      train_indices <- setdiff(seq_len(nrow(full_df)), folds[[fold_index]])
-      valid_indices <- folds[[fold_index]]
-
-      train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
-      valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
-
-      train_y_factor <- factor(y[train_indices], levels = c(0, 1, 2))
-      weights <- as.numeric(feature_digit_function(train_y_factor))
-      setinfo(train_data, "weight", weights)
-
-      xgb_model <- xgb.train(
-        data = train_data,
-        nrounds = selected_trees,
-        objective = "multi:softmax",
-        eval_metric = "mlogloss",
-        max_depth = selected_max_depth,
-        min_child_weight = selected_min_child,
-        early_stopping_rounds = early_stop,
-        eta = selected_eta,
-        gamma = selected_gamma,
-        watchlist = list(eval = valid_data),
-        num_class = 3,
-        print_every_n = print_every,
-      )
-
-      # Store OOF predictions
-      oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
-
-      # Create the feature importance matrix
-      importance_matrix <- xgb.importance(feature_names = colnames(X), model = xgb_model)
-
-      # Store the importance matrix in the dataframe
-      feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
-    }
-
-    # Store the predictions in the corresponding column
-    meta_oof_predictions[[paste0("pred_", selected_feature)]] <- oof_predictions
-
-  } else if (feature %in% reg_features) {
-
-    xgb_meta_model <- xgb.cv(
-      data = xgb_data,
-      nrounds = selected_trees,
-      objective = "reg:squarederror",
-      eval_metric = "rmse",
-      early_stopping_rounds = early_stop,
-      folds = meta_folds,
-      max_depth = selected_max_depth,
-      min_child_weight = selected_min_child,
-      eta = selected_eta,
-      gamma = selected_gamma,
-      print_every_n = print_every,
-      prediction = TRUE
-    )
-
-    # Store the predictions in the corresponding column
-    meta_oof_predictions[[paste0("pred_", selected_feature)]] <- xgb_meta_model$pred
+  # Determine parameter set based on feature type
+  parameters <- if (feature %in% meta_parameters$Feature) {
+    meta_parameters
   } else {
     cat("Feature not found")
+    next
   }
+
+  # Select the parameters and weights corresponding to the feature
+  selected_parameters <- parameters[parameters$Feature == feature, ]
+
+  if (nrow(selected_parameters) == 0) {
+    cat("No parameters found for feature: ", feature, "\n")
+    next
+  }
+
+  # Print selected parameters
+  cat("\n Selected Parameters:\n")
+  print(selected_parameters)
+
+  y <- ifelse(feature %in% cat_features, as.integer, as.numeric)(label_data[[feature]])
+  cat("\n Y: ")
+  print(head(y))
+
+  # Fold-wise training
+  for (fold_index in seq_along(folds)) {
+    cat(
+      "\n\t\t\t\t Fold: ", fold_index, "\n"
+    )
+    train_indices <- setdiff(seq_len(nrow(meta_input_data)), folds[[fold_index]])
+    valid_indices <- folds[[fold_index]]
+
+    train_data <- xgb.DMatrix(data = as.matrix(meta_input_data[train_indices, ]), label = y[train_indices])
+    cat("\n Train Data: \n")
+    print(head(y[train_indices], 10))
+
+    valid_data <- xgb.DMatrix(data = as.matrix(meta_input_data[valid_indices, ]), label = y[valid_indices])
+
+    if (feature %in% cat_features) {
+      selected_ref <- as.numeric(
+        selected_parameters[c(
+          "Weight_loss",
+          "Weight_normal",
+          "Weight_gain"
+        )]
+      )
+      weights <- as.numeric(feature_digit_function(factor(y[train_indices], levels = c(0, 1, 2)), selected_ref))
+      setinfo(train_data, "weight", weights)
+
+      cat(
+        "\n\n Weight Loss: ", selected_ref[1], "\n",
+        "Weight Normal: ", selected_ref[2], "\n",
+        "Weight Gain: ", selected_ref[3], "\n\n")
+
+      cat("\n Weights: \n")
+      print(head(weights, 10))
+      cat("\n\n")
   
-  # Modify the feature importance matrix
-  feature_imp_df <- feature_imp_df %>%
-    group_by(Feature) %>%
-    summarise_all(mean) %>%
-    # create the combined normalised importance
-    mutate(
-      Combined = rowSums(across(.cols = -Feature))
-    ) %>%
-    mutate(
-      Normalised = Combined / sum(Combined),
-      Target = feature
-    ) %>%
+    }
+
+    # Adjust weights for categorical features
+
+    # Train model
+    params_list <- list(
+      data = train_data,
+      nrounds = selected_parameters$Trees,
+      objective = ifelse(feature %in% cat_features, "multi:softmax", "reg:squarederror"),
+      eval_metric = ifelse(feature %in% cat_features, "mlogloss", "rmse"),
+      max_depth = selected_parameters$Max_depth,
+      min_child_weight = selected_parameters$Child_weight,
+      early_stopping_rounds = early_stop,
+      eta = selected_parameters$Eta,
+      gamma = selected_parameters$Gamma,
+      watchlist = list(eval = valid_data),
+      print_every_n = print_every
+    )
+
+    # Only add num_class for categorical features
+    if (feature %in% cat_features) {
+      params_list$num_class <- 3
+    }
+
+    xgb_model <- do.call(xgb.train, params_list)
+
+    # Store OOF predictions
+    oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
+    cat(
+      "\n OOF Predictions: \n"
+    )
+    print(head(oof_predictions, 10))
+
+    # Create the feature importance matrix
+    importance_matrix <- xgb.importance(
+      feature_names = colnames(meta_input_data),
+      model = xgb_model
+    )
+
+    # Store the importance matrix in the dataframe
+    feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
+  }
+
+  # Store the predictions in the corresponding column
+  meta_oof_predictions[[paste0("pred_", feature)]] <- oof_predictions
+
+  # get the feature imp df
+  imp <- feat_imp(imp_df = feature_imp_df, top_gene_num = 5, basis = "Gain", Type = "Meta")
+
+  top_genes <- imp$top_genes
+
+  full_feature_imp_df <- rbind(
+    full_feature_imp_df,
+    imp$feature_imp_df %>%
+      mutate(Target = feature)
+  ) %>%
     arrange(desc(Gain))
 }
 
@@ -857,7 +930,99 @@ write.csv(
   meta_oof_predictions,
   "Data/Gen_model_input/Meta_predictions/Full_meta_predictions.csv"
 )
+
+# Save the feature importance df
+write.csv(
+  full_feature_imp_df,
+  "Data/Gen_model_output/Results/Feature_importance/Full_meta_feature_importance.csv"
+)
 ```
+
+
+General Meta_layer Feature Importance Plot
+```{r}
+# import the feature importance df
+full_feature_imp_df <- read.csv(
+  "Data/Gen_model_output/Results/Feature_importance/Full_meta_feature_importance.csv",
+  row.names = 1
+)
+
+# Plot of the top feature for each target
+top_gene_each <- full_feature_imp_df %>%
+  group_by(Target) %>%
+  top_n(1, Gain) %>%
+  arrange(desc(Gain))
+
+top_barplt <- ggplot(top_gene_each, aes(x = reorder(Target, Gain), y = Gain)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Top Feature for each Target",
+    x = "Feature",
+    y = "Gain"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  geom_text(
+    aes(label = Feature ),
+    hjust = 1.5 ,
+    size = 3,
+    angle = 90
+    )
+
+print(top_barplt)
+
+# Heatmap of the top features 
+top_genes_complete <- full_feature_imp_df %>%
+  filter(Feature %in% top_gene_each$Feature) %>%
+  select(Feature, Target, Gain) %>%
+  pivot_wider(names_from = Feature, values_from = Gain) %>% 
+  replace(is.na(.), 0) %>% 
+  column_to_rownames("Target")
+
+# Assume your desired midpoint is 0.5 (change this as needed)
+midpoint <-1/length(unique(full_feature_imp_df$Feature))
+
+# Calculate the range of your data
+data_range <- range(top_genes_complete, na.rm = TRUE)
+
+# Create a sequence of breaks from min to max, ensuring midpoint is directly included
+num_breaks <- 101  # An odd number ensures a break directly at the midpoint
+breaks <- seq(from = data_range[1], to = data_range[2], length.out = num_breaks)
+
+# Adjust midpoint_index to make sure the exact midpoint is one of the breaks
+midpoint_index <- which.min(abs(breaks - midpoint))
+# Ensure midpoint is directly included and centered
+if (breaks[midpoint_index] != midpoint) {
+  breaks[midpoint_index] <- midpoint
+}
+
+# Define the color palette with white at the midpoint
+colors_below_midpoint <- colorRampPalette(c("#A4AAAB", "#F4F9FC"))(midpoint_index - 1)
+colors_above_midpoint <- colorRampPalette(c("#F4F9FC", "#7F000D"))(num_breaks - midpoint_index)
+
+colors <- c(colors_below_midpoint,"#F4F9FC", colors_above_midpoint)
+
+pheatmap(
+  top_genes_complete, 
+  color = colors,
+  breaks = breaks,
+  cluster_rows = FALSE, 
+  cluster_cols = FALSE, 
+  border_color = "black", 
+  show_colnames = TRUE, 
+  show_rownames = TRUE, 
+  main = "Top Target Features",
+  legend = TRUE
+  )
+
+
+  
+```
+
+
 
 Reconvert the data into the original scale
 ```{r}
@@ -878,10 +1043,11 @@ regression_columns <- c(
 
 # Reconvert the data into the original scale
 final_base_oof_predictions <- base_oof_predictions %>%
-  mutate(across(.cols = -SampleID, .fns = as.numeric)) %>%
-  mutate(across(.cols = -c("SampleID", regression_columns), ~ replace(., . == 0, -1))) %>%
-  mutate(across(.cols = -c("SampleID", regression_columns), ~ replace(., . == 1, 0))) %>%
-  mutate(across(.cols = -c("SampleID", regression_columns), ~ replace(., . == 2, 1)))
+  column_to_rownames("act_index") %>%
+  mutate_all(as.numeric) %>%
+  mutate(across(.cols = -all_of(regression_columns), ~ replace(., . == 0, -1))) %>%
+  mutate(across(.cols = -all_of(regression_columns), ~ replace(., . == 1, 0))) %>%
+  mutate(across(.cols = -all_of(regression_columns), ~ replace(., . == 2, 1)))
 
 final_meta_oof_predictions <- meta_oof_predictions %>%
   mutate_all(as.numeric) %>%
@@ -1018,45 +1184,22 @@ for (feature in response_features) {
     )
 
     # Create the actual vs predicted plot f
-    # Function to create a predicted vs actual plot
-    create_pred_vs_actual_plot <- function(data, feature, type, plot_title_prefix = "Predicted vs Actual for ") {
-      ggplot(data, aes_string(
-        x = paste0("pred_", feature), # Predicted on x-axis
-        y = paste0("act_", feature) # Actual on y-axis
-      )) +
-        geom_point() +
-        geom_smooth(method = "lm", se = FALSE, color = "blue") +
-        labs(
-          title = paste0(plot_title_prefix, str_replace_all(feature, "_", " ")),
-          x = "Predicted",
-          y = "Actual",
-          caption = paste0("Linear Regression R² = ", get(paste0("r2_", type)))
-        ) +
-        theme_minimal() +
-        theme(
-          plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
-          axis.title = element_text(size = 14),
-          panel.border = element_rect(linetype = "solid", color = "black", fill = NA, size = 0.5),
-          panel.grid.major = element_line(color = "gray20", size = 0.2),
-          panel.grid.minor = element_line(color = "gray85", size = 0.1)
-        )
-    }
+   
 
-    plot_base_reg <- create_pred_vs_actual_plot(
+    plot_base_reg <- pred_vs_actual_plot(
       final_base_oof_predictions,
       feature,
       "base",
       "Base model residuals for "
     )
 
-    plot_meta_reg <- create_pred_vs_actual_plot(
+    plot_meta_reg <- pred_vs_actual_plot(
       final_meta_oof_predictions,
       feature,
       "meta",
       "Meta model residuals for "
     )
 
-    print(plot_meta_reg)
   }
 }
 

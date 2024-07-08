@@ -155,7 +155,7 @@ cat_cin <- read_tsv(
   )
 
 cat("\n Categorical CIN:  \n")
-print(head(cat_cin[1:5]))
+print(head(cat_cin[1:5], 3))
 
 # Numerical features
 # HRD scores

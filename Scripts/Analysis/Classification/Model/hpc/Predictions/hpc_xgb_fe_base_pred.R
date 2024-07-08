@@ -12,9 +12,9 @@ library(caret)
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
 
-early_stop <- 100
-print_every <- 25
-cv <- 2
+early_stop <- 150
+print_every <- 150
+cv <- 5
 
 input_path <- "/hpc/shared/prekovic/dhaynessimmons/data/"
 
@@ -154,7 +154,7 @@ cat_cin <- read_tsv(
   )
 
 cat("\n Categorical CIN:  \n")
-print(head(cat_cin[1:5]))
+print(head(cat_cin[1:5], 3))
 
 # Numerical features
 # HRD scores
@@ -203,7 +203,7 @@ reg_cin <- merge(
   mutate(Row.names = str_replace_all(Row.names, "-", ".")) %>%
   column_to_rownames("Row.names")
 cat("\n Regression CIN:  \n")
-print(head(reg_cin[1:5]))
+print(head(reg_cin[1:5], 3))
 
 rm(peri_cnv)
 rm(hrd)
@@ -222,9 +222,9 @@ response_features <- colnames(full_cin)
 reg_features <- colnames(reg_cin)
 cat_features <- colnames(cat_cin)
 cat(
-  "\n Response Features # :", length(response_features), "\n",
-  "Regression Features # :", length(reg_features), "\n",
-  "Categorical Features # :", length(cat_features), "\n"
+  "\n Number of Response Features :", length(response_features), "\n",
+  "Number of Regression Features :", length(reg_features), "\n",
+  "Number of Categorical Features :", length(cat_features), "\n"
 )
 
 rm(reg_cin)
@@ -243,11 +243,11 @@ full_data <- merge(
   by = "row.names"
 )
 cat("\n Full Data:  \n")
-print(head(full_data[1:5]))
+print(head(full_data[1:5], 3))
 
 # Creating the folds and returning the indices for the out-of-fold predictions only
 folds <- createFolds(full_data[["1p"]], k = cv, list = TRUE, returnTrain = FALSE)
-cat("\n Folds # :", length(folds), "\n")
+cat("\n Number of Folds: ", length(folds), "\n")
 
 # Create the empty dataframe that will store the out-of-fold predictions for each model
 oof_predictions <- data.frame(
@@ -371,7 +371,7 @@ for (fold_index in seq_along(folds)) {
   # Train model
   params_list <- list(
     data = train_data,
-    nrounds = selected_parameters$Trees,
+    nrounds = selected_parameters$Trees + 150,
     objective = ifelse(feature %in% cat_features, "multi:softmax", "reg:squarederror"),
     eval_metric = ifelse(feature %in% cat_features, "mlogloss", "rmse"),
     max_depth = selected_parameters$Max_depth,
@@ -401,9 +401,6 @@ for (fold_index in seq_along(folds)) {
   # Store the importance matrix in the dataframe
   feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
 }
-  
-cat("current_oof_predictions: ", dim(current_oof_predictions), "\n")
-print(head(current_oof_predictions, 10) )
 
 # Store the predictions in the corresponding column
 oof_predictions[[paste0("pred_", feature)]] <- current_oof_predictions
