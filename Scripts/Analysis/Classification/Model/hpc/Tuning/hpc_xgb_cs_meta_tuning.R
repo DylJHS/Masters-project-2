@@ -1,8 +1,6 @@
 # This script is the third part of the cancer-specific model prediction pipeline.
 # Its goal is to tune the hyperparameters for the meta learner models.
 
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
-
 # Load the packages
 library(dplyr)
 library(readr)
@@ -11,9 +9,9 @@ library(xgboost)
 
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1]) # for the feature index
-index <- 3
 
-cat("\n\n\t\t\t\t\t\t Feature Index: ", index, "\n")
+
+cat("\n\n\t\t Index: ", index, "\n")
 
 response_features <- c(
   "1p", "1q", "2p", "2q", "3p",
@@ -41,7 +39,6 @@ cancer_types <- c(
 )
 
 feature <- response_features[index]
-cat("\n\n\t\t\t\t\t\t Feature: ", feature, "\n")
 
 # Load the functions
 # Function to map factor levels to weights
@@ -50,7 +47,7 @@ feature_digit_function <- function(factors, reference) {
 }
 
 # Get the parameters from stored Parameters file
-hyper_param_folder <- file.path("Data/Cancer_specific_data/Model_input/Parameters/Hyperparameters/")
+hyper_param_folder <- file.path("/hpc/shared/prekovic/dhaynessimmons/data/Cancer_specific_data/Model_input/Parameters/Hyperparameters/")
 
 for (cancer in cancer_types) {
   selected_cancer <- cancer
@@ -100,19 +97,22 @@ for (cancer in cancer_types) {
     }
   }
 
+  cat("Loaded the hyperparameters.\n")
+
   # Load the arm class weights
   arm_weights <- read.csv(
     paste0(
-      "Data/Cancer_specific_data/Model_input/Parameters/Arm_class_weights/",
+      "/hpc/shared/prekovic/dhaynessimmons/data/Cancer_specific_data/Model_input/Parameters/Arm_class_weights/",
       selected_cancer,
       "_arm_weights.csv"
     ),
     row.names = 1
   )
+  cat("\n\n The arm weights have been loaded.\n")
 
   # Load the full base prediction data
   input_predictions_file <- file.path(
-    "Data/Cancer_specific_data/Model_output",
+    "/hpc/shared/prekovic/dhaynessimmons/data/Cancer_specific_data/Model_output",
     selected_cancer,
     "Results/Predictions/Full_base_predictions.csv"
   )
@@ -177,8 +177,8 @@ for (cancer in cancer_types) {
 
   # Define the hyperparameter grid
   hyper_grid <- expand.grid(
-    depth = seq(selected_max_depth - 1, selected_max_depth + 1, 1),
-    min_child = seq(selected_min_child - 1, selected_min_child + 1, 1),
+    depth = seq(selected_max_depth - 1, selected_max_depth + 3, 1),
+    min_child = seq(selected_min_child - 1, selected_min_child + 5, 1),
     eta = seq(0.5, 0.53, 0.05),
     gamma = seq(0.1, 0.5, 0.51)
   )

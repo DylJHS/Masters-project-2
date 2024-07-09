@@ -106,23 +106,53 @@ if (selected_feature %in% cat_features) {
     # Create the xgb data
     xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
 
-    # Train the model
-    xgb_model <- xgb.cv(
+    # Set common parameters
+    xgb_params <- list(
       data = xgb_data,
       nrounds = selected_trees,
-      nfold = 5,
-      early_stopping_rounds = 100,
-      objective = "multi:softmax",
-      eval_metric = "mlogloss",
-      num_class = 3,
+      nfold = 10,
+      early_stopping_rounds = 150,
+      objective = if (selected_feature %in% cat_features) "multi:softmax" else "reg:squarederror",
+      eval_metric = if (selected_feature %in% cat_features) "mlogloss" else "rmse",
       eta = selected_eta,
       gamma = selected_gamma,
       max_depth = selected_max_depth,
       min_child_weight = selected_min_child,
       stratified = TRUE,
-      print_every_n = 25,
+      print_every_n = 50,
       prediction = TRUE
     )
+    
+    # Add num_class only if it's a classification problem
+    if (selected_feature %in% cat_features) {
+      xgb_params$num_class <- 3
+    }
+    
+    # Train model using the parameters list
+    xgb_model <- do.call(xgb.cv, xgb_params)# Set common parameters
+    xgb_params <- list(
+      data = xgb_data,
+      nrounds = selected_trees,
+      nfold = 10,
+      early_stopping_rounds = 150,
+      objective = if (selected_feature %in% cat_features) "multi:softmax" else "reg:squarederror",
+      eval_metric = if (selected_feature %in% cat_features) "mlogloss" else "rmse",
+      eta = selected_eta,
+      gamma = selected_gamma,
+      max_depth = selected_max_depth,
+      min_child_weight = selected_min_child,
+      stratified = TRUE,
+      print_every_n = 50,
+      prediction = TRUE
+    )
+    
+    # Add num_class only if it's a classification problem
+    if (selected_feature %in% cat_features) {
+      xgb_params$num_class <- 3
+    }
+    
+    # Train model using the parameters list
+    xgb_model <- do.call(xgb.cv, xgb_params)
 
     best_iteration <- 0
 

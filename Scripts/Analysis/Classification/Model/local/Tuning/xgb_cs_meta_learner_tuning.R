@@ -28,7 +28,8 @@ feature_digit_function <- function(factors, reference) {
 }
 
 # Get the parameters from stored Parameters file
-hyper_param_folder <- file.path("Data/Cancer_specific_data/Model_input/Parameters/Hyperparameters",
+hyper_param_folder <- file.path(
+  "Data/Cancer_specific_data/Model_input/Parameters/Hyperparameters",
   selected_cancer
 )
 
@@ -86,14 +87,13 @@ cat("\n\n Response Features: ")
 print(response_features)
 
 # Create the empty df that will contain the hyperparameters and the associated results
-meta_model_metrics_full <- data.frame(
-)
+meta_model_metrics_full <- data.frame()
 
 # Loop over the response features
 for (feature in response_features) {
   # Define the hyperparameters to tune
   hyperparameter_file <- file.path(hyper_param_folder, "meta_hyperparams.csv")
-  if(!file.exists(hyperparameter_file)) {
+  if (!file.exists(hyperparameter_file)) {
     selected_feature <- feature
     selected_trees <- 10000
     selected_eta <- 0.3
@@ -203,16 +203,15 @@ for (feature in response_features) {
       cat("\n Loaded xgb data without weights.\n")
       xgb_data <- xgb.DMatrix(data = as.matrix(X), label = y)
     }
-    
-    # Train model
-    xgb_model <- xgb.cv(
+
+    # Set common parameters
+    xgb_params <- list(
       data = xgb_data,
       nrounds = selected_trees,
       nfold = 10,
       early_stopping_rounds = 150,
-      objective = ifelse(selected_feature %in% cat_features, "multi:softmax", "reg:squarederror"),
-      eval_metric = ifelse(selected_feature %in% cat_features, "mlogloss", "rmse"),
-      num_class = ifelse(selected_feature %in% cat_features, 3, NA),
+      objective = if (selected_feature %in% cat_features) "multi:softmax" else "reg:squarederror",
+      eval_metric = if (selected_feature %in% cat_features) "mlogloss" else "rmse",
       eta = selected_eta,
       gamma = selected_gamma,
       max_depth = selected_max_depth,
@@ -221,6 +220,14 @@ for (feature in response_features) {
       print_every_n = 50,
       prediction = TRUE
     )
+
+    # Add num_class only if it's a classification problem
+    if (selected_feature %in% cat_features) {
+      xgb_params$num_class <- 3
+    }
+
+    # Train model using the parameters list
+    xgb_model <- do.call(xgb.cv, xgb_params)
 
     best_iteration <- 0
 
@@ -248,7 +255,7 @@ for (feature in response_features) {
       }
     }
 
-    best_mlogloss_train <- if (best_iteration > 0) {
+    best_train <- if (best_iteration > 0) {
       if (selected_feature %in% cat_features) {
         xgb_model$evaluation_log$train_mlogloss_mean[best_iteration]
       } else {
@@ -258,7 +265,7 @@ for (feature in response_features) {
       NA # Or appropriate default/error value
     }
 
-    best_mlogloss_test <- if (best_iteration > 0) {
+    best_test <- if (best_iteration > 0) {
       if (selected_feature %in% cat_features) {
         xgb_model$evaluation_log$test_mlogloss_mean[best_iteration]
       } else {
@@ -283,19 +290,12 @@ for (feature in response_features) {
         "Gamma" = selected_gamma,
         "Max_depth" = selected_max_depth,
         "Child_weight" = selected_min_child,
-        "Train_result" = ifelse(
-          selected_feature %in% cat_features,
-          best_mlogloss_train,
-          best_rmse_train
-        ),
-        "Test_result" = ifelse(
-          selected_feature %in% cat_features,
-          best_mlogloss_test,
-          best_rmse_test
-        ),
+        "Train_result" = best_train,
+        "Test_result" = best_test,
         "Seed" = selected_seed
       )
-    )
+    ) %>%
+      arrange(Test_result)
   }
 
   # Append the results to the full df
@@ -304,7 +304,6 @@ for (feature in response_features) {
     meta_model_metrics
   )
 }
-
 
 # Get the best hyperparameter values for eahc feature
 best_hyperparameters <- meta_model_metrics_full %>%
