@@ -51,7 +51,7 @@ hyper_param_folder <- file.path("/hpc/shared/prekovic/dhaynessimmons/data/Cancer
 
 for (cancer in cancer_types) {
   selected_cancer <- cancer
-  cat("\n\n\t\t\t\t\t\t Cancer: ", selected_cancer, "\t",
+  cat("\n\n\t\t\t\t\t\t\t\t\t\t\t\t Cancer: ", selected_cancer, "\n",
       "Feature: ", feature, "\n")
 
   # Define the hyperparameters to tune
@@ -182,7 +182,8 @@ for (cancer in cancer_types) {
   hyper_grid <- expand.grid(
     max_depth = seq(selected_max_depth - 1, selected_max_depth + 1, 1),
     min_child = seq(selected_min_child - 3, selected_min_child + 3, 1),
-    eta = seq(selected_eta - 0.05, selected_eta, 0.05)
+    eta = seq(selected_eta - 0.05, selected_eta, 0.05),
+    gamma = 0.1
   )
 
   # Start the model tuning based on the selected feature
