@@ -2323,4 +2323,83 @@ the above yields 27 pericentromeric regions from 1 different chromosomes. The ch
 - Creating the full sets (all genes and samples) in the different formats (log, scaled ...) that can be queried by the cancer type
   
 - The cancer types with 300 samples or more include 12 cancer types
-- BLCA, BRCA, CESC, HNSC, LGG, LIHC, LUAD, LUSC, OV, PRAD, STAD and THCA
+- BLCA, BRCA, CESC, HNSC, LGG, LIHC, LUAD, LUSC, OV, PRAD, STAD and THCA01/07/24
+
+- Given the size of the cancer dfs which are a lot smaller employing 10 fold 
+
+- Edits to the cancer-specific arm class weights to limit the lowest class weight to 0.01 to prevent the model from ignoring the majority class
+  
+- Some the features do not show any variation in cancer-specific subsets
+- The model is not able to learn from the features that do not show any variation
+- So these features will have be removed from those models
+- This mostly applies to regression models which predict the pericentromeric cnvs 
+
+- Edit the general hyperparameter tuning to handle cancer-specific models
+
+- Using the hyperparameters from the general model for guidance 
+
+
+02/07/24
+
+- Realised that the rna sets being used contain all samples and are not split between train and test sets
+- Splitting the cancer-speific rna sets into train and test sets
+
+- Need to upload the new rna sets to the server
+- and run the hyperparameter tuning for the cancer-specific models on that new rna data
+
+
+03/07/24
+
+- For the visualisation of the Gen model results:
+  
+- For the Categorical models
+- Show line graph of the overall accuracy (y axis) for each feature (x axis), by model type (base & meta, colour)
+- Show line graph of the Balanced accuracy (y axis) for each feature (x axis), by class (colour) = META MODEL ONLY 
+- Show line facetted graph of the metric level (y axis) for each feature (x axis) by metric type (the precision, recall and specificity, colour) and by class (facet) = META MODEL ONLY
+- Show facetted bar graph of the 5 metrics (y) values (x) by class (facet or colour) and model type (base & meta, facet or colour) = ONLY FOR 1-2 SPECIFIC FEATURES 
+- OR multiclass AUC ROC plot for the specific features
+
+- For the Regression models
+- Show line graph of the r-squared level (y axis) for each feature (x axis) by model type (base & meta, colour)
+- Show bar graph of metric values (x) for all Features (y) by model type (base & meta, colour) and metric type (RMSE & MAE, facet) 
+- Show regression plot of the predicted vs actual values for the specific features with r-squared value (annotation) and the line of best fit
+
+- For the Feature importance TBD
+- Show bar graph of the feature importance values (y) for each feature (x) by model type (base & meta, colour) and class (facet) = META MODEL ONLY
+
+
+04/07/24
+
+- Ran the meta predictions on the data using class weights 
+- Obtained improved performance metrics for the meta model compared to when using no weights
+
+- Define the feature importance in terms of the Gain and not the Cover, or the Frequency
+- The Gain is the improvement in accuracy brought by a feature
+  
+- For the individual base feature models, only showing the top 10 features in the feature importance plot
+- Also plan to show an overall feature importance plot for all base models combined
+- The combined feature importance plot should show the most important gene for each feature
+- Or, the 10 most important gene across all features (using the sum or mean)
+
+
+07/07/24
+- Running the full script on the general model with the feature importance and residual and classifcation plots
+- Now see an improvement in the performance metrics for the meta model for both the regression and classification models
+- The improvement seen in both the balanced accuracy for the most part and the recall for the minority classes in the classification models
+- The improvement in the r-squared value for the regression models
+- The improvement is only very slight though 
+- aroound .01 to 0.02 
+
+- The equal importance threshold for the meta model is 1/56 since there are 56 target features
+- The equal importance threshold for the base model is 1 divided by the number of genes in the extended gene set
+  
+
+08/07/24
+- Creating the full (all genes and all cancerous samples) rna data sets
+- To create the cancer-specific rna data sets just need to filter the full rna data sets by the cancer type
+
+
+09/07/24
+- Finished the script for the meta tuning for the hpc
+- Started writing the methods section of the thesis
+- Starting with the STRING part

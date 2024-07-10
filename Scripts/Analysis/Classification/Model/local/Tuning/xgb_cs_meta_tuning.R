@@ -179,8 +179,7 @@ for (cancer in cancer_types) {
   hyper_grid <- expand.grid(
     depth = seq(selected_max_depth - 1, selected_max_depth + 1, 1),
     min_child = seq(selected_min_child - 1, selected_min_child + 1, 1),
-    eta = seq(0.5, 0.53, 0.05),
-    gamma = seq(0.1, 0.5, 0.51)
+    eta = seq(0.1, 0.5, 0.1)
   )
 
   # Start the model tuning based on the selected feature
@@ -192,7 +191,12 @@ for (cancer in cancer_types) {
   for (i in 1:nrow(hyper_grid)) {
     # Get the hyperparameters
     for (param in names(hyper_grid)) {
-      assign(paste0("selected_", param), hyper_grid[i, param])
+      param_value <- hyper_grid[j, param]
+      assign(paste0("selected_", param), param_value)
+
+      if (param_value <= 0) {
+        assign(paste0("selected_", param), 1)
+      }
     }
 
     # Print the selected hyperparameters

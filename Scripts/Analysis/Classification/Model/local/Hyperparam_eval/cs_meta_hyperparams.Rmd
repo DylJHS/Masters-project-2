@@ -63,12 +63,15 @@ for (cancer_folder in list.files(hyper_folder)){
     row.names = FALSE
   )
   
-  # Save teh full hyperparameters
+  # Save the full hyperparameters
   write.csv(
     full_hyperparams, 
     file.path(hyper_folder, cancer_folder, "meta_full.csv"),
     row.names = FALSE
   )
+  
+  # Delete all the individual files from the folder
+  file.remove(file.path(individual_folder, list.files(individual_folder)))
 }
     
   

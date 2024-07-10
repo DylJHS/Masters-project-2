@@ -99,21 +99,33 @@ for (feature in response_features) {
     selected_eta <- 0.3
     selected_gamma <- 0
     selected_max_depth <- 5
-    selected_min_child <- 1
+    selected_min_child <- 2
     selected_seed <- 99
   } else {
-    hyperparameters <- read.csv(hyperparameter_file)
+    hyperparameters <- read.csv(hyperparameter_file, header = TRUE, stringsAsFactors = FALSE)
 
-    # Define the constant hyperparameters
-    selected_parameters <- hyperparameters[hyperparameters$Feature == feature, ]
+    # Check that the feature is part of the hyperparameters
+    if (!(feature %in% hyperparameters$Feature)) {
+      cat("\n\n The feature is not in the hyperparameters. \n Using default intial params \n")
+      selected_feature <- feature
+      selected_trees <- 10000
+      selected_eta <- 0.3
+      selected_gamma <- 0
+      selected_max_depth <- 5
+      selected_min_child <- 2
+      selected_seed <- 99
+    } else {
+      # Define the constant hyperparameters
+      selected_parameters <- hyperparameters[hyperparameters$Feature == feature, ]
 
-    selected_feature <- selected_parameters$Feature
-    selected_trees <- selected_parameters$Trees + 500
-    selected_eta <- selected_parameters$Eta
-    selected_gamma <- selected_parameters$Gamma
-    selected_max_depth <- selected_parameters$Max_depth
-    selected_min_child <- selected_parameters$Child_weight
-    selected_seed <- 99
+      selected_feature <- selected_parameters$Feature
+      selected_trees <- selected_parameters$Trees + 500
+      selected_eta <- selected_parameters$Eta
+      selected_gamma <- selected_parameters$Gamma
+      selected_max_depth <- selected_parameters$Max_depth
+      selected_min_child <- selected_parameters$Child_weight
+      selected_seed <- 99
+    }
   }
 
   # Create the empty df that will contain the hyperparameters and the associated results
@@ -133,7 +145,7 @@ for (feature in response_features) {
 
   # Define the hyperparameter grid
   hyper_grid <- expand.grid(
-    depth = seq(selected_max_depth - 1, selected_max_depth + 1, 1),
+    max_depth = seq(selected_max_depth - 1, selected_max_depth + 1, 1),
     min_child = seq(selected_min_child - 1, selected_min_child + 1, 1),
     eta = seq(0.5, 0.53, 0.05),
     gamma = seq(0.1, 0.5, 0.51)
@@ -148,7 +160,12 @@ for (feature in response_features) {
   for (i in 1:nrow(hyper_grid)) {
     # Get the hyperparameters
     for (param in names(hyper_grid)) {
-      assign(paste0("selected_", param), hyper_grid[i, param])
+      param_value <- hyper_grid[j, param]
+      assign(paste0("selected_", param), param_value)
+
+      if (param_value <= 0) {
+        assign(paste0("selected_", param), 1)
+      }
     }
 
     # Print the selected hyperparameters
