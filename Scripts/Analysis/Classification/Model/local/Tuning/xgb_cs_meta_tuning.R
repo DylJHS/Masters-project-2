@@ -87,12 +87,14 @@ for (cancer in cancer_types) {
       selected_min_child <- 1
       selected_seed <- 99
     } else {
-      # Define the constant hyperparameters
+     # Define the constant hyperparameters
       selected_parameters <- hyperparameters[hyperparameters$Feature == feature, ]
 
       selected_feature <- selected_parameters$Feature
       selected_trees <- selected_parameters$Trees + 500
-      selected_eta <- selected_parameters$Eta
+      selected_eta <- ifelse(selected_trees > 88000, selected_parameters$Treesselected_parameters$Trees * 10,
+                             ifelse(selected_trees > 44000,  selected_parameters$Treesselected_parameters$Trees * 5,
+                                    ifelse(selected_trees > 32000,  selected_parameters$Treesselected_parameters$Trees * 3, 0.3)))
       selected_gamma <- selected_parameters$Gamma
       selected_max_depth <- selected_parameters$Max_depth
       selected_min_child <- selected_parameters$Child_weight

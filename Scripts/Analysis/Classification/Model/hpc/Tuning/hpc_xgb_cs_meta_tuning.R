@@ -182,8 +182,7 @@ for (cancer in cancer_types) {
   hyper_grid <- expand.grid(
     max_depth = seq(selected_max_depth - 1, selected_max_depth + 1, 1),
     min_child = seq(selected_min_child - 3, selected_min_child + 3, 1),
-    eta = seq(selected_eta - 0.05, selected_eta, 0.05),
-    gamma = 0.1
+    eta = seq(selected_eta - 0.05, selected_eta, 0.05)
   )
 
   # Start the model tuning based on the selected feature
