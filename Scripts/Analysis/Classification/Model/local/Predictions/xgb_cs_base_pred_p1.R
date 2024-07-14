@@ -1,5 +1,5 @@
 # This script is the first part of the cancer-specific model prediction pipeline.
-# Its goal is to generate predictions for the all base models in parallel
+# Its goal is to generate predictions for the all base models in loop fashion
 
 # Load the packages
 library(dplyr)

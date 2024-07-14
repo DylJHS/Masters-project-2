@@ -59,7 +59,7 @@ Configure function that builds the set of interest metrics
 calculate_summary <- function(input_dataframe) {
   df_name <- deparse(substitute(input_dataframe))
   
-  # Calculate column means
+  # Calculate column (sample) means
   means <- colMeans(input_dataframe[, -c(1, 2)], na.rm = TRUE)
   
   # Create a new dataframe to store the summary
@@ -71,6 +71,7 @@ calculate_summary <- function(input_dataframe) {
   
   return(Summary_Dataframe)
 }
+
 ```
 
 
@@ -78,73 +79,80 @@ Part I. Inter-genomic Expression analysis
 
 I) Cancerous & Normal individual TCGA Analysis 
 ```{r}
-# nrm_soi_sum <- calculate_summary(soi_nrm)
-# can_soi_sum <- calculate_summary(soi_can)
+# Calculate the mean expression levels for all samples across all genes in the SOI for both the cancerous and normal data
+# (average expression of all SOI genes by sample)
+nrm_soi_sum <- calculate_summary(soi_nrm)
+can_soi_sum <- calculate_summary(soi_can)
 ```
 
 
 
 ```{r}
-# start_time <- Sys.time()
-# # Create a table that contains all the SOI-Control_set differences for each of the controls sets
-# nrm_Dif_table <- data.frame(id = rownames(nrm_soi_sum))
-# nrm_Mean_table <- data.frame(id = rownames(nrm_soi_sum), soi_mean = nrm_soi_sum$soi_geom_mean)
-# 
-# can_Dif_table <- data.frame(id = rownames(can_soi_sum))
-# can_Mean_table <- data.frame(id = rownames(can_soi_sum), soi_mean = can_soi_sum$soi_geom_mean)
-# # Loop over the control datasets
-# 
-# 
-# for (i in 1:num_datasets) {
-#  
-# 
-#   nrm_ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Normal_CTRL_Sets/TCGA_Normal_mRNA_TPM_CTRL_Set", i, ".csv", sep = "")
-#   ctrl_set_nrm <- read.csv(nrm_ctrl_file)
-# 
-#   nrm_ctrl_summary <- calculate_summary(ctrl_set_nrm)
-# 
-#   nrm_summary <- merge(nrm_ctrl_summary %>% rownames_to_column(var = "id"),
-#                  nrm_soi_sum %>% rownames_to_column(var = "id"),
-#                  by = "id",
-#                  all = FALSE,
-#                  suffixes = c("", i)) %>%
-#   mutate(mean_dif = soi_geom_mean - ctrl_geom_mean)
-# 
-#   nrm_Dif_table <- merge(nrm_Dif_table, nrm_summary %>% select(id, mean_dif),
-#                      by = "id", all = FALSE, suffixes = c("", i)
-#                      )
-#   nrm_Mean_table <- merge(nrm_Mean_table, nrm_summary %>% select(id, ctrl_geom_mean),
-#                      by = "id", all = FALSE, suffixes = c("", i)
-#                      )
-#   
-#   
-#   can_ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df", i, ".csv", sep = "")
-#   ctrl_set_can <- read.csv(can_ctrl_file)
-# 
-#   can_ctrl_summary <- calculate_summary(ctrl_set_can)
-# 
-#   can_summary <- merge(can_ctrl_summary %>% rownames_to_column(var = "id"),
-#                  can_soi_sum %>% rownames_to_column(var = "id"),
-#                  by = "id",
-#                  all = FALSE,
-#                  suffixes = c("", i)) %>%
-#   mutate(mean_dif = soi_geom_mean - ctrl_geom_mean)
-# 
-#   can_Dif_table <- merge(can_Dif_table, can_summary %>% select(id, mean_dif),
-#                      by = "id", all = FALSE, suffixes = c("", i)
-#                      )
-#   can_Mean_table <- merge(can_Mean_table, can_summary %>% select(id, ctrl_geom_mean),
-#                      by = "id", all = FALSE, suffixes = c("", i)
-#                      )
-# }
-# 
-# end_time <- Sys.time()
-# cat('\n',i," iterations with a total duration of: ", end_time - start_time, "minutes")
-# can_Dif_table <- can_Dif_table %>% dplyr::rename(mean_dif1 = mean_dif)
-# can_Mean_table <- can_Mean_table %>% dplyr::rename(ctrl_geom_mean1 = ctrl_geom_mean)
-# 
-# nrm_Dif_table <- nrm_Dif_table %>% dplyr::rename(mean_dif1 = mean_dif)
-# nrm_Mean_table <- nrm_Mean_table %>% dplyr::rename(ctrl_geom_mean1 = ctrl_geom_mean)
+start_time <- Sys.time()
+# Create a table that contains all the SOI to Control_set general expression differences for each of the controls sets for the normal samples
+nrm_Dif_table <- data.frame(id = rownames(nrm_soi_sum))
+# Create a table that contains all the SOI and Control_set general expression means for the normal samples
+nrm_Mean_table <- data.frame(id = rownames(nrm_soi_sum), soi_mean = nrm_soi_sum$soi_geom_mean)
+
+# Create a table that contains all the SOI to Control_set general expression differences for each of the controls sets for the cancerous samples
+can_Dif_table <- data.frame(id = rownames(can_soi_sum))
+# Create a table that contains all the SOI and Control_set general expression means for the cancerous samples
+can_Mean_table <- data.frame(id = rownames(can_soi_sum), soi_mean = can_soi_sum$soi_geom_mean)
+
+
+# Loop over the control datasets
+for (i in 1:num_datasets) {
+
+  # Read in the normal control set data
+  nrm_ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Normal_CTRL_Sets/TCGA_Normal_mRNA_TPM_CTRL_Set", i, ".csv", sep = "")
+  ctrl_set_nrm <- read.csv(nrm_ctrl_file)
+
+  # Calculate the summary statistics for the normal control set
+  nrm_ctrl_summary <- calculate_summary(ctrl_set_nrm)
+
+  # Merge the summary statistics for the noraml control set with the summary statistics for the normal SOI
+  nrm_summary <- merge(nrm_ctrl_summary %>% rownames_to_column(var = "id"),
+                 nrm_soi_sum %>% rownames_to_column(var = "id"),
+                 by = "id",
+                 all = FALSE,
+                 suffixes = c("", i)) %>%
+  mutate(mean_dif = soi_geom_mean - ctrl_geom_mean)
+
+  nrm_Dif_table <- merge(nrm_Dif_table, nrm_summary %>% select(id, mean_dif),
+                     by = "id", all = FALSE, suffixes = c("", i)
+                     )
+  nrm_Mean_table <- merge(nrm_Mean_table, nrm_summary %>% select(id, ctrl_geom_mean),
+                     by = "id", all = FALSE, suffixes = c("", i)
+                     )
+  
+  
+  can_ctrl_file <- paste("Data/RNA_Data/TCGA_TPM/TCGA_Cancer_CTRL_Sets/TCGA_TPM_RNA_Control_df", i, ".csv", sep = "")
+  ctrl_set_can <- read.csv(can_ctrl_file)
+
+  can_ctrl_summary <- calculate_summary(ctrl_set_can)
+
+  can_summary <- merge(can_ctrl_summary %>% rownames_to_column(var = "id"),
+                 can_soi_sum %>% rownames_to_column(var = "id"),
+                 by = "id",
+                 all = FALSE,
+                 suffixes = c("", i)) %>%
+  mutate(mean_dif = soi_geom_mean - ctrl_geom_mean)
+
+  can_Dif_table <- merge(can_Dif_table, can_summary %>% select(id, mean_dif),
+                     by = "id", all = FALSE, suffixes = c("", i)
+                     )
+  can_Mean_table <- merge(can_Mean_table, can_summary %>% select(id, ctrl_geom_mean),
+                     by = "id", all = FALSE, suffixes = c("", i)
+                     )
+}
+
+end_time <- Sys.time()
+cat('\n',i," iterations with a total duration of: ", end_time - start_time, "minutes")
+can_Dif_table <- can_Dif_table %>% dplyr::rename(mean_dif1 = mean_dif)
+can_Mean_table <- can_Mean_table %>% dplyr::rename(ctrl_geom_mean1 = ctrl_geom_mean)
+
+nrm_Dif_table <- nrm_Dif_table %>% dplyr::rename(mean_dif1 = mean_dif)
+nrm_Mean_table <- nrm_Mean_table %>% dplyr::rename(ctrl_geom_mean1 = ctrl_geom_mean)
 ```
 
 
@@ -242,78 +250,78 @@ B) Use a Friedman's test (non-parametric version of the RMA, which is a paired t
 
 
 ```{r}
-# # can_Fried_test_data <- can_Dif_table %>%
-# #   gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
-# #   mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
-# #   select(Sample, Pairing, Difference)
-# # 
-# # can_friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = can_Fried_test_data)
-# # 
-# # 
-# # nrm_Fried_test_data <- nrm_Dif_table %>%
-# #   gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
-# #   mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
-# #   select(Sample, Pairing, Difference)
-# # 
-# # nrm_friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = nrm_Fried_test_data)
-# # 
-# # print(can_friedman_result)
-# # print(nrm_friedman_result)
-# ```
-# Result: The p-values of the Friedman test for both the cancerous and normal data show a value fo less than 2.2e-16 which is significant.
-# Interpretation: The Friedman test reveals that there is at least a significant differnece between 2 of the sets in both conditions. So we cannot come to the conclusion that the control sets (portraying the rest of the genome) within conditions are all similar (come from the same distribution).
+# can_Fried_test_data <- can_Dif_table %>%
+#   gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
+#   mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
+#   select(Sample, Pairing, Difference)
+# 
+# can_friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = can_Fried_test_data)
 # 
 # 
-# C) Construct a contrast analysis to assess each of the pairings against the general trend (excluding the current set)
+# nrm_Fried_test_data <- nrm_Dif_table %>%
+#   gather(key = "Pairing", value = "Difference", starts_with("mean")) %>%
+#   mutate(Sample = as.factor(id), Pairing = as.factor(Pairing)) %>%
+#   select(Sample, Pairing, Difference)
 # 
-# ```{r}
-# can_Paired_wilc_table <- can_Dif_table %>%
-#   select(starts_with("mean_dif")) %>%
-#   mutate_all(as.numeric)
+# nrm_friedman_result <- coin::friedman_test(Difference ~ Pairing | Sample, data = nrm_Fried_test_data)
 # 
-# can_Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
-# 
-# 
-# nrm_Paired_wilc_table <- nrm_Dif_table %>%
-#   select(starts_with("mean_dif")) %>%
-#   mutate_all(as.numeric)
-# 
-# nrm_Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
-# 
-# # Loop over each control gene-sets
-# for (i in 1:num_datasets) {
-# 
-#   set = paste('mean_dif', i, sep = "")
-#   
-#    can_Global_table <- can_Paired_wilc_table %>%
-#     mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
-#     select(set, global)
-# 
-#    can_wlcx_paired_res <- wilcox.test(can_Global_table[[set]], can_Global_table$global, paired = TRUE)
-#    can_Corrected_Pval <- can_wlcx_paired_res$p.value * num_datasets
-#    can_Significant_value <- if(can_Corrected_Pval < 0.05) "TRUE" else "FALSE"
-# 
-#    can_Contrast_table <- rbind(can_Contrast_table, data.frame(Set = set, P_Value = can_wlcx_paired_res$p.value, Adj_P_Value = can_Corrected_Pval,
-#                                                               Significant = can_Significant_value)) %>% arrange(desc(Adj_P_Value))
-#    
-#    
-#    nrm_Global_table <- nrm_Paired_wilc_table %>%
-#     mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
-#     select(set, global)
-# 
-#    nrm_wlcx_paired_res <- wilcox.test(nrm_Global_table[[set]], nrm_Global_table$global, paired = TRUE)
-#    nrm_Corrected_Pval <- nrm_wlcx_paired_res$p.value * num_datasets
-#    nrm_Significant_value <- if(nrm_Corrected_Pval < 0.05) "TRUE" else "FALSE"
-# 
-#    nrm_Contrast_table <- rbind(nrm_Contrast_table, data.frame(Set = set, P_Value = nrm_wlcx_paired_res$p.value, Adj_P_Value = nrm_Corrected_Pval,
-#                                                               Significant = nrm_Significant_value)) %>% arrange(desc(Adj_P_Value))
-# }
-# 
-# can_Contrast_agg_count_table <- can_Contrast_table %>% group_by(Significant) %>% dplyr::summarise(count = n())
-# kable(can_Contrast_agg_count_table)
-# 
-# nrm_Contrast_agg_count_table <- nrm_Contrast_table %>% group_by(Significant) %>% dplyr::summarise(count = n())
-# kable(nrm_Contrast_agg_count_table)
+# print(can_friedman_result)
+# print(nrm_friedman_result)
+```
+Result: The p-values of the Friedman test for both the cancerous and normal data show a value fo less than 2.2e-16 which is significant.
+Interpretation: The Friedman test reveals that there is at least a significant differnece between 2 of the sets in both conditions. So we cannot come to the conclusion that the control sets (portraying the rest of the genome) within conditions are all similar (come from the same distribution).
+
+
+C) Construct a contrast analysis to assess each of the pairings against the general trend (excluding the current set)
+
+```{r}
+can_Paired_wilc_table <- can_Dif_table %>%
+  select(starts_with("mean_dif")) %>%
+  mutate_all(as.numeric)
+
+can_Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
+
+
+nrm_Paired_wilc_table <- nrm_Dif_table %>%
+  select(starts_with("mean_dif")) %>%
+  mutate_all(as.numeric)
+
+nrm_Contrast_table <- data.frame(Set = character(0), P_Value = numeric(0), Adj_P_Value = numeric(0), Significant = character(0))
+
+# Loop over each control gene-sets
+for (i in 1:num_datasets) {
+
+  set = paste('mean_dif', i, sep = "")
+  
+   can_Global_table <- can_Paired_wilc_table %>%
+    mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
+    select(set, global)
+
+   can_wlcx_paired_res <- wilcox.test(can_Global_table[[set]], can_Global_table$global, paired = TRUE)
+   can_Corrected_Pval <- can_wlcx_paired_res$p.value * num_datasets
+   can_Significant_value <- if(can_Corrected_Pval < 0.05) "TRUE" else "FALSE"
+
+   can_Contrast_table <- rbind(can_Contrast_table, data.frame(Set = set, P_Value = can_wlcx_paired_res$p.value, Adj_P_Value = can_Corrected_Pval,
+                                                              Significant = can_Significant_value)) %>% arrange(desc(Adj_P_Value))
+   
+   
+   nrm_Global_table <- nrm_Paired_wilc_table %>%
+    mutate(global = rowMeans(select(., -set), na.rm = TRUE)) %>%
+    select(set, global)
+
+   nrm_wlcx_paired_res <- wilcox.test(nrm_Global_table[[set]], nrm_Global_table$global, paired = TRUE)
+   nrm_Corrected_Pval <- nrm_wlcx_paired_res$p.value * num_datasets
+   nrm_Significant_value <- if(nrm_Corrected_Pval < 0.05) "TRUE" else "FALSE"
+
+   nrm_Contrast_table <- rbind(nrm_Contrast_table, data.frame(Set = set, P_Value = nrm_wlcx_paired_res$p.value, Adj_P_Value = nrm_Corrected_Pval,
+                                                              Significant = nrm_Significant_value)) %>% arrange(desc(Adj_P_Value))
+}
+
+can_Contrast_agg_count_table <- can_Contrast_table %>% group_by(Significant) %>% dplyr::summarise(count = n())
+kable(can_Contrast_agg_count_table)
+
+nrm_Contrast_agg_count_table <- nrm_Contrast_table %>% group_by(Significant) %>% dplyr::summarise(count = n())
+kable(nrm_Contrast_agg_count_table)
 ```
 
 Result: The Contrast analysis shows that the expression pattern of the control gene-sets differs significantly compared to the average for  540/547 in the cancerous data and   526/547 in the normal data, with an adjusted p-value < 0.01 using the paired Wilcoxon Signed Rank Test. 
@@ -1123,8 +1131,8 @@ numbers_list <- seq(1, num_datasets)
 names <- c("Participant",
   "geom_mean_nrm_soi",
   "geom_mean_can_soi",
-  unlist(lapply(controls, function(i) paste("geom_mean_nrm", i, sep = "_"))),
-  unlist(lapply(controls, function(i) paste("geom_mean_can", i, sep = "_")))
+  unlist(lapply(numbers_list, function(i) paste("geom_mean_nrm", i, sep = "_"))),
+  unlist(lapply(numbers_list, function(i) paste("geom_mean_can", i, sep = "_")))
 )
 select_combos <- all_combos %>% dplyr::select(all_of(names))
 

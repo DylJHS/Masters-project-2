@@ -93,17 +93,6 @@ print(final_cgbh)
 
 
 
-Length-limited Alpha excluded conclusion: the above yields 27 pericentromeric regions across all chromosomes. The chromosomes that do not have any pericentromeric regions assigned to them include chromosomes 6,11, 12, 18 & 19, which seems to add up with what is seen in the genome viewer as well as what has been reported by Altmose (2022). The chromosomes which display more than a single elongated pericentromeric region include chromosomes:
-- 13 with 3
-- 15 with 2
-- 16 with 2
-- 21 with 2
-- 22 with 4 
-- Y with 2
-
-Unlimited Alpha excluded conclusion: 
-
-
 Length-limited Alpha Included conclusion: the above yields 25 pericentromeric regions across all chromosomes. The chromosomes that do not have any pericentromeric regions assigned to them include chromosomes 6,11, 12, 18 & 19, which seems to add up with what is seen in the genome viewer as well as what has been reported by Altmose (2022). The chromosomes which display more than a single elongated pericentromeric region include chromosomes:
 - 13 with 2
 - 15 with 2
@@ -112,21 +101,6 @@ Length-limited Alpha Included conclusion: the above yields 25 pericentromeric re
 - 22 with 3
 - Y with 2
 
-
-Unlimited Alpha Included conclusion: the above yields 35 pericentromeric regions across all chromosomes. The chromosomes that do not have any pericentromeric regions assigned to them include chromosomes 6,11, 12, 18 & 19, which seems to add up with what is seen in the genome viewer as well as what has been reported by Altmose (2022). The chromosomes which display more than a single elongated pericentromeric region include chromosomes:
-- 2 with 2
-- 3 with 2
-- 4 with 2
-- 7 with 2
-- 9 with 2
-- 13 with 2
-- 14 with 2
-- 15 with 2
-- 16 with 2
-- 17 with 2
-- 21 with 2
-- 22 with 3
-- Y with 3
 
 
 
@@ -196,9 +170,6 @@ cnv_reformat[is.na(cnv_reformat)] <- 0
 
 Length-limited alpha included CNV mapped conclusion: 
 - 14 regions are able to get mapped to certain cnvs that are present in the data
-
-Unlimited alpha included CNV mapped conclusion: 
-- 22 regions are able to get mapped to certain cnvs that are present in the data
 
 
 
