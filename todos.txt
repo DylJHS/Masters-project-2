@@ -22,9 +22,7 @@ URGENT:
 
 - Figure out what the baseline model is (always predicts normal claass or follows the class frequency frequencies randomly)
 
-- Remove the cancer types with less than 300 samples
-- Loop over the different cancer types and tune the hyperparameters 
-- Create a model based on each type 
+
 
 - Once the parameters and hyperparameters are set train the full model on the train data 
 - Test on the validation/test data 

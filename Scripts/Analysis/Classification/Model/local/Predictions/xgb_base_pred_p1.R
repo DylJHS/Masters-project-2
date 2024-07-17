@@ -236,7 +236,7 @@ full_data <- merge(
   read.csv(
     paste0(
       input_path,
-      "RNA/Train/train_tpm_soi.csv"
+      "RNA/Train/train_exp_soi.csv"
     ),
     row.names = 1
   ),

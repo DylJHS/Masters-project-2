@@ -9,9 +9,9 @@ library(xgboost)
 library(caret)
 
 
-early_stop <- 250
+early_stop <- 100
 print_every <- 50
-cv <- 10
+cv < -5
 
 cancer_types <- c(
   "BLCA", "BRCA", "CESC",
@@ -33,17 +33,9 @@ feature_digit_function <- function(factors, reference) {
 feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
   # Create the feature importance matrix
   created_imp <- imp_df %>%
-    group_by(Feature) %>%
-    summarise_all(mean) %>%
-    # create the combined normalised importance
-    mutate(
-      Combined = rowSums(across(.cols = -Feature))
-    ) %>%
-    mutate(
-      Normalised = Combined / sum(Combined)
-    ) %>%
-    select(-Combined) %>%
-    arrange(desc(basis))
+    group_by(Feature) %>% 
+    summarise_all(mean) %>% 
+    dplyr::arrange(desc(.data[[basis]]))
 
   type_file_folder <- ifelse(Type == "Meta", "Meta_feat_imp/", "Base_feat_imp/")
   csv_filefold <- file.path(
@@ -66,12 +58,11 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
     )
   )
 
-
   # Create the plot for the top 10 features
   top_genes <- created_imp %>%
-    select(Feature, basis) %>%
-    top_n(top_gene_num, basis) %>%
-    arrange(desc(basis))
+    select(dplyr::all_of(c("Feature", basis))) %>%
+    top_n(top_gene_num, .data[[basis]]) %>%
+    dplyr::arrange(dplyr::desc(.data[[basis]]))
 
   # Create the plot
   top_genes_plot <- ggplot(
@@ -293,7 +284,7 @@ for (selected_cancer in cancer_types) {
 
  
   base_oof_predictions <- cbind(base_oof_predictions, fold_labels) %>%
-  arrange(act_index)
+  dplyr::arrange(act_index)
 
   cat("\n Predictions Dataframe:  \n")
   print(head(base_oof_predictions[1:5]))
@@ -464,7 +455,7 @@ for (selected_cancer in cancer_types) {
       imp$feature_imp_df %>%
         mutate(Target = feature)
     ) %>% 
-      arrange(desc(Gain))
+      dplyr::arrange(desc(Gain))
   }
 
   # Save the feature importance df

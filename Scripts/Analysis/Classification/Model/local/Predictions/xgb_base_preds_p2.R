@@ -6,8 +6,6 @@
 library(dplyr)
 library(readr)
 library(tidyverse)
-library(xgboost)
-library(caret)
 
 
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
