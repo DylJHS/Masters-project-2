@@ -11,11 +11,10 @@ library(caret)
 # Set the params
 args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
-index <- 3
 
 early_stop <- 100
 print_every <- 25
-cv <- 2
+cv <- 5
 
 input_path <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Gen_model_input/"
 
@@ -408,7 +407,9 @@ print(head(current_oof_predictions, 10) )
 
 # Store the predictions in the corresponding column
 oof_predictions[[paste0("pred_", feature)]] <- current_oof_predictions
-current_preds <- oof_predictions %>% select(paste0("pred_", feature))
+print(head(oof_predictions))
+current_preds <- oof_predictions %>%
+  select(paste0("pred_", feature), paste0("act_", feature))
 print(head(current_preds))
 
 # Save the current predictions
@@ -423,6 +424,6 @@ write.csv(
 )
 
 # get the feature imp df
-imp <- feat_imp(imp_df = feature_imp_df, Type = "Base", top_gene_num = 10, basis = "Gain")
+# imp <- feat_imp(imp_df = feature_imp_df, Type = "Base", top_gene_num = 10, basis = "Gain")
 
 cat("\n The script has finished running for feature: ", feature)

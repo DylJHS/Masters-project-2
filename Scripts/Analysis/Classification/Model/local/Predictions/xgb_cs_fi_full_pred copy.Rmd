@@ -9,7 +9,33 @@ from the soi RNAseq data to the final predictions from the meta learners"
 knitr::opts_knit$set(root.dir = "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 ```
 
+Set the parameters
+```{r}
+# Select the cancer type from the list
+cancer_type <- "LGG"
 
+
+cancer_types <- c(
+  "BLCA", "BRCA", "CESC",
+  "HNSC", "LGG", "LIHC",
+  "LUAD", "LUSC", "OV",
+  "PRAD", "STAD", "THCA"
+)
+
+# The interval between print statements for the xgboost model during cross-validation
+print_every <- 100
+
+# Set the working directory
+setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
+
+# Set the path for inputs
+input_path <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Cancer_specific_data/Model_input"
+
+# Set the path for the outputs
+output_path <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Cancer_specific_data/Model_output"
+```
+
+Load the packages
 ```{r}
 # Load the packages
 library(dplyr)
@@ -19,18 +45,10 @@ library(xgboost)
 library(caret)
 library(ggplot2)
 library(pheatmap)
+library(ggraph)
+library(igraph)
 ```
 
-
-```{r}
-print_every <- 100
-early_stop <- 150
-
-
-setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
-
-input_path <- "Data/Gen_model_input/"
-```
 
 FUNCTIONS
 ```{r}
@@ -100,7 +118,10 @@ tpr_confusion_matrix <- function(object, feature, learner_type) {
     )
 
   # save the plot
-  filefold <- file.path("Plots/Model_Plots/General_model/Results/Categorical/Confusion_matrices")
+  filefold <- file.path(
+    output_path,
+    cancer_type,
+    "Plots/Predictions/Categorical/Confusion_matrices")
   if (!dir.exists(filefold)) {
     dir.create(filefold, recursive = TRUE)
   }
@@ -108,7 +129,7 @@ tpr_confusion_matrix <- function(object, feature, learner_type) {
   # Save the heatmap
   ggsave(
     filename = paste0(
-      filefold,
+      filefold, "/",
       feature, "_",
       learner_type,
       "_TPR_Heatmap.png"
@@ -168,7 +189,11 @@ confusion_stat_plot <- function(data) {
     )
 
   # save the plot
-  filefold <- file.path("Plots/Model_Plots/General_model/Results/Categorical/Stat_metrics")
+  filefold <- file.path(
+    output_path,
+    cancer_type,
+    "Plots/Predictions/Categorical/Stat_metrics"
+    )
   if (!dir.exists(filefold)) {
     dir.create(filefold, recursive = TRUE)
   }
@@ -195,12 +220,15 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
 
   type_file_folder <- ifelse(Type == "Meta", "Meta_feat_imp/", "Base_feat_imp/")
   csv_filefold <- file.path(
-    "Data/Gen_model_output/Results/Feature_importance/",
+    output_path,
+    cancer_type,
+    "Results/Feature_importance",
     type_file_folder
   )
   if (!dir.exists(csv_filefold)) {
-    csv_filefold
+    dir.create(csv_filefold, recursive = TRUE)
   }
+  
   # Save the feature importance df
   write.csv(
     created_imp,
@@ -240,7 +268,9 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
 
   # Save the plot
   plt_filefold <- file.path(
-    "Plots/Model_Plots/General_model/Results/Feature_importance/",
+    output_path,
+    cancer_type,
+    "Plots/Feature_importance",
     type_file_folder
   )
   if (!dir.exists(plt_filefold)) {
@@ -250,6 +280,7 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
   ggsave(
     filename = paste0(
       plt_filefold,
+      "/",
       feature,
       "_Top_",
       top_gene_num,
@@ -287,7 +318,11 @@ pred_vs_actual_plot <- function(data, feature, type, plot_title_prefix = "Predic
     )
 
   # Save the plot
-  filefold <- file.path("Plots/Model_Plots/General_model/Results/Regression/Residual_plts/")
+  filefold <- file.path(
+    output_path,
+    cancer_type,
+    "Plots/Predictions/Regression/Residual_plts"
+    )
   if (!dir.exists(filefold)) {
     dir.create(filefold, recursive = TRUE)
   }
@@ -295,6 +330,7 @@ pred_vs_actual_plot <- function(data, feature, type, plot_title_prefix = "Predic
   ggsave(
     filename = paste0(
       filefold,
+      "/",
       type, "_",
       feature,
       "_Pred_vs_Actual.pdf"
@@ -316,9 +352,9 @@ rna_list <- list(
   log_scaled_transcripts_per_million = "log_scld_tpm",
   log_transcripts_per_million = "log_tpm",
   expected_counts = "exp",
-  scaled_expected_counts = "scld",
-  log_expected_counts = "log",
-  log_scaled_expected_counts = "log_scld"
+    scaled_expected_counts = "scld_exp",
+  log_expected_counts = "log_exp",
+  log_scaled_expected_counts = "log_scld_exp"
 )
 ```
 
@@ -329,7 +365,7 @@ RESPONSE FEATURES
 cat_cin <- read_tsv(
   paste0(
     input_path,
-    "CIN_Features/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
+    "/CIN/PANCAN_ArmCallsAndAneuploidyScore_092817.txt"
   ),
   show_col_types = FALSE
 ) %>%
@@ -354,7 +390,7 @@ print(head(cat_cin[20:30]))
 # Numerical features
 # HRD scores
 ori_hrd <- read_tsv(
-  paste0(input_path, "CIN_Features/TCGA.HRD_withSampleID.txt"),
+  paste0(input_path, "/CIN/TCGA.HRD_withSampleID.txt"),
   show_col_types = FALSE
 )
 
@@ -381,7 +417,7 @@ hrd <- hrd %>%
 peri_cnv <- read.csv(
   paste0(
     input_path,
-    "/CIN_Features/lim_alpha_incl_TCGA_pericentro.csv"
+    "/CIN/lim_alpha_incl_TCGA_pericentro.csv"
   )
 ) %>%
   mutate_all(~ replace(., is.na(.), 0)) %>%
@@ -394,24 +430,30 @@ peri_cnv <- read.csv(
 HYPERPARAMETERS
 ```{r}
 base_cat_parameters <- read.csv(
-  paste0(
-    input_path,
-    "Hyperparameters/base_cat_hyperparams.csv"
+    paste0(
+      input_path,
+      "/Parameters/Hyperparameters/",
+      cancer_type,
+      "/base_cat_hyperparams.csv"
+    )
   )
-)
-base_reg_parameters <- read.csv(
-  paste0(
-    input_path,
-    "Hyperparameters/base_reg_hyperparams.csv"
+  base_reg_parameters <- read.csv(
+    paste0(
+      input_path,
+      "/Parameters/Hyperparameters/",
+      cancer_type,
+      "/base_reg_hyperparams.csv"
+    )
   )
-)
 
 meta_parameters <- read.csv(
   paste0(
-    input_path,
-    "Hyperparameters/meta_hyperparams.csv"
+      input_path,
+      "/Parameters/Hyperparameters/",
+      cancer_type,
+      "/meta_hyperparameters.csv"
+    )
   )
-)
 ```
 
 FULL CIN DF
@@ -439,11 +481,11 @@ cat("\n Full CIN:  \n")
 print(head(full_cin[1:5]))
 
 # All response feature names
-response_features <- colnames(full_cin)
+all_response_features <- colnames(full_cin)
 reg_features <- colnames(reg_cin)
 cat_features <- colnames(cat_cin)
 cat(
-  "\n Response Features # :", length(response_features), "\n",
+  "\n Response Features # :", length(all_response_features), "\n",
   "Regression Features # :", length(reg_features), "\n",
   "Categorical Features # :", length(cat_features), "\n"
 )
@@ -452,16 +494,40 @@ cat(
 # rm(cat_cin)
 ```
 
+Check and track invalid features for the cancer type
+```{r}
+# Keep list of invalid features 
+invalid_features <- c()
+
+# Check which features are not valid for this cancer type by checking if the RNA set is NA
+for (feature in cat_features) {
+  if (is.na(base_cat_parameters[base_cat_parameters$Feature == feature, ]$Trees)) {
+    invalid_features <- c(invalid_features, feature)
+  }
+}
+for (feature in reg_features) {
+  print(feature)
+  if (is.na(base_reg_parameters[base_reg_parameters$Feature == feature, ]$Trees)) {
+    invalid_features <- c(invalid_features, feature)
+  }
+}
+
+# Remove the invalid features from the response features
+response_features <- setdiff(all_response_features, invalid_features)
+```
+
+
 FOLDS
 ```{r}
 # Create the folds to be used
-
 # Create the full data by merging the soi & cancerous RNA data with the CIN data
 full_data <- merge(
   read.csv(
     paste0(
       input_path,
-      "RNA/Full/full_exp_soi.csv"
+        "/RNA/",
+        cancer_type,
+        "/Full/tpm_soi.csv"
     ),
     row.names = 1
   ),
@@ -510,7 +576,7 @@ BASE TRAINING
 # Create the full feature importance dataframe
 full_feature_imp <- data.frame()
 
-for (feature in response_features[2:48]) {
+for (feature in response_features[1:length(response_features)]) {
   cat(
     "Feature: ", feature, "\n\n"
   )
@@ -533,24 +599,26 @@ for (feature in response_features[2:48]) {
 
   # Select the parameters and weights corresponding to the feature
   selected_parameters <- parameters[parameters$Feature == feature, ]
-
+  # Check if the selected parameters are empty
   if (nrow(selected_parameters) == 0) {
     cat("No parameters found for feature: ", feature, "\n")
     next
   }
 
   # Print selected parameters
-  cat("\n Selected Parameters:\n")
-  print(selected_parameters)
+  # cat("\n Selected Parameters:\n")
+  # print(selected_parameters)
 
   # Load and prepare data
   rna_selection_name <- rna_list[[selected_parameters$RNA_set]]
   rna_set <- read.csv(
     paste0(
-      input_path,
-      "RNA/Full/full_",
-      rna_selection_name,
-      "_soi.csv"
+     input_path,
+        "/RNA/",
+        cancer_type,
+        "/Full/",
+        rna_selection_name,
+        "_soi.csv"
     ),
     row.names = 1
   )
@@ -562,7 +630,7 @@ for (feature in response_features[2:48]) {
   print(head(y, 15))
 
   X <- full_df %>%
-    select(-c("Row.names", all_of(response_features))) %>%
+    select(-c("Row.names", all_of(all_response_features))) %>%
     as.data.frame()
 
   # Initialize containers for predictions and feature importance
@@ -580,7 +648,8 @@ for (feature in response_features[2:48]) {
 
     train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
     valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
-
+   
+    
     # Adjust weights for categorical features
     if (feature %in% cat_features) {
       selected_ref <- as.numeric(
@@ -602,7 +671,6 @@ for (feature in response_features[2:48]) {
       eval_metric = ifelse(feature %in% cat_features, "mlogloss", "rmse"),
       max_depth = selected_parameters$Max_depth,
       min_child_weight = selected_parameters$Child_weight,
-      early_stopping_rounds = early_stop,
       eta = selected_parameters$Eta,
       gamma = selected_parameters$Gamma,
       watchlist = list(eval = valid_data),
@@ -648,29 +716,42 @@ for (feature in response_features[2:48]) {
     dplyr::arrange(desc(Gain))
 }
 
+output_folder <- file.path(
+  output_path,
+  cancer_type,
+  "Results"
+)
+if (!dir.exists(output_folder)) {
+  dir.create(output_folder, recursive = TRUE)
+}
+
 # Save the feature importance df
 write.csv(
   full_feature_imp,
-  "Data/Gen_model_output/Results/Feature_importance/Full_base_feature_importance.csv"
+  file.path(output_folder, "/Feature_importance/Full_base_feature_importance.csv")
 )
 
 # Save the predictions
 write.csv(
   base_oof_predictions,
-  "Data/Gen_model_output/Predictions/Base_predictions/Full_base_predictions.csv"
+  file.path(output_folder, "/Predictions/Full_base_predictions.csv")
 )
-write.csv(
-  base_oof_predictions,
-  "Data/Gen_model_input/Base_predictions/Full_base_predictions.csv"
-)
+
+base_oof_predictions <- base_oof_predictions %>%
+  column_to_rownames("act_index")
 
 cat("\n\n Training the base models complete")
 ```
+
 General Base_layer Feature Importance Plot
 ```{r}
 # import the feature importance df
 full_feature_imp <- read.csv(
-  "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Gen_model_output/Results/Feature_importance/Full_base_feature_importance.csv",
+  file.path(
+    output_path,
+    cancer_type,
+    "Results/Feature_importance/Full_base_feature_importance.csv"
+  ),
   row.names = 1
 )
 
@@ -738,24 +819,41 @@ gene_heatmap <- pheatmap(
   main = "Genomic Contribution"
 )
 
+# Save the heatmap
+filefold <- file.path(
+  output_path,
+  cancer_type,
+  "Plots/Feature_importance/"
+)
+
+# Save the heatmap as a png
+ggsave(
+  filename = paste0(
+    filefold,
+    "Genomic_Feature_Importance_Heatmap.png"
+  ),
+  plot = gene_heatmap,
+  width = 10,
+  height = 10
+)
 
 ```
 
 
 META MODEL INITIALIZATION
 ```{r}
-# Upload the base predictions
-base_oof_predictions <- read.csv(
-  paste0(
-    input_path,
-    "Base_predictions/Full_base_predictions.csv"
-  ),
-  row.names = 1
-) %>%
-  merge(
-    labels,
-    by = "act_index"
+# Upload the base predictions if not already loaded
+if (!exists("base_oof_predictions")) {
+  base_oof_predictions <- read.csv(
+    paste0(
+      output_path,
+      "/",
+      cancer_type,
+      "/Results/Predictions/Full_base_predictions.csv"
+    ),
+    row.names = 1
   )
+}
 
 # Create the training folds
 meta_folds <- createFolds(base_oof_predictions[["act_1p"]], k = 5, list = TRUE, returnTrain = FALSE)
@@ -789,7 +887,6 @@ meta_input_data <- base_oof_predictions %>%
 
 label_data <- base_oof_predictions %>%
   select(starts_with("act_")) %>%
-  select(-act_index) %>%
   rename_with(~ str_replace(., "act_", ""))
 
 # Create the full feature importance dataframe
@@ -845,13 +942,23 @@ for (feature in response_features) {
     valid_data <- xgb.DMatrix(data = as.matrix(meta_input_data[valid_indices, ]), label = y[valid_indices])
 
     if (feature %in% cat_features) {
+      selected_base <- read.csv(
+        paste0(
+          input_path,
+          "/Parameters/Hyperparameters/",
+          cancer_type,
+          "/base_cat_hyperparams.csv"
+        )
+      )
+        selected_base_params <- selected_base[selected_base$Feature == feature, ]
       selected_ref <- as.numeric(
-        selected_parameters[c(
+        selected_base_params[c(
           "Weight_loss",
           "Weight_normal",
           "Weight_gain"
         )]
       )
+      
       weights <- as.numeric(feature_digit_function(factor(y[train_indices], levels = c(0, 1, 2)), selected_ref))
       setinfo(train_data, "weight", weights)
 
@@ -876,7 +983,6 @@ for (feature in response_features) {
       eval_metric = ifelse(feature %in% cat_features, "mlogloss", "rmse"),
       max_depth = selected_parameters$Max_depth,
       min_child_weight = selected_parameters$Child_weight,
-      early_stopping_rounds = early_stop,
       eta = selected_parameters$Eta,
       gamma = selected_parameters$Gamma,
       watchlist = list(eval = valid_data),
@@ -928,17 +1034,23 @@ cat("Training of the meta models complete")
 # Save the out-of-fold predictions
 write.csv(
   meta_oof_predictions,
-  "Data/Gen_model_output/Predictions/Meta_predictions/Full_meta_predictions.csv"
-)
-write.csv(
-  meta_oof_predictions,
-  "Data/Gen_model_input/Meta_predictions/Full_meta_predictions.csv"
+  paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Predictions/Full_meta_predictions.csv"
+  )
 )
 
 # Save the feature importance df
 write.csv(
   full_feature_imp_df,
-  "Data/Gen_model_output/Results/Feature_importance/Full_meta_feature_importance.csv"
+  paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Feature_importance/Full_meta_feature_importance.csv"
+  )
 )
 ```
 
@@ -947,7 +1059,12 @@ General Meta_layer Feature Importance Plot
 ```{r}
 # import the feature importance df
 full_feature_imp_df <- read.csv(
-  "Data/Gen_model_output/Results/Feature_importance/Full_meta_feature_importance.csv",
+  paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Feature_importance/Full_meta_feature_importance.csv"
+  ),
   row.names = 1
 )
 
@@ -1009,7 +1126,7 @@ colors_above_midpoint <- colorRampPalette(c("#F4F9FC", "#7F000D"))(num_breaks - 
 
 colors <- c(colors_below_midpoint, "#F4F9FC", colors_above_midpoint)
 
-pheatmap(
+model_dependency_heatmap <- pheatmap(
   top_genes_complete,
   color = colors,
   breaks = breaks,
@@ -1019,9 +1136,90 @@ pheatmap(
   show_colnames = TRUE,
   show_rownames = TRUE,
   main = "Top Target Features",
+  
   legend = TRUE
 )
 
+# Save the heatmap as a png
+ggsave(
+  filename = paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Plots/Feature_importance/Model_Interdependence_Heatmap.png"
+  ),
+  plot = model_dependency_heatmap,
+  width = 10,
+  height = 10
+)
+
+```
+
+Create the arc diagram of the feature inter-dependencies
+```{r}
+# Get the feature order
+all_feature_order <- c("1p", "1q", "2p", "2q", "3p", "3q", "4p", "4q", "5p", "5q", "6p", "6q", "7p", "7q", "8p", "8q", "9p", "9q", "10p", "10q", "11p", "11q", "12p", "12q", "13q", "14q", "15q", "16p", "16q", "17p", "17q", "18p", "18q", "19p", "19q", "20p", "20q", "21q", "22q", "ai1", "lst1", "loh_hrd", "peri_1", "peri_2", "peri_3", "peri_4", "peri_5", "peri_7", "peri_8", "peri_9", "peri_10", "peri_16_1", "peri_16_2", "peri_17", "peri_20", "peri_22_3")
+
+# Remove the features that don't show in the Cancer type
+feature_order <- all_feature_order[all_feature_order %in% response_features]
+
+
+# Transform your adjacency matrix (or similar structure) into a long format if not already
+connect <- full_feature_imp_df %>%
+  mutate(Gain = (Gain - min(Gain)) / (max(Gain) - min(Gain))) %>%
+  filter(Gain > 0.025) %>%  # Assuming 'Gain' indicates the strength or existence of a connection
+  select(from = Feature, to = Target, value = Gain)
+
+# Create a graph object with igraph
+mygraph <- graph_from_data_frame(connect, directed = FALSE)
+
+# Find community if necessary (optional, depends on need to color nodes by community)
+com <- cluster_walktrap(mygraph)
+membership <- membership(com)
+
+# Prepare data for plotting
+coauth <- data.frame(name = feature_order) 
+
+# Update graph with filtered data
+mygraph <- graph_from_data_frame(connect, vertices = coauth, directed = FALSE)
+
+# Prepare colors
+# mycolor <- viridis_pal(option = "D")(length(unique(coauth$grp)))
+
+# Make the graph
+interdependencies <- ggraph(mygraph, layout = "linear") +
+  geom_edge_arc(aes(edge_alpha = value, edge_colour = value), edge_width = 0.3) +
+  geom_node_point(alpha = 0.5) +
+  labs(title = "Inter-Model Dependencies",
+       x = "Feature Model") +
+  scale_edge_color_gradient(low = "grey54", high = "#7F000D") +
+  geom_node_text(aes(label = name), repel = FALSE, angle = -45 , nudge_y = -1.0, size = 2) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(size = 11),
+        panel.border = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.title.x = element_text(size = 8)) +
+  expand_limits(x = c(-0.5, 0.5), y = c(-1.5, 1)
+                )
+
+print(interdependencies)
+
+# Save the plot
+ggsave(
+  plot = interdependencies,
+  filename = paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Plots/Feature_importance/Meta_Feature_Interdependency_arcplt.pdf"
+  ),
+  width = 12,
+  height = 5
+)
 ```
 
 
@@ -1031,8 +1229,21 @@ Reconvert the data into the original scale
 # Upload the meta predictions
 meta_oof_predictions <- read.csv(
   paste0(
-    input_path,
-    "Meta_predictions/Full_meta_predictions.csv"
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Predictions/Full_meta_predictions.csv"
+  ),
+  row.names = 1
+)
+
+# Upload the base predictions
+base_oof_predictions <- read.csv(
+  paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Predictions/Full_base_predictions.csv"
   ),
   row.names = 1
 )
@@ -1045,22 +1256,21 @@ regression_columns <- c(
 
 # Reconvert the data into the original scale
 final_base_oof_predictions <- base_oof_predictions %>%
-  column_to_rownames("act_index") %>%
-  mutate_all(as.numeric) %>%
-  mutate(across(.cols = -all_of(regression_columns), ~ replace(., . == 0, -1))) %>%
-  mutate(across(.cols = -all_of(regression_columns), ~ replace(., . == 1, 0))) %>%
-  mutate(across(.cols = -all_of(regression_columns), ~ replace(., . == 2, 1)))
+  mutate(across(.cols = -any_of(regression_columns), ~ replace(., . == 0, -1))) %>%
+  mutate(across(.cols = -any_of(regression_columns), ~ replace(., . == 1, 0))) %>%
+  mutate(across(.cols = -any_of(regression_columns), ~ replace(., . == 2, 1)))
 
 final_meta_oof_predictions <- meta_oof_predictions %>%
   mutate_all(as.numeric) %>%
-  mutate(across(.cols = -regression_columns, ~ replace(., . == 0, -1))) %>%
-  mutate(across(.cols = -regression_columns, ~ replace(., . == 1, 0))) %>%
-  mutate(across(.cols = -regression_columns, ~ replace(., . == 2, 1)))
+  mutate(across(.cols = -any_of(regression_columns), ~ replace(., . == 0, -1))) %>%
+  mutate(across(.cols = -any_of(regression_columns), ~ replace(., . == 1, 0))) %>%
+  mutate(across(.cols = -any_of(regression_columns), ~ replace(., . == 2, 1)))
 ```
 
 
 Assess the performance of the models
 ```{r}
+# Dataframe to store the metrics for the classification models
 Class_metrics_df <- data.frame(
   Feature = character(),
   Class = character(),
@@ -1069,6 +1279,7 @@ Class_metrics_df <- data.frame(
   Value = numeric()
 )
 
+# Dataframe to store the general metrics for the models
 Cat_general_metrics <- data.frame(
   Feature = character(),
   Type = character(),
@@ -1078,6 +1289,7 @@ Cat_general_metrics <- data.frame(
   AccuracyPValue = numeric()
 )
 
+# Dataframe to store the metrics for the regression models
 Reg_general_metrics <- data.frame(
   Feature = character(),
   Type = character(),
@@ -1085,38 +1297,41 @@ Reg_general_metrics <- data.frame(
   MAE = numeric()
 )
 
-# Assess the performance of the models
+# Assess the performance of each individual model
 for (feature in response_features) {
   predicted <- paste0("pred_", feature)
   labelled <- paste0("act_", feature)
 
   if (feature %in% cat_features) { # Categorical features
     # Use Caret package to get the performance stats
+    # Get the confusion matrix for the base and meta models
     cm_base <- calculate_confusion_matrix(final_base_oof_predictions, predicted, labelled)
     cm_meta <- calculate_confusion_matrix(final_meta_oof_predictions, predicted, labelled)
 
-    # Update the general metrics dataframeß
+    # Create the base metrics dataframe
     cat_base_metrics <- as.data.frame(cm_base$overall) %>%
       t() %>%
       as.data.frame() %>%
       mutate(Feature = feature, Type = "Base") %>%
       select(Feature, Type, everything())
-
+             
+    # Create the meta metrics dataframe
     cat_meta_metrics <- as.data.frame(cm_meta$overall) %>%
       t() %>%
       as.data.frame() %>%
       mutate(Feature = feature, Type = "Meta") %>%
       select(Feature, Type, everything())
-
+    
+    # Update the general categorical metrics dataframe
     Cat_general_metrics <- rbind(
       Cat_general_metrics,
       cat_base_metrics,
       cat_meta_metrics
     )
 
-    # # Create the TPR confusion matrix and the heatmap
-    # tpr_mtrx_base <- tpr_confusion_matrix(cm_base, feature, "Base")
-    # tpr_mtrx_meta <- tpr_confusion_matrix(cm_meta, feature, "Meta")
+    # Create the TPR confusion matrix and the heatmap
+    tpr_mtrx_base <- tpr_confusion_matrix(cm_base, feature, "Base")
+    tpr_mtrx_meta <- tpr_confusion_matrix(cm_meta, feature, "Meta")
 
     # Create the confusion matrix stats
     confusion_matrix_data <- rbind(
@@ -1144,7 +1359,7 @@ for (feature in response_features) {
       final_meta_oof_predictions[[labelled]]
     )
 
-    # Calulate the MAE for the regression models
+    # Calculate the MAE for the regression models
     mae_base <- caret::MAE(
       final_base_oof_predictions[[predicted]],
       final_base_oof_predictions[[labelled]]
@@ -1185,9 +1400,7 @@ for (feature in response_features) {
       )
     )
 
-    # Create the actual vs predicted plot f
-
-
+    # Create the actual vs predicted plot 
     plot_base_reg <- pred_vs_actual_plot(
       final_base_oof_predictions,
       feature,
@@ -1222,19 +1435,146 @@ Class_metrics_df <- Class_metrics_df %>%
 # Save the dataframes
 write.csv(
   Cat_general_metrics,
-  "Data/Gen_model_output/Results/Gen_cat_metrics.csv"
+  paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Predictions/Gen_cat_metrics.csv"
+  )
 )
 
 write.csv(
   Reg_general_metrics,
-  "Data/Gen_model_output/Results/Gen_reg_metrics.csv"
+  paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Predictions/Gen_reg_metrics.csv"
+  
+  )
 )
 
 write.csv(
   Class_metrics_df,
-  "Data/Gen_model_output/Results/Gen_cat_class_metrics.csv"
+  paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Results/Predictions/Gen_cat_class_metrics.csv"
+  )
 )
 ```
 
+Create the plot the categorical models in terms of their accuracy
+```{r}
+# Factorize the Feature column
+Cat_general_metrics$Feature <- factor(Cat_general_metrics$Feature, levels = unique(Cat_general_metrics$Feature))
 
+# Create line plot the categorical features in terms of the Accuracy
+cat_acc_plot <- ggplot(
+  Cat_general_metrics,
+  aes(x = Feature, y = Accuracy, color = Type, group = Type)
+) +
+  geom_line(
+    lwd = 0.75
+  ) +
+  scale_color_manual(values = c("Base" = "#4d63b2", "Meta" = "#7F000D")) +
+  labs(
+    title = "Accuracy of the Aneuploidy models",
+    x = "Feature",
+    y = "Accuracy",
+    color = "Model Type",
+    subtitle = paste0(
+      "For cancer type: ",
+      cancer_type)
+  ) +
+  ylim(
+    ifelse(min(Cat_general_metrics$Accuracy) > 0.25,
+      min(Cat_general_metrics$Accuracy - 0.2),
+      0),
+       1) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text.y = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(size = 7),
+    panel.border = element_rect(linetype = "solid", color = "black", fill = NA, size = 0.5),
+    panel.grid.major = element_line(color = "grey49", size = 0.2)
+  )
+
+# Save the plot
+ggsave(
+  filename = paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Plots/Predictions/Model_Accuracy_line.pdf"
+  ),
+  plot = cat_acc_plot,
+  width = 10,
+  height = 5
+)
+
+print(cat_acc_plot)
+
+```
+
+Create the plot the regression models in terms of their Rsquared
+```{r}
+# Factorize the Feature column
+Reg_general_metrics$Feature <- factor(Reg_general_metrics$Feature, levels = unique(Reg_general_metrics$Feature))
+
+# Create line plot the regression features in terms of the Rsquared
+reg_rsqd_plot <- ggplot(
+  Reg_general_metrics,
+  aes(x = Feature, y = R_squared, color = Type, group = Type)
+) +
+  geom_line(
+    lwd = 0.75
+  ) +
+  scale_color_manual(values = c("Base" = "#4d63b2", "Meta" = "#7F000D")) +
+  labs(
+    title = expression("Pericentromeric and HRD models in terms of R"^2),
+    x = "Feature",
+    y = expression(R^2),
+    color = "Model Type",
+    subtitle = paste0(
+      "For cancer type: ",
+      cancer_type)
+  )+
+  ylim(
+    ifelse(min(Reg_general_metrics$R_squared) > 0.25,
+      min(Reg_general_metrics$R_squared - 0.2),
+      0),
+       1) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text.y = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 7),
+    plot.title = element_text(hjust = 0.5),
+    panel.border = element_rect(linetype = "solid", color = "black", fill = NA, size = 0.5),
+    panel.grid.major = element_line(color = "grey49", size = 0.2)
+  )
+
+# Save the plot
+ggsave(
+  filename = paste0(
+    output_path,
+    "/",
+    cancer_type,
+    "/Plots/Predictions/Model_Rsquared_line.pdf"
+  ),
+  plot = reg_rsqd_plot,
+  width = 10,
+  height = 5
+)
+
+print(reg_rsqd_plot)
+```
+
+```{r}
+print(paste0("The analysis for ", cancer_type, " is complete."))
+```
 

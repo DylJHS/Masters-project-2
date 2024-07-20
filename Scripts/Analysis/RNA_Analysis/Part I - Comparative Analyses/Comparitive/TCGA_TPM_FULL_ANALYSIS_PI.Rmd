@@ -1073,6 +1073,11 @@ for (i in 1:num_datasets) {
 
 all_combos <- all_combos %>%
   dplyr::rename(dif_soi = dif)
+
+# Save the results to a file
+write.csv(all_combos, "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/RNA_data/Comparative_analysis_data/TCGA_all_combo_df.csv",
+          row.names = FALSE)
+
 ```
 
 
@@ -1091,7 +1096,7 @@ full_results <- mutate(
   similar_level = ifelse(p.signif == "****", "TRUE", "FALSE")
 )
 # 
-kable(head(full_results))
+head(full_results)
 ```
 
 Build table to compare the assessments made above.
@@ -1111,7 +1116,7 @@ summary_table <- as.data.frame(t(summary_table))%>%
   dplyr::rename("TRUE" = V1,
          "FALSE" = V2)
 
-kable(summary_table)
+head(summary_table)
 ```
 
 Results: Out of the 547 sets :
@@ -1197,23 +1202,56 @@ summary_pivot <- merge(pivot_main %>%
   by = "set",
   all = FALSE
 )
+
+# Save the data to a csv file
+write.csv(summary_pivot, "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/RNA_data/Comparative_analysis_data/TCGA_full_Sets_Summary.csv", row.names = FALSE)
 ```
 
 
 F) Volcano plot demonstrating the effect of the up-regulation in the SOI and how it compares to the other sets
 
 ```{r}
+
+summary_pivot$set <- factor(summary_pivot$set, levels = c("soi", numbers_list))
+
+keyvals <- ifelse(
+  summary_pivot$set == "soi", "#D21717", "#4d63b2")
+  keyvals[is.na(keyvals)] <- 'black'
+  names(keyvals)[keyvals == '#D21717'] <- 'Set of Interest'
+  names(keyvals)[keyvals == '#4d63b2'] <- 'Control Set'
+
+
 Full_Volcano <- EnhancedVolcano(summary_pivot,
                 lab = summary_pivot$set,
                 x = "mean_log2fc",
                 y = "p",
+                caption = "Number of sets: 548",
+                selectLab = "None",
+                title = "",
+                subtitle = "Average Differential Expression",
                 xlim = c(-0.25,0.25),
-                selectLab = c('soi'),
+                colCustom = keyvals,
+                colAlpha = 1,
                 pCutoff = 0.01,
-                FCcutoff = 0.05)
+                FCcutoff = 0.2,
+                pointSize = 4.5,
+                cutoffLineType = "blank",
+                cutoffLineCol = "black",
+                legendPosition = "right",
+                subtitleLabSize = 21,
+                captionLabSize = 14,
+                legendLabSize = 14,
+                legendIconSize =4,
+                axisLabSize = 15) + 
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "black", linewidth = 0.5) +
+  annotate("text", x = 0.25, y = -log10(0.01) + 0.1, label = "P-value = 0.01", hjust = -0.5, color = "black", size = 4.5)
 
-Full_Volcano
+pdf("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/Sets Volcano Plots/Full_Volcano.pdf", width = 10, height = 8)
+print(Full_Volcano)
+dev.off()
+
 ```
+
 
 Interpretation: The Volcano plot confirms that the set of interest demonstrates a significant and general up-regulation that varies greatly from the rest of the genome. The SOI is the most significant set in the plot and demonstrates a meaningfully different fold change when compared to the control sets.
 
@@ -1227,54 +1265,94 @@ Repeat the above looking at the effect across different cancer/tissue types
 - Repeat for the next tissue type
 
 ```{r}
-
+# get the list of columns needed
 col_list <-  c("soi", numbers_list)
 
+# Create a df to store the results for all tissue types
 all_tissue_summary <- data.frame(Tissue = character(0), Set = character(0), avg_log2fc = numeric(0), p_val = numeric(0), adjusted_p = numeric(0))
 
+# Loop over all the tissue types
 for (tissue in unique(all_combos$tissue_type)){
   
+  # Subset the data for the current tissue type
   type_subset <- all_combos[all_combos$tissue_type == tissue,]
+  
+  # Create a df to store the results for the current tissue type
   tissue_summary <- data.frame(Tissue = character(0), Set = character(0), avg_log2fc = numeric(0), p_val = numeric(0))
   
+  # Loop over all the sets
   for (col in col_list) {
+    # Select the columns needed for the test
     set_selection <- c(paste("geom_mean_nrm", col, sep = "_"),
                    paste("geom_mean_can", col, sep = "_"),
                    paste("dif", col, sep = "_"))
     
+    # Subset the data for the current set
     type_set_subset <- type_subset %>%
       select(all_of(set_selection))
     
+    # Perform the wilcoxon signed rank test
     type_set_subset_gathered <- type_set_subset %>% 
       gather(key = "Condition", value = "Geom_mean", 1, 2)
-    
     type_wilc_res <- type_set_subset_gathered  %>%
     wilcox_test(Geom_mean ~ Condition, paired = TRUE, alternative = "two.sided") %>%
     add_significance()
       
+    # Calculate the average log2 fold change and get the p-value
     log_change <- mean(type_set_subset[,3])
     pval <- type_wilc_res$p
     
+    # Store the results in the current tissue type df
     row <- data.frame(Tissue = tissue ,Set = col, avg_log2fc = log_change, p_val = pval)
     tissue_summary <- rbind(tissue_summary, row)
   }
   
+  # Correct the p-values for multiple comparisons
   tissue_summary <- tissue_summary %>%
-      mutate(adjusted_p = p.adjust(tissue_summary$p_val, method = "BH"))
+    mutate(adjusted_p = p.adjust(tissue_summary$p_val, method = "BH"))
   
-   assign(paste("df", tissue, sep = "_"),tissue_summary)
-  
+  # Store the results in the complete tissue type df
+  assign(paste("df", tissue, sep = "_"),tissue_summary)
   all_tissue_summary <- rbind(all_tissue_summary, tissue_summary)
   
+  # Create the key values for the plot
+  keyvals <- ifelse(
+    tissue_summary$Set == "soi", "#D21717", "#4d63b2")
+  keyvals[is.na(keyvals)] <- 'black'
+  names(keyvals)[keyvals == '#D21717'] <- 'Set of Interest'
+  names(keyvals)[keyvals == '#4d63b2'] <- 'Control Set'
   
-  assign(paste("p", tissue, sep = "_"),EnhancedVolcano(tissue_summary,
-                lab = tissue_summary$Set,
-                x = "avg_log2fc",
-                y = "p_val",
-                selectLab = c('soi'),
-                xlim = c(min(tissue_summary$avg_log2fc), max(tissue_summary$avg_log2fc)),
-                pCutoff = 0.01,
-                FCcutoff = 0.1) )  
+  # Create the volcano plot for the current tissue type
+  assign(paste("p", tissue, sep = "_"),
+         EnhancedVolcano(tissue_summary,
+                         lab = tissue_summary$Set,
+                         x = "avg_log2fc",
+                         y = "p_val",
+                         caption = "Number of sets: 548",
+                         selectLab = "None",
+                         title = "",
+                         subtitle = "Average Differential Expression",
+                         xlim = c(-0.25,0.25),
+                         colCustom = keyvals,
+                         colAlpha = 1,
+                         pCutoff = 0.01,
+                         FCcutoff = 0.2,
+                         pointSize = 4.5,
+                         cutoffLineType = "blank",
+                         cutoffLineCol = "black",
+                         legendPosition = "right",
+                         subtitleLabSize = 21,
+                         captionLabSize = 14,
+                         legendLabSize = 14,
+                         legendIconSize =4,
+                         axisLabSize = 15) + 
+           geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "black", linewidth = 0.5) +
+           annotate("text", x = 0.25, y = -log10(0.01) + 0.1, label = "P-value = 0.01", hjust = -0.5, color = "black", size = 4.5))
+  
+  # Save the plot
+  pdf(paste("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/Sets Volcano Plots/", tissue, "_Volcano.pdf", sep = ""), width = 10, height = 8)
+  print(get(paste("p", tissue, sep = "_")))
+  dev.off()
 }
  
 
@@ -1339,7 +1417,7 @@ usable_volcano <- EnhancedVolcano(usable_tissues,
 usable_volcano
 ```
 
-Interpretation: Although the 
+
 
 
 

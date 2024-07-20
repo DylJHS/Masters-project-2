@@ -404,7 +404,8 @@ for (fold_index in seq_along(folds)) {
 
 # Store the predictions in the corresponding column
 oof_predictions[[paste0("pred_", feature)]] <- current_oof_predictions
-current_preds <- oof_predictions %>% select(paste0("pred_", feature))
+current_preds <- oof_predictions %>%
+  select(paste0("pred_", feature), paste0("act_", feature))
 print(head(current_preds))
 
 # Save the current predictions

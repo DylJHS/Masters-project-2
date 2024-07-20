@@ -34,6 +34,8 @@ for (file in list.files(predictions_folder)[2:length(list.files(predictions_fold
   )
 }
 
+predictions <- predictions %>% 
+  column_to_rownames("act_index")
 
 print(dim(predictions))
 cat("predictions \n\n")
