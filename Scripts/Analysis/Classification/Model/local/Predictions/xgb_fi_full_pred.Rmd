@@ -32,6 +32,7 @@ early_stop <- 150
 setwd("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project")
 
 input_path <- "Data/Gen_model_input/"
+plt_folder <- "Plots/Model_Plots/General_model/Results/"
 ```
 
 FUNCTIONS
@@ -126,7 +127,7 @@ create_confusion_matrix_data <- function(obj, type) {
   as.data.frame(obj$byClass) %>%
     rownames_to_column("Class") %>%
     mutate(Type = type) %>%
-    select(-c(
+    dplyr::select(-c(
       "Pos Pred Value", "Neg Pred Value",
       "Prevalence", "Detection Rate",
       "Detection Prevalence", "Sensitivity"
@@ -215,7 +216,7 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
 
   # Create the plot for the top 10 features
   top_genes <- created_imp %>%
-    select(dplyr::all_of(c("Feature", basis))) %>%
+    dplyr::select(dplyr::all_of(c("Feature", basis))) %>%
     top_n(top_gene_num, .data[[basis]]) %>%
     dplyr::arrange(dplyr::desc(.data[[basis]]))
 
@@ -336,7 +337,7 @@ cat_cin <- read_tsv(
   show_col_types = FALSE
 ) %>%
   replace(is.na(.), 0) %>%
-  select(-c("Type", "Aneuploidy Score")) %>%
+  dplyr::select(-c("Type", "Aneuploidy Score")) %>%
   mutate(Sample = str_replace_all(Sample, "-", "\\.")) %>%
   column_to_rownames("Sample") %>%
   mutate_all(~ replace(., . == 1, 2)) %>%
@@ -366,7 +367,7 @@ colnames(first_hrd) <- t_hrd[1, ]
 hrd <- as.data.frame(first_hrd[-1, ]) %>%
   mutate_all(as.numeric) %>%
   dplyr::rename(loh_hrd = "hrd-loh") %>%
-  select(-HRD) %>%
+  dplyr::select(-HRD) %>%
   mutate(new = str_replace_all(rownames(.), "-", "\\."))
 
 rm(first_hrd)
@@ -375,7 +376,7 @@ rm(t_hrd)
 
 rownames(hrd) <- hrd$new
 hrd <- hrd %>%
-  select(-new)
+  dplyr::select(-new)
 
 # print(head(hrd))
 
@@ -495,7 +496,7 @@ LABELS
 ```{r}
 # Get the actual (true) fold labels
 labels <- full_data %>%
-  select(all_of(intersect(response_features, colnames(.)))) %>%
+  dplyr::select(all_of(intersect(response_features, colnames(.)))) %>%
   mutate(
     index = as.factor(row_number())
   ) %>%
@@ -512,7 +513,7 @@ BASE TRAINING
 # Create the full feature importance dataframe
 full_feature_imp <- data.frame()
 
-for (feature in response_features[2:48]) {
+for (feature in response_features) {
   cat(
     "Feature: ", feature, "\n\n"
   )
@@ -564,7 +565,7 @@ for (feature in response_features[2:48]) {
   print(head(y, 15))
 
   X <- full_df %>%
-    select(-c("Row.names", all_of(response_features))) %>%
+    dplyr::select(-c("Row.names", all_of(response_features))) %>%
     as.data.frame()
 
   # Initialize containers for predictions and feature importance
@@ -679,6 +680,11 @@ full_feature_imp <- read.csv(
   row.names = 1
 )
 
+# Set the order for the response features
+response_features <- c(
+  "1p", "1q", "2p", "2q", "3p", "3q", "4p", "4q", "5p", "5q","6p", "6q", "7p", "7q", "8p", "8q", "9p", "9q", "10p", "10q",
+)
+
 # Plot of the top feature for each target
 top_gene_each <- full_feature_imp %>%
   group_by(Target) %>%
@@ -702,7 +708,7 @@ top_barplt <- ggplot(top_gene_each, aes(x = reorder(Target, Gain), y = Gain)) +
 # Heatmap of the top features
 top_genes_complete <- full_feature_imp %>%
   filter(Feature %in% top_gene_each$Feature) %>%
-  select(Feature, Target, Gain) %>%
+  dplyr::select(Feature, Target, Gain) %>%
   pivot_wider(names_from = Feature, values_from = Gain) %>%
   replace(is.na(.), 0) %>%
   replace(is.null(.), 0) %>%
@@ -727,22 +733,33 @@ if (breaks[midpoint_index] != midpoint) {
 
 # Define the color palette with white at the midpoint
 colors_below_midpoint <- colorRampPalette(c("#A4AAAB", "#F4F9FC"))(midpoint_index - 1)
-colors_above_midpoint <- colorRampPalette(c("#F4F9FC", "#7F000D"))(num_breaks - midpoint_index)
+colors_above_midpoint <- colorRampPalette(c("#F4F9FC", "#D21717"))(num_breaks - midpoint_index)
 
 colors <- c(colors_below_midpoint, "#F4F9FC", colors_above_midpoint)
 
+# Create the heatmap
 gene_heatmap <- pheatmap(
   top_genes_complete,
   color = colors,
   breaks = breaks,
-  cluster_rows = TRUE,
-  cluster_cols = TRUE,
+  cluster_rows = FALSE,
+  cluster_cols = FALSE,
   border_color = "black",
   show_colnames = TRUE,
   show_rownames = TRUE,
   main = "Genomic Contribution"
 )
 
+# Save the heatmap
+ggplot2::ggsave(
+  filename = paste0(
+    plt_folder,
+    "Feature_importance/Base_Features_Heatmap.pdf"
+  ),
+  plot = gene_heatmap,
+  width = 10,
+  height = 10
+)
 
 ```
 
@@ -785,12 +802,12 @@ META TRAINING
 ```{r}
 # Create the predictor data for the meta learners
 meta_input_data <- base_oof_predictions %>%
-  select(starts_with("pred_")) %>%
+  dplyr::select(starts_with("pred_")) %>%
   rename_with(~ str_replace(., "pred_", ""))
 
 label_data <- base_oof_predictions %>%
-  select(starts_with("act_")) %>%
-  select(-act_index) %>%
+  dplyr::select(starts_with("act_")) %>%
+  dplyr::select(-act_index) %>%
   rename_with(~ str_replace(., "act_", ""))
 
 # Create the full feature importance dataframe
@@ -982,7 +999,7 @@ print(top_barplt)
 # Heatmap of the top features
 top_genes_complete <- full_feature_imp_df %>%
   filter(Feature %in% top_gene_each$Feature) %>%
-  select(Feature, Target, Gain) %>%
+  dplyr::select(Feature, Target, Gain) %>%
   pivot_wider(names_from = Feature, values_from = Gain) %>%
   replace(is.na(.), 0) %>%
   column_to_rownames("Target")
@@ -1006,7 +1023,7 @@ if (breaks[midpoint_index] != midpoint) {
 
 # Define the color palette with white at the midpoint
 colors_below_midpoint <- colorRampPalette(c("#A4AAAB", "#F4F9FC"))(midpoint_index - 1)
-colors_above_midpoint <- colorRampPalette(c("#F4F9FC", "#7F000D"))(num_breaks - midpoint_index)
+colors_above_midpoint <- colorRampPalette(c("#F4F9FC", "#D21717"))(num_breaks - midpoint_index)
 
 colors <- c(colors_below_midpoint, "#F4F9FC", colors_above_midpoint)
 
@@ -1033,7 +1050,7 @@ feature_order <- c("1p", "1q", "2p", "2q", "3p", "3q", "4p", "4q", "5p", "5q", "
 connect <- full_feature_imp_df %>%
   mutate(Gain = (Gain - min(Gain)) / (max(Gain) - min(Gain))) %>%
   filter(Gain > 0.025) %>%  # Assuming 'Gain' indicates the strength or existence of a connection
-  select(from = Feature, to = Target, value = Gain)
+  dplyr::select(from = Feature, to = Target, value = Gain)
 
 # Create a graph object with igraph
 mygraph <- graph_from_data_frame(connect, directed = FALSE)
@@ -1169,14 +1186,14 @@ for (feature in response_features) {
       t() %>%
       as.data.frame() %>%
       mutate(Feature = feature, Type = "Base") %>%
-      select(Feature, Type, everything())
+      dplyr::select(Feature, Type, everything())
              
     # Create the meta metrics dataframe
     cat_meta_metrics <- as.data.frame(cm_meta$overall) %>%
       t() %>%
       as.data.frame() %>%
       mutate(Feature = feature, Type = "Meta") %>%
-      select(Feature, Type, everything())
+      dplyr::select(Feature, Type, everything())
     
     # Update the general categorical metrics dataframe
     Cat_general_metrics <- rbind(
@@ -1195,7 +1212,7 @@ for (feature in response_features) {
       create_confusion_matrix_data(cm_base, "Base")
     ) %>%
       mutate(Feature = feature) %>%
-      select(Feature, everything())
+      dplyr::select(Feature, everything())
 
     # Update the class metrics dataframe
     Class_metrics_df <- rbind(Class_metrics_df, confusion_matrix_data)
@@ -1276,13 +1293,13 @@ for (feature in response_features) {
 # Reset the indices of the dataframes to row number
 Cat_general_metrics <- Cat_general_metrics %>%
   rownames_to_column("Index") %>%
-  select(-Index) %>%
+  dplyr::select(-Index) %>%
   distinct() %>%
-  select(Feature, Type, Accuracy, Kappa, AccuracyNull, AccuracyPValue)
+  dplyr::select(Feature, Type, Accuracy, Kappa, AccuracyNull, AccuracyPValue)
 
 Reg_general_metrics <- Reg_general_metrics %>%
   rownames_to_column("Index") %>%
-  select(-Index) %>%
+  dplyr::select(-Index) %>%
   distinct()
 
 Class_metrics_df <- Class_metrics_df %>%
@@ -1307,6 +1324,12 @@ write.csv(
 
 Create the plot the categorical models in terms of their accuracy
 ```{r}
+# Load the categorical metrics
+Cat_general_metrics <- read.csv(
+  "Data/Gen_model_output/Results/Gen_cat_metrics.csv",
+  row.names = 1
+)
+
 # Factorize the Feature column
 Cat_general_metrics$Feature <- factor(Cat_general_metrics$Feature, levels = unique(Cat_general_metrics$Feature))
 
@@ -1318,12 +1341,12 @@ cat_acc_plot <- ggplot(
   geom_line(
     lwd = 0.75
   ) +
-  scale_color_manual(values = c("Base" = "#4d63b2", "Meta" = "#7F000D")) +
+  scale_color_manual(values = c("Base" = "#4d63b2", "Meta" = "#D21717")) +
   labs(
-    title = "Accuracy of the Aneuploidy models",
+    title = "Accuracy of the Aneuploidy Learners",
     x = "Feature",
     y = "Accuracy",
-    color = "Model Type"
+    color = "Learner Type"
   ) +
   ylim(
     ifelse(min(Cat_general_metrics$Accuracy) > 0.25,
@@ -1353,6 +1376,12 @@ print(cat_acc_plot)
 
 Create the plot the regression models in terms of their Rsquared
 ```{r}
+# Load the regression metrics
+Reg_general_metrics <- read.csv(
+  "Data/Gen_model_output/Results/Gen_reg_metrics.csv",
+  row.names = 1
+)
+
 # Factorize the Feature column
 Reg_general_metrics$Feature <- factor(Reg_general_metrics$Feature, levels = unique(Reg_general_metrics$Feature))
 
@@ -1364,12 +1393,12 @@ reg_rsqd_plot <- ggplot(
   geom_line(
     lwd = 0.75
   ) +
-  scale_color_manual(values = c("Base" = "#4d63b2", "Meta" = "#7F000D")) +
+  scale_color_manual(values = c("Base" = "#4d63b2", "Meta" = "#D21717")) +
   labs(
-    title = expression("Pericentromeric and HRD models in terms of R"^2),
+    title = expression("Pericentromeric and HRD Learners in terms of R"^2),
     x = "Feature",
     y = expression(R^2),
-    color = "Model Type"
+    color = "Learner Type"
   )+
   ylim(
     ifelse(min(Reg_general_metrics$R_squared) > 0.25,

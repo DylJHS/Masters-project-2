@@ -1211,6 +1211,10 @@ write.csv(summary_pivot, "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epig
 F) Volcano plot demonstrating the effect of the up-regulation in the SOI and how it compares to the other sets
 
 ```{r}
+numbers_list <- seq(1, 547)
+
+# Load the data
+summary_pivot <- read.csv("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/RNA_data/Comparative_analysis_data/TCGA_full_Sets_Summary.csv")
 
 summary_pivot$set <- factor(summary_pivot$set, levels = c("soi", numbers_list))
 
@@ -1228,25 +1232,24 @@ Full_Volcano <- EnhancedVolcano(summary_pivot,
                 caption = "Number of sets: 548",
                 selectLab = "None",
                 title = "",
-                subtitle = "Average Differential Expression",
+                subtitle = "",
                 xlim = c(-0.25,0.25),
                 colCustom = keyvals,
                 colAlpha = 1,
                 pCutoff = 0.01,
                 FCcutoff = 0.2,
-                pointSize = 4.5,
+                pointSize = ifelse(
+  summary_pivot$set == "soi", 6, 3.3),
                 cutoffLineType = "blank",
                 cutoffLineCol = "black",
-                legendPosition = "right",
-                subtitleLabSize = 21,
-                captionLabSize = 14,
-                legendLabSize = 14,
-                legendIconSize =4,
-                axisLabSize = 15) + 
-  geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "black", linewidth = 0.5) +
-  annotate("text", x = 0.25, y = -log10(0.01) + 0.1, label = "P-value = 0.01", hjust = -0.5, color = "black", size = 4.5)
+                legendPosition = "top",
+                captionLabSize = 20,
+                legendLabSize = 28,
+                legendIconSize =4.4,
+                axisLabSize = 29) + 
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "black", linewidth = 0.5)
 
-pdf("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/Sets Volcano Plots/Full_Volcano.pdf", width = 10, height = 8)
+pdf("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/Sets Volcano Plots/Full_Volcano.pdf", width = 13, height = 11)
 print(Full_Volcano)
 dev.off()
 
@@ -1331,8 +1334,8 @@ for (tissue in unique(all_combos$tissue_type)){
                          caption = "Number of sets: 548",
                          selectLab = "None",
                          title = "",
-                         subtitle = "Average Differential Expression",
-                         xlim = c(-0.25,0.25),
+                         subtitle = "",
+                         xlim = c(-1,1),
                          colCustom = keyvals,
                          colAlpha = 1,
                          pCutoff = 0.01,
@@ -1346,15 +1349,18 @@ for (tissue in unique(all_combos$tissue_type)){
                          legendLabSize = 14,
                          legendIconSize =4,
                          axisLabSize = 15) + 
-           geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "black", linewidth = 0.5) +
-           annotate("text", x = 0.25, y = -log10(0.01) + 0.1, label = "P-value = 0.01", hjust = -0.5, color = "black", size = 4.5))
+           geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "black", linewidth = 0.5))
   
   # Save the plot
-  pdf(paste("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/Sets Volcano Plots/", tissue, "_Volcano.pdf", sep = ""), width = 10, height = 8)
+  pdf(paste("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/Sets Volcano Plots/", tissue, "_Volcano.pdf", sep = ""), width = 10, height = 8) 
   print(get(paste("p", tissue, sep = "_")))
   dev.off()
 }
  
+
+
+# Save the data to a csv file
+write.csv(all_tissue_summary, "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/RNA_data/Comparative_analysis_data/TCGA_cancer_specif_summary.csv", row.names = FALSE)
 
 ```
 
@@ -1378,43 +1384,70 @@ all_tissue_volcano
 ```
 
 
-Create the individual and combined volcano plot only using the tumour types with 20 or more samples
+Create the combined volcano plot only using the select tumour types,
 highlighting the sets of interest  
 
 
 ```{r}
+# Load the data
+all_tissue_summary <- read.csv("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/RNA_data/Comparative_analysis_data/TCGA_cancer_specif_summary.csv")
 
-usable_tissues <- all_tissue_summary[all_tissue_summary$Tissue %in%
-                                       (all_combos %>%
-                                          dplyr::count(tissue_type) %>%
-                                          filter(n > 19) %>% 
-                                          pull("tissue_type")),]
+# Select the tumour types to be used
+usable_tissues <- c("BRCA", "HNSC", "LUSC", "LUAD")
 
-usable_volcano_facet <- EnhancedVolcano(usable_tissues,
-                lab = usable_tissues$Set,
-                x = "avg_log2fc",
-                y = "p_val",
-                selectLab = c('soi'),
-                xlim = c(-0.95,0.95),
-                ylim = c(0,10),
-                pCutoff = 0.01,
-                FCcutoff = 0.1) +
-  facet_wrap(~Tissue, ncol = 3, scales = "free")
+# Subset the data for the selected tumour types
+usable_summary <- all_tissue_summary[all_tissue_summary$Tissue %in% usable_tissues,] %>% 
+  merge(meta_data, by.x = "Tissue", by.y = "Study.Abbreviation", all = FALSE) %>% 
+  dplyr::arrange(Set)
 
-usable_volcano <- EnhancedVolcano(usable_tissues,
-                lab = usable_tissues$Set,
-                x = "avg_log2fc",
-                y = "p_val",
-                selectLab = c('soi'),
-                pointSize = c(ifelse(usable_tissues$Set == "soi", 4, 1)),
-                drawConnectors = TRUE,
-                widthConnectors = 0.2,
-                xlim = c(-0.95,0.95),
-                ylim = c(0,10),
-                pCutoff = 0.05,
-                FCcutoff = 0.1)
+# factorize the set column
+usable_summary$Set <- factor(usable_summary$Set, levels = c("soi", numbers_list))
 
-usable_volcano
+# Create the colour key values for the plot
+keyvals <- ifelse(
+  usable_summary$Set == "soi", "#D21717", "#4d63b2")
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == '#D21717'] <- 'Set of Interest'
+names(keyvals)[keyvals == '#4d63b2'] <- 'Control Set'
+
+# Create the size keyvals# Create the size keypals
+keyvals3 <- ifelse(
+  usable_summary$Set == "soi", 4.5, 2)
+
+usable_volcano_facet <- EnhancedVolcano(usable_summary,
+                                        lab = usable_summary$Set,
+                                        x = "avg_log2fc",
+                                        y = "p_val",
+                                        selectLab = "None",
+                                        title = "",
+                                        subtitle = "",
+                                        caption = "",
+                                        xlim = c(-0.5,0.65),
+                                        ylim = c(0, 9),
+                                        colCustom = keyvals,
+                                        pCutoff = 0.01,
+                                        colAlpha = 1,
+                                        FCcutoff = 0.2,
+                                        pointSize = keyvals3,
+                                        cutoffLineType = "blank",
+                                        cutoffLineCol = "black",
+                                        legendPosition = "top",
+                                        legendLabSize = 25,
+                                        legendIconSize = 6,
+                                        axisLabSize = 28) + 
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "black", linewidth = 0.5) +
+  geom_vline(xintercept = 0, linetype = "solid", color = "black", linewidth = 0.5) +
+  facet_wrap(~Study.Name, ncol = 2, scales = "free")+
+  theme(
+    strip.text = element_text(size = 28)
+  )
+
+
+# Save the plot
+pdf("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/RNA_Plots/RNA_Plts_Part_I/Sets Volcano Plots/Usable_Volcano.pdf", width = 25, height = 19) 
+print(usable_volcano_facet)
+dev.off()
+
 ```
 
 

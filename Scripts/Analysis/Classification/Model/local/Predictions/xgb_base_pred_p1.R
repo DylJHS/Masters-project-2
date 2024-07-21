@@ -13,7 +13,7 @@ args <- commandArgs(trailingOnly = TRUE)
 index <- as.numeric(args[1])
 
 early_stop <- 100
-print_every <- 25
+print_every <- 100
 cv <- 5
 
 input_path <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Gen_model_input/"
@@ -24,27 +24,21 @@ feature_digit_function <- function(factors, reference) {
   sapply(factors, function(x) reference[as.numeric(x)])
 }
 
-# Feature importance function to create the df and sort based on the Gain and plot the top 10 features 
+# Feature importance function to create the df and sort based on the Gain and plot the top 10 features
 feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
   # Create the feature importance matrix
   created_imp <- imp_df %>%
     group_by(Feature) %>%
     summarise_all(mean) %>%
-    # create the combined normalised importance
-    mutate(
-      Combined = rowSums(across(.cols = -Feature))
-    ) %>%
-    mutate(
-      Normalised = Combined / sum(Combined)
-    ) %>%
-    select(-Combined) %>%
-    arrange(desc(basis))
-  
+    dplyr::arrange(desc(.data[[basis]]))
+
   type_file_folder <- ifelse(Type == "Meta", "Meta_feat_imp/", "Base_feat_imp/")
-  csv_filefold <- file.path("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Gen_model_output/Results/Feature_importance/",
-                            type_file_folder)
+  csv_filefold <- file.path(
+    "Data/Gen_model_output/Results/Feature_importance/",
+    type_file_folder
+  )
   if (!dir.exists(csv_filefold)) {
-    dir.create(csv_filefold, recursive = TRUE)
+    csv_filefold
   }
   # Save the feature importance df
   write.csv(
@@ -55,19 +49,21 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
       "_feature_importance.csv"
     )
   )
-  
-  
+
   # Create the plot for the top 10 features
   top_genes <- created_imp %>%
-    select(Feature, basis) %>%
-    top_n(top_gene_num, basis) %>%
-    arrange(desc(basis))
-  
+    dplyr::select(dplyr::all_of(c("Feature", basis))) %>%
+    top_n(top_gene_num, .data[[basis]]) %>%
+    dplyr::arrange(dplyr::desc(.data[[basis]]))
+
   # Create the plot
-  top_genes_plot <- ggplot(top_genes[1:top_gene_num,],
-                           aes(x = reorder(Feature, .data[[basis]]), 
-                               y = .data[[basis]])
-                           ) +
+  top_genes_plot <- ggplot(
+    top_genes[1:top_gene_num, ],
+    aes(
+      x = reorder(Feature, .data[[basis]]),
+      y = .data[[basis]]
+    )
+  ) +
     geom_bar(stat = "identity", fill = "steelblue") +
     labs(
       title = paste0("Top ", top_gene_num, " Features for ", feature),
@@ -82,8 +78,10 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
     )
 
   # Save the plot
-  plt_filefold <- file.path("/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Plots/Model_Plots/General_model/Results/Feature_importance/",
-                        type_file_folder)
+  plt_filefold <- file.path(
+    "Plots/Model_Plots/General_model/Results/Feature_importance/",
+    type_file_folder
+  )
   if (!dir.exists(plt_filefold)) {
     dir.create(plt_filefold, recursive = TRUE)
   }
@@ -100,7 +98,7 @@ feat_imp <- function(imp_df, top_gene_num = 10, basis = "Gain", Type) {
     width = 10,
     height = 10
   )
-  
+
   return(list(feature_imp_df = created_imp, top_genes = top_genes))
 }
 
