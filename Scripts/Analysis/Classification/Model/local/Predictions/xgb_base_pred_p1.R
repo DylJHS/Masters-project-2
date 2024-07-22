@@ -17,6 +17,10 @@ print_every <- 100
 cv <- 5
 
 input_path <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project/Data/Gen_model_input/"
+working_directory <- "/Users/Dyll/Documents/Education/VU_UVA/Internship/Epigenetics/Janssen_Group-UMCUtrecht/Main_Project"
+
+# Set the working directory
+setwd(working_directory)
 
 # Load the functions
 # Function to map factor levels to weights
@@ -323,11 +327,13 @@ print(selected_parameters)
 
 # Load and prepare data
 rna_selection_name <- rna_list[[selected_parameters$RNA_set]]
-rna_set <- read.csv(paste0(
-  input_path, 
-  "RNA/Train/train_", 
-  rna_selection_name, 
-  "_soi.csv"), 
+rna_set <- read.csv(
+  paste0(
+    input_path,
+    "RNA/Train/train_",
+    rna_selection_name,
+    "_soi.csv"
+  ),
   row.names = 1
 )
 
@@ -350,22 +356,23 @@ for (fold_index in seq_along(folds)) {
   )
   train_indices <- setdiff(seq_len(nrow(full_df)), folds[[fold_index]])
   valid_indices <- folds[[fold_index]]
-  
+
   train_data <- xgb.DMatrix(data = as.matrix(X[train_indices, ]), label = y[train_indices])
   valid_data <- xgb.DMatrix(data = as.matrix(X[valid_indices, ]), label = y[valid_indices])
-  
+
   # Adjust weights for categorical features
   if (feature %in% cat_features) {
     selected_ref <- as.numeric(
-    selected_parameters[c(
-      "Weight_loss",
-      "Weight_normal",
-      "Weight_gain"
-    )])
+      selected_parameters[c(
+        "Weight_loss",
+        "Weight_normal",
+        "Weight_gain"
+      )]
+    )
     weights <- as.numeric(feature_digit_function(factor(y[train_indices], levels = c(0, 1, 2)), selected_ref))
     setinfo(train_data, "weight", weights)
   }
-  
+
   # Train model
   params_list <- list(
     data = train_data,
@@ -380,28 +387,31 @@ for (fold_index in seq_along(folds)) {
     watchlist = list(eval = valid_data),
     print_every_n = print_every
   )
-  
+
   # Only add num_class for categorical features
   if (feature %in% cat_features) {
-    params_list$num_class <- 3}
-  
+    params_list$num_class <- 3
+  }
+
   xgb_model <- do.call(xgb.train, params_list)
-  
+
   # Store OOF predictions
   current_oof_predictions[valid_indices] <- predict(xgb_model, valid_data)
-  cat("\n OOF Predictions: \n",
-      dim(current_oof_predictions), "\n")
+  cat(
+    "\n OOF Predictions: \n",
+    dim(current_oof_predictions), "\n"
+  )
   print(head(current_oof_predictions, 10))
-  
+
   # Create the feature importance matrix
   importance_matrix <- xgb.importance(feature_names = colnames(X), model = xgb_model)
-  
+
   # Store the importance matrix in the dataframe
   feature_imp_df <- rbind(feature_imp_df, as.data.frame(importance_matrix))
 }
-  
+
 cat("current_oof_predictions: ", dim(current_oof_predictions), "\n")
-print(head(current_oof_predictions, 10) )
+print(head(current_oof_predictions, 10))
 
 # Store the predictions in the corresponding column
 oof_predictions[[paste0("pred_", feature)]] <- current_oof_predictions
@@ -422,6 +432,6 @@ write.csv(
 )
 
 # get the feature imp df
-# imp <- feat_imp(imp_df = feature_imp_df, Type = "Base", top_gene_num = 10, basis = "Gain")
+imp <- feat_imp(imp_df = feature_imp_df, Type = "Base", top_gene_num = 10, basis = "Gain")
 
 cat("\n The script has finished running for feature: ", feature)
